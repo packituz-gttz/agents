@@ -4,7 +4,7 @@
  * 
  * @enum {string}
  */
-enum RunnableEventType {
+export enum GraphEvents {
   /** Emitted when a chat model starts processing. */
   CHAT_MODEL_START = "on_chat_model_start",
   

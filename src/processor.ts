@@ -6,6 +6,7 @@ import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types/graph';
 import { HandlerRegistry, DefaultLLMStreamHandler } from '@/stream';
+import { GraphEvents } from '@/common/enum';
 
 export class Processor {
   private graph: t.Graph;
@@ -13,7 +14,7 @@ export class Processor {
 
   constructor(config?: { customHandlers?: Record<string, t.EventHandler> }) {
     this.handlerRegistry = new HandlerRegistry();
-    this.handlerRegistry.register("on_llm_stream", new DefaultLLMStreamHandler());
+    this.handlerRegistry.register(GraphEvents.LLM_STREAM, new DefaultLLMStreamHandler());
 
     if (config?.customHandlers) {
       for (const [eventType, handler] of Object.entries(config.customHandlers)) {

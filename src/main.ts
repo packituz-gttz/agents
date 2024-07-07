@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { Processor } from './processor';
 import type * as t from '@/types/graph';
+import { GraphEvents } from '@/common/enum';
 
 dotenv.config();
 
@@ -8,13 +9,13 @@ async function testStreaming() {
   let conversationHistory: string[][] = [];
 
   const customHandlers = {
-    "on_llm_start": {
+    [GraphEvents.LLM_START]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.log(event);
         console.dir(data, { depth: null });
       }
     },
-    "on_llm_end": {
+    [GraphEvents.LLM_END]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.log(event);
         console.dir(data, { depth: null });
@@ -27,7 +28,7 @@ async function testStreaming() {
         }
       }
     },
-    "on_tool_end": {
+    [GraphEvents.TOOL_END]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.log(event);
         console.dir(data, { depth: null });
