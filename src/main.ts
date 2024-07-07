@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { Processor } from './processor';
+import { Processor } from '@/processor';
 import type * as t from '@/types/graph';
 import { GraphEvents } from '@/common/enum';
 

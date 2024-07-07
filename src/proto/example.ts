@@ -73,10 +73,10 @@ async function testStreaming() {
 
   const processor = new GraphStreamProcessor(handlerRegistry);
   
-  let config = { 
+  let config: Partial<RunnableConfig> & { version: "v1" | "v2", streamMode: string } = { 
     configurable: { thread_id: "conversation-num-1" },
     streamMode: "values",
-    version: "v1",
+    version: "v1" as const,
   };
 
   console.log("Test 1: Initial greeting");

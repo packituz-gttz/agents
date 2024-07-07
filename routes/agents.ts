@@ -25,7 +25,7 @@ export const agentsRouter: FastifyPluginAsync = async (fastify) => {
       },
     },
   }, async (request, reply) => {
-    const { input } = request.body;
+    const { input } = request.body as any;
     
     // Here you would typically call your agent execution logic
     // For now, we'll just return a dummy response

@@ -2,10 +2,12 @@
   "name": "agentes-libres",
   "version": "1.0.0",
   "main": "index.ts",
-  "scripts": {
-    "start": "node --loader ts-node/esm --experimental-specifier-resolution=node index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+"scripts": {
+  "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
+  "start:c": "node dist/src/main.js",
+  "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
+  "test": "echo \"Error: no test specified\" && exit 1"
+},
   "author": "Danny Avila",
   "license": "UNLICENSED",
   "description": "",
@@ -20,9 +22,9 @@
     "langchain": "^0.2.8"
   },
   "imports": {
-      "@/*": "./src/*",
-      "~/*": "./*"
-    },
+    "@/*": "./src/*",
+    "~/*": "./*"
+  },
   "devDependencies": {
     "@swc/core": "^1.6.13",
     "@types/node": "^20.14.10",
@@ -31,6 +33,7 @@
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsc-alias": "^1.8.10",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.3"
   }
