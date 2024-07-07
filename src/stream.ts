@@ -1,6 +1,6 @@
 import type { ChatGenerationChunk } from "@langchain/core/outputs";
 import type { AIMessageChunk } from "@langchain/core/messages";
-import type * as t from './types/graph';
+import type * as t from '@/types/graph';
 
 export class HandlerRegistry {
   private handlers: Map<string, t.EventHandler> = new Map();

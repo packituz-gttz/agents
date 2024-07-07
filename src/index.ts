@@ -129,7 +129,7 @@ function isStreamedOutput(op: OperationType) {
 }
 
 function hasFunctionCall(op: OperationType) {
-  return op?.['value']?.message?.additional_kwargs?.function_call;
+  return (op as any)?.value?.message?.additional_kwargs?.function_call;
 }
 
 function isFinalOutput(op: OperationType) {
@@ -145,7 +145,7 @@ function printFinalOutput(op: OperationType) {
   process.stdout.write(`
 
 ########################_START_##########################
-        ${JSON.stringify(op?.['value']?.output, null, 2)}
+        ${JSON.stringify((op as any)?.value?.output, null, 2)}
 ########################__END__##########################
 
         `);

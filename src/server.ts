@@ -1,7 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import dotenv from 'dotenv';
-import { agentsRouter } from './routes/agents';
+import { agentsRouter } from '../routes/agents';
 
 // Load environment variables
 dotenv.config();

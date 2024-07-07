@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { Processor } from './processor';
-import type * as t from './types/graph';
+import type * as t from '@/types/graph';
 
 dotenv.config();
 

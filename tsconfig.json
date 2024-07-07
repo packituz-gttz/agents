@@ -9,7 +9,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "ts-node": {
     "transpileOnly": true,

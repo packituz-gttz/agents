@@ -1,11 +1,11 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
+import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-import type * as t from './types/graph';
-import { HandlerRegistry, DefaultLLMStreamHandler } from './stream';
+import type * as t from '@/types/graph';
+import { HandlerRegistry, DefaultLLMStreamHandler } from '@/stream';
 
 export class Processor {
   private graph: t.Graph;
