@@ -4,6 +4,9 @@ import type { BaseMessage } from "@langchain/core/messages";
 export interface IState {
   messages: BaseMessage[];
 }
+export interface EventHandler {
+  handle(event: string, data: StreamEventData): void;
+}
 
 export type GraphState = StateGraphArgs<IState>["channels"];
 
