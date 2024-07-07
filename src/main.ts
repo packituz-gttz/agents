@@ -51,18 +51,11 @@ async function testStreaming() {
   await processor.processStream(inputs, config);
   console.log("\n");
 
-  conversationHistory.push(["user", "Make a search for the weather in new york today, which is 7/7/24"]);
-
   console.log("Test 2: Weather query");
-  inputs = { 
-    messages: [
-      ...conversationHistory,
-      
-    ]
-  };
+  conversationHistory.push(["user", "Make a search for the weather in new york today, which is 7/7/24. Make sure to always refer to me by name."]);
+  inputs = { messages: conversationHistory };
   await processor.processStream(inputs, config);
   console.log("\n");
-  console.dir(conversationHistory, { depth: null });
 }
 
 testStreaming();

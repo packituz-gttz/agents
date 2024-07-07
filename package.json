@@ -4,7 +4,7 @@
   "main": "index.ts",
 "scripts": {
   "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
-  "start:c": "node dist/src/main.js",
+  "start:c": "node dist/main.js",
   "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
   "test": "echo \"Error: no test specified\" && exit 1"
 },

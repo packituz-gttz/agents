@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 function addJsExtension(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   const updatedContent = content.replace(
-    /from\s+['"](.\/[^'"\s]+)['"]/g,
+    /from\s+['"](.\/[^'"\s]+)['"](?!\.js)/g,
     (match, p1) => `from '${p1}.js'`
   );
   fs.writeFileSync(filePath, updatedContent);
