@@ -4,12 +4,13 @@
   "main": "index.ts",
   "scripts": {
     "clean": "node ./config/clean.js",
-    "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
-    "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
-    "start:c": "node dist/main.js",
-    "start:o": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
+    "build": "rollup -c",
+    "build:dev": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
+    "start": "node dist/main.js",
+    "start:dev": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
+    "start:s": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "reinstall": "npm run clean && npm ci"
+    "reinstall": "npm run clean && npm ci && rm -rf ./dist && npm run build"
   },
   "author": "Danny Avila",
   "license": "UNLICENSED",
@@ -31,16 +32,24 @@
     "~/*": "./*"
   },
   "devDependencies": {
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-commonjs": "^26.0.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@swc/core": "^1.6.13",
     "@types/node": "^20.14.10",
     "@typescript-eslint/eslint-plugin": "^7.15.0",
     "@typescript-eslint/parser": "^7.15.0",
     "better-sqlite3": "^9.6.0",
     "eslint": "^8.57.0",
+    "rollup": "^4.18.1",
+    "rollup-plugin-cleandir": "^2.0.0",
+    "rollup-plugin-cleaner": "^1.0.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "tsc-alias": "^1.8.10",
     "tsconfig-paths": "^4.2.0",
+    "tslib": "^2.6.3",
     "typescript": "^5.5.3"
   }
 }
