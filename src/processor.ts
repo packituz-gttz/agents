@@ -1,31 +1,48 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { ChatAnthropic } from "@langchain/anthropic";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types/graph';
-import { HandlerRegistry, DefaultLLMStreamHandler } from '@/stream';
+import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
 import { GraphEvents } from '@/common/enum';
+
+export type LLMProvider = 'openai' | 'anthropic';
+
+export type LLMConfig = {
+  provider: LLMProvider;
+} & Record<string, any>;
+
+type ChatModel = typeof ChatAnthropic | typeof ChatOpenAI;
 
 export class Processor {
   private graph: t.Graph;
   private handlerRegistry: HandlerRegistry;
+  private static llmProviders: Map<LLMProvider, ChatModel> = new Map<LLMProvider, ChatModel>([
+    ['openai', ChatOpenAI],
+    ['anthropic', ChatAnthropic],
+  ]);
 
-  constructor(config?: { customHandlers?: Record<string, t.EventHandler> }) {
+  constructor(config: { 
+    customHandlers?: Record<string, t.EventHandler>;
+    llmConfig: LLMConfig;
+  }) {
     this.handlerRegistry = new HandlerRegistry();
     this.handlerRegistry.register(GraphEvents.LLM_STREAM, new DefaultLLMStreamHandler());
+    this.handlerRegistry.register(GraphEvents.CHAT_MODEL_STREAM, new ChatModelStreamHandler());
 
-    if (config?.customHandlers) {
+    if (config.customHandlers) {
       for (const [eventType, handler] of Object.entries(config.customHandlers)) {
         this.handlerRegistry.register(eventType, handler);
       }
     }
 
-    this.graph = this.createGraph();
+    this.graph = this.createGraph(config.llmConfig);
   }
 
-  private createGraph(): t.Graph {
+  private createGraph(llmConfig: LLMConfig): t.Graph {
     const graphState: t.GraphState = {
       messages: {
         value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
@@ -35,7 +52,11 @@ export class Processor {
 
     const tools = [new TavilySearchResults({})];
     const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
-    const model = new ChatOpenAI({ model: "gpt-4" });
+
+    const { provider, ...clientOptions } = llmConfig;
+
+    const constructor = this.getLLMConstructor(provider);
+    const model = new constructor(clientOptions);
     const boundModel = model.bindTools(tools);
 
     const routeMessage = (state: t.IState) => {
@@ -68,11 +89,21 @@ export class Processor {
     return workflow.compile();
   }
 
+  private getLLMConstructor(provider: LLMProvider): ChatModel {
+    const LLMConstructor = Processor.llmProviders.get(provider);
+    if (!LLMConstructor) {
+      throw new Error(`Unsupported LLM provider: ${provider}`);
+    }
+
+    return LLMConstructor;
+  }
+
   async processStream<RunInput>(
     inputs: RunInput,
     config: Partial<RunnableConfig> & { version: "v1" | "v2" },
   ) {
-    for await (const event of this.graph.streamEvents(inputs, config)) {
+    const stream = this.graph.streamEvents(inputs, config);
+    for await (const event of stream) {
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);
