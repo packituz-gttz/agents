@@ -5,15 +5,19 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import type { AnthropicInput } from "@langchain/anthropic";
+import type { OpenAIInput } from "@langchain/openai";
 import type * as t from '@/types/graph';
 import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
 import { GraphEvents } from '@/common/enum';
 
 export type LLMProvider = 'openai' | 'anthropic';
 
+type CallOptions = OpenAIInput | AnthropicInput;
+
 export type LLMConfig = {
   provider: LLMProvider;
-} & Record<string, any>;
+} & Partial<CallOptions>;
 
 type ChatModel = typeof ChatAnthropic | typeof ChatOpenAI;
 

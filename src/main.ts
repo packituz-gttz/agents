@@ -45,23 +45,20 @@ async function testStreaming() {
     },
   };
 
-  const llmConfig: LLMConfig = {
-    provider: 'openai',
-    model: 'gpt-4',
-    temperature: 0.7,
-    // Add any other OpenAI-specific options here
-  };
+  // const llmConfig: LLMConfig = {
+  //   provider: 'openai',
+  //   model: 'gpt-4',
+  //   temperature: 0.7,
+  //   // Add any other OpenAI-specific options here
+  // };
 
   // Uncomment the following block to use Anthropic instead
-  /*
   const llmConfig: LLMConfig = {
     provider: 'anthropic',
     model: 'claude-3-haiku-20240307',
-    temperature: 0.7,
     streaming: true,
     // Add any other Anthropic-specific options here
   };
-  */
 
   const processor = new Processor({ 
     customHandlers,
