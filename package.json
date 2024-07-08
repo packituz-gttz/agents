@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "clean": "node ./config/clean.js",
     "build": "rollup -c",
-    "build:dev": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
     "start": "node dist/main.js",
+    "clean": "node ./config/clean.js",
     "start:dev": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
     "start:s": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
