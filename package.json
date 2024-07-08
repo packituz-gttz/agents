@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "clean": "node ./config/clean.js",
     "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
     "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
     "start:c": "node dist/main.js",
     "start:o": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "reinstall": "npm run clean && npm ci"
   },
   "author": "Danny Avila",
   "license": "UNLICENSED",
