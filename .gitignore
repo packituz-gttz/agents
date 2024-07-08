@@ -8,3 +8,4 @@ dist/
 *_output.json
 *.txt
 .turbo
+google_auth.json

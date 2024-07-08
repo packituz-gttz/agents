@@ -58,15 +58,21 @@ async function testStreaming() {
   //   streaming: true,
   // };
 
+  // const llmConfig: t.LLMConfig = {
+  //   provider: Providers.MISTRALAI,
+  //   model: 'mistral-large-latest',
+  // };
+
   const llmConfig: t.LLMConfig = {
-    provider: Providers.MISTRALAI,
-    model: 'mistral-large-latest',
+    provider: Providers.VERTEXAI,
+    modelName: 'gemini-1.5-flash-001',
+    streaming: true,
   };
 
   const processor = new Processor({ 
-    tools: [new TavilySearchResults({})],
-    customHandlers,
     llmConfig,
+    customHandlers,
+    tools: [new TavilySearchResults({})],
   });
   
   let config = { 

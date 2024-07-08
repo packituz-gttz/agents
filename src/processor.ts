@@ -2,6 +2,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatMistralAI } from "@langchain/mistralai";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { ChatVertexAI } from "@langchain/google-vertexai";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
@@ -13,9 +14,11 @@ import {
   DefaultLLMStreamHandler,
 } from '@/stream';
 import { GraphEvents, Providers } from '@/common';
+import { createVertexAgent } from '@/agents';
 
 const llmProviders: Record<Providers, t.ChatModelConstructor> = {
   [Providers.OPENAI]: ChatOpenAI,
+  [Providers.VERTEXAI]: ChatVertexAI,
   [Providers.MISTRALAI]: ChatMistralAI,
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
@@ -102,6 +105,7 @@ export class Processor {
   ) {
     const stream = this.graph.streamEvents(inputs, config);
     for await (const event of stream) {
+      console.log(event.event);
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);

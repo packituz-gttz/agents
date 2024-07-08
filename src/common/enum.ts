@@ -53,6 +53,7 @@ export enum GraphEvents {
 
 export enum Providers {
   OPENAI = "openai",
+  VERTEXAI = "vertexai",
   MISTRALAI = "mistralai",
   ANTHROPIC = "anthropic"
 }
