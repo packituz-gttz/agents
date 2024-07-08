@@ -10,7 +10,8 @@
     "start:dev": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
     "start:s": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "reinstall": "npm run clean && npm ci && rm -rf ./dist && npm run build"
+    "reinstall": "npm run clean && npm ci && rm -rf ./dist && npm run build",
+    "b:reinstall": "bun run clean && npm ci && rm -rf ./dist && turbo build"
   },
   "author": "Danny Avila",
   "license": "UNLICENSED",
