@@ -21,13 +21,14 @@ export type LLMConfig = {
 
 type ChatModel = typeof ChatAnthropic | typeof ChatOpenAI;
 
+const llmProviders: Map<LLMProvider, ChatModel> = new Map<LLMProvider, ChatModel>([
+  ['openai', ChatOpenAI],
+  ['anthropic', ChatAnthropic],
+]);
+
 export class Processor {
   private graph: t.Graph;
   private handlerRegistry: HandlerRegistry;
-  private static llmProviders: Map<LLMProvider, ChatModel> = new Map<LLMProvider, ChatModel>([
-    ['openai', ChatOpenAI],
-    ['anthropic', ChatAnthropic],
-  ]);
 
   constructor(config: { 
     customHandlers?: Record<string, t.EventHandler>;
@@ -94,7 +95,7 @@ export class Processor {
   }
 
   private getLLMConstructor(provider: LLMProvider): ChatModel {
-    const LLMConstructor = Processor.llmProviders.get(provider);
+    const LLMConstructor = llmProviders.get(provider);
     if (!LLMConstructor) {
       throw new Error(`Unsupported LLM provider: ${provider}`);
     }
