@@ -1,4 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
+import { ChatBedrockConverse } from "@langchain/aws";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatMistralAI } from "@langchain/mistralai";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
@@ -19,6 +20,7 @@ import { createVertexAgent } from '@/agents';
 const llmProviders: Record<Providers, t.ChatModelConstructor> = {
   [Providers.OPENAI]: ChatOpenAI,
   [Providers.VERTEXAI]: ChatVertexAI,
+  [Providers.AWS]: ChatBedrockConverse,
   [Providers.MISTRALAI]: ChatMistralAI,
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
