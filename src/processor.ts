@@ -4,7 +4,7 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
+import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
 import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
 import { GraphEvents } from '@/common/enum';
@@ -22,7 +22,8 @@ export class Processor {
   private graph: t.Graph;
   private handlerRegistry: HandlerRegistry;
 
-  constructor(config: { 
+  constructor(config: {
+    tools?: StructuredTool[];
     customHandlers?: Record<string, t.EventHandler>;
     llmConfig: LLMConfig;
   }) {
@@ -36,10 +37,10 @@ export class Processor {
       }
     }
 
-    this.graph = this.createGraph(config.llmConfig);
+    this.graph = this.createGraph(config.llmConfig, config.tools);
   }
 
-  private createGraph(llmConfig: LLMConfig): t.Graph {
+  private createGraph(llmConfig: LLMConfig, tools: StructuredTool[] = []): t.Graph {
     const graphState: t.GraphState = {
       messages: {
         value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
@@ -47,9 +48,7 @@ export class Processor {
       },
     };
 
-    const tools = [new TavilySearchResults({})];
     const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
-
     const { provider, ...clientOptions } = llmConfig;
 
     const constructor = this.getLLMConstructor(provider);

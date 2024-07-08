@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
-import { Processor, LLMConfig } from '@/processor';
+import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types/graph';
+import { Processor, LLMConfig } from '@/processor';
 import { GraphEvents } from '@/common/enum';
 
 dotenv.config();
@@ -61,8 +62,9 @@ async function testStreaming() {
   };
 
   const processor = new Processor({ 
+    tools: [new TavilySearchResults({})],
     customHandlers,
-    llmConfig
+    llmConfig,
   });
   
   let config = { 
