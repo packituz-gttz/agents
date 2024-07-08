@@ -1,22 +1,24 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatMistralAI } from "@langchain/mistralai";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
-import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
-import { GraphEvents, Providers } from '@/common/enum';
+import {
+  HandlerRegistry,
+  ChatModelStreamHandler,
+  DefaultLLMStreamHandler,
+} from '@/stream';
+import { GraphEvents, Providers } from '@/common';
 
-export type LLMConfig = {
-  provider: t.LLMProvider;
-} & Partial<t.CallOptions>;
-
-const llmProviders: Map<t.LLMProvider, t.ChatModel> = new Map<t.LLMProvider, t.ChatModel>([
-  [Providers.OPENAI, ChatOpenAI],
-  [Providers.ANTHROPIC, ChatAnthropic],
-]);
+const llmProviders: Record<Providers, t.ChatModelConstructor> = {
+  [Providers.OPENAI]: ChatOpenAI,
+  [Providers.MISTRALAI]: ChatMistralAI,
+  [Providers.ANTHROPIC]: ChatAnthropic,
+};
 
 export class Processor {
   private graph: t.Graph;
@@ -25,7 +27,7 @@ export class Processor {
   constructor(config: {
     tools?: StructuredTool[];
     customHandlers?: Record<string, t.EventHandler>;
-    llmConfig: LLMConfig;
+    llmConfig: t.LLMConfig;
   }) {
     this.handlerRegistry = new HandlerRegistry();
     this.handlerRegistry.register(GraphEvents.LLM_STREAM, new DefaultLLMStreamHandler());
@@ -40,7 +42,7 @@ export class Processor {
     this.graph = this.createGraph(config.llmConfig, config.tools);
   }
 
-  private createGraph(llmConfig: LLMConfig, tools: StructuredTool[] = []): t.Graph {
+  private createGraph(llmConfig: t.LLMConfig, tools: StructuredTool[] = []): t.Graph {
     const graphState: t.GraphState = {
       messages: {
         value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
@@ -51,8 +53,8 @@ export class Processor {
     const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
     const { provider, ...clientOptions } = llmConfig;
 
-    const constructor = this.getLLMConstructor(provider);
-    const model = new constructor(clientOptions);
+    const ChatModelClass = this.getChatModelClass(provider);
+    const model = new ChatModelClass(clientOptions);
     const boundModel = model.bindTools(tools);
 
     const routeMessage = (state: t.IState) => {
@@ -85,13 +87,13 @@ export class Processor {
     return workflow.compile();
   }
 
-  private getLLMConstructor(provider: t.LLMProvider): t.ChatModel {
-    const LLMConstructor = llmProviders.get(provider);
-    if (!LLMConstructor) {
+  private getChatModelClass(provider: Providers): t.ChatModelConstructor {
+    const ChatModelClass = llmProviders[provider];
+    if (!ChatModelClass) {
       throw new Error(`Unsupported LLM provider: ${provider}`);
     }
 
-    return LLMConstructor;
+    return ChatModelClass;
   }
 
   async processStream<RunInput>(

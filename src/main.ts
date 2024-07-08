@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-import type * as t from '@/types/graph';
-import { Processor, LLMConfig } from '@/processor';
-import { GraphEvents, Providers } from '@/common/enum';
+import type * as t from '@/types';
+import { Processor } from '@/processor';
+import { GraphEvents, Providers } from '@/common';
 
 dotenv.config();
 
@@ -52,7 +52,7 @@ async function testStreaming() {
   //   temperature: 0.7,
   // };
 
-  const llmConfig: LLMConfig = {
+  const llmConfig: t.LLMConfig = {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-haiku-20240307',
     streaming: true,
