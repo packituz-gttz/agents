@@ -46,9 +46,9 @@ async function testStreaming() {
     },
   };
 
-  // const llmConfig: LLMConfig = {
+  // const llmConfig: t.LLMConfig = {
   //   provider: Providers.OPENAI,
-  //   model: 'gpt-4',
+  //   model: 'gpt-4o',
   //   temperature: 0.7,
   // };
 
