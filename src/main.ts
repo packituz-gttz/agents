@@ -52,10 +52,15 @@ async function testStreaming() {
   //   temperature: 0.7,
   // };
 
+  // const llmConfig: t.LLMConfig = {
+  //   provider: Providers.ANTHROPIC,
+  //   model: 'claude-3-haiku-20240307',
+  //   streaming: true,
+  // };
+
   const llmConfig: t.LLMConfig = {
-    provider: Providers.ANTHROPIC,
-    model: 'claude-3-haiku-20240307',
-    streaming: true,
+    provider: Providers.MISTRALAI,
+    model: 'mistral-large-latest',
   };
 
   const processor = new Processor({ 
