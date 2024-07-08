@@ -1,17 +1,19 @@
 {
-  "name": "agentes-libres",
+  "name": "agentus",
   "version": "1.0.0",
   "main": "index.ts",
-"scripts": {
-  "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
-  "start:c": "node dist/main.js",
-  "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
+  "scripts": {
+    "build": "tsc && tsc-alias -p tsconfig.json && node add-js-extension.mjs",
+    "start": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
+    "start:c": "node dist/main.js",
+    "start:o": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "author": "Danny Avila",
   "license": "UNLICENSED",
   "description": "",
   "type": "module",
+  "packageManager": "npm@10.5.2",
   "dependencies": {
     "@fastify/type-provider-typebox": "^4.0.0",
     "@langchain/anthropic": "^0.2.3",
@@ -30,6 +32,7 @@
     "@types/node": "^20.14.10",
     "@typescript-eslint/eslint-plugin": "^7.15.0",
     "@typescript-eslint/parser": "^7.15.0",
+    "better-sqlite3": "^9.6.0",
     "eslint": "^8.57.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",

@@ -28,3 +28,13 @@ export class DefaultLLMStreamHandler implements t.EventHandler {
     }
   }
 }
+export class ChatModelStreamHandler implements t.EventHandler {
+  handle(event: string, data: t.StreamEventData) {
+    const chunk = data?.chunk;
+    const content = chunk.content;
+    if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
+      console.log(chunk.tool_call_chunks);
+    } 
+      process.stdout.write(content);
+  }
+}
