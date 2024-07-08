@@ -7,15 +7,15 @@ import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
 import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
-import { GraphEvents } from '@/common/enum';
+import { GraphEvents, Providers } from '@/common/enum';
 
 export type LLMConfig = {
   provider: t.LLMProvider;
 } & Partial<t.CallOptions>;
 
 const llmProviders: Map<t.LLMProvider, t.ChatModel> = new Map<t.LLMProvider, t.ChatModel>([
-  ['openai', ChatOpenAI],
-  ['anthropic', ChatAnthropic],
+  [Providers.OPENAI, ChatOpenAI],
+  [Providers.ANTHROPIC, ChatAnthropic],
 ]);
 
 export class Processor {

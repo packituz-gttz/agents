@@ -50,3 +50,8 @@ export enum GraphEvents {
   /** Emitted when a prompt completes its processing. */
   PROMPT_END = "on_prompt_end"
 }
+
+export enum Providers {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic"
+}

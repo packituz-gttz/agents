@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types/graph';
 import { Processor, LLMConfig } from '@/processor';
-import { GraphEvents } from '@/common/enum';
+import { GraphEvents, Providers } from '@/common/enum';
 
 dotenv.config();
 
@@ -47,18 +47,15 @@ async function testStreaming() {
   };
 
   // const llmConfig: LLMConfig = {
-  //   provider: 'openai',
+  //   provider: Providers.OPENAI,
   //   model: 'gpt-4',
   //   temperature: 0.7,
-  //   // Add any other OpenAI-specific options here
   // };
 
-  // Uncomment the following block to use Anthropic instead
   const llmConfig: LLMConfig = {
-    provider: 'anthropic',
+    provider: Providers.ANTHROPIC,
     model: 'claude-3-haiku-20240307',
     streaming: true,
-    // Add any other Anthropic-specific options here
   };
 
   const processor = new Processor({ 
