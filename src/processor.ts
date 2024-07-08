@@ -5,23 +5,15 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage } from "@langchain/core/messages";
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-import type { AnthropicInput } from "@langchain/anthropic";
-import type { OpenAIInput } from "@langchain/openai";
-import type * as t from '@/types/graph';
+import type * as t from '@/types';
 import { HandlerRegistry, DefaultLLMStreamHandler, ChatModelStreamHandler } from '@/stream';
 import { GraphEvents } from '@/common/enum';
 
-export type LLMProvider = 'openai' | 'anthropic';
-
-type CallOptions = OpenAIInput | AnthropicInput;
-
 export type LLMConfig = {
-  provider: LLMProvider;
-} & Partial<CallOptions>;
+  provider: t.LLMProvider;
+} & Partial<t.CallOptions>;
 
-type ChatModel = typeof ChatAnthropic | typeof ChatOpenAI;
-
-const llmProviders: Map<LLMProvider, ChatModel> = new Map<LLMProvider, ChatModel>([
+const llmProviders: Map<t.LLMProvider, t.ChatModel> = new Map<t.LLMProvider, t.ChatModel>([
   ['openai', ChatOpenAI],
   ['anthropic', ChatAnthropic],
 ]);
@@ -94,7 +86,7 @@ export class Processor {
     return workflow.compile();
   }
 
-  private getLLMConstructor(provider: LLMProvider): ChatModel {
+  private getLLMConstructor(provider: t.LLMProvider): t.ChatModel {
     const LLMConstructor = llmProviders.get(provider);
     if (!LLMConstructor) {
       throw new Error(`Unsupported LLM provider: ${provider}`);
