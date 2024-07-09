@@ -58,9 +58,9 @@ export class Processor {
     const graphState: t.GraphState = {
       messages: {
         value: (x: BaseMessage[], y: BaseMessage[]) => 
-          provider === Providers.AWS 
-            ? this.handleAWSMessages(x, y)
-            : x.concat(y),
+          // provider === Providers.AWS 
+          //   ? this.handleAWSMessages(x, y) : 
+            x.concat(y),
         default: () => [],
       },
     };
@@ -126,7 +126,7 @@ export class Processor {
   }
 
   private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
-    const [lastMessageX, secondLastMessageX] = x.slice(-2);
+    const [lastMessageX, secondLastMessageX] = x.slice(0, -2);
     const lastMessageY = y[y.length - 1];
   
     if (
@@ -141,7 +141,8 @@ export class Processor {
         lastMessageY,
       });
   
-      return [...x.slice(0, -4), overrideMessage];
+      const initialMessages = x.slice(0, -4);
+      return [...initialMessages, overrideMessage];
     }
   
     return x.concat(y);

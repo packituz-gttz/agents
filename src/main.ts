@@ -6,6 +6,10 @@ import { Processor } from '@/processor';
 
 dotenv.config();
 
+const userName = "Jo";
+const location = "New York";
+const currentDate = new Date().toLocaleString();
+
 async function testStreaming() {
   let conversationHistory: string[][] = [];
 
@@ -46,11 +50,11 @@ async function testStreaming() {
     },
   };
 
-  // const llmConfig: t.LLMConfig = {
-  //   provider: Providers.OPENAI,
-  //   model: 'gpt-4o',
-  //   temperature: 0.7,
-  // };
+  const llmConfig: t.LLMConfig = {
+    provider: Providers.OPENAI,
+    model: 'gpt-4o',
+    temperature: 0.7,
+  };
 
   // const llmConfig: t.LLMConfig = {
   //   provider: Providers.ANTHROPIC,
@@ -69,15 +73,15 @@ async function testStreaming() {
   //   streaming: true,
   // };
 
-  const llmConfig: t.LLMConfig = {
-    provider: Providers.AWS,
-    model: 'anthropic.claude-3-sonnet-20240229-v1:0',
-    region: process.env.BEDROCK_AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
-    },
-  };
+  // const llmConfig: t.LLMConfig = {
+  //   provider: Providers.AWS,
+  //   model: 'anthropic.claude-3-sonnet-20240229-v1:0',
+  //   region: process.env.BEDROCK_AWS_REGION,
+  //   credentials: {
+  //     accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
+  //     secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
+  //   },
+  // };
 
   const processor = new Processor({ 
     llmConfig,
@@ -91,18 +95,25 @@ async function testStreaming() {
     version: "v2" as const,
   };
 
-  console.log("Test 1: Initial greeting");
+  console.log("\nTest 1: Initial greeting");
 
-  conversationHistory.push(["user", "Hi I'm Jo."]);
+  conversationHistory.push(["user", `Hi I'm ${userName}.`]);
   let inputs = { messages: conversationHistory };
   await processor.processStream(inputs, config);
-  console.log("\n");
 
-  console.log("Test 2: Weather query");
-  conversationHistory.push(["user", "Make a search for the weather in new york today, which is 7/7/24. Make sure to always refer to me by name."]);
+  console.log("\nTest 2: Weather query");
+
+  const userMessage = `
+  Make a search for the weather in ${location} today, which is ${currentDate}.
+  Make sure to always refer to me by name.
+  After giving me a thorough summary, tell me a joke about the weather forecast we went over.
+  `;
+
+  conversationHistory.push(["user", userMessage]);
+
   inputs = { messages: conversationHistory };
   await processor.processStream(inputs, config);
-  console.log("\n");
+
 }
 
 testStreaming();
