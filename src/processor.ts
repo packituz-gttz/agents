@@ -6,7 +6,8 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ChatVertexAI } from "@langchain/google-vertexai";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { END, START, StateGraph } from "@langchain/langgraph";
-import { AIMessage, BaseMessage } from "@langchain/core/messages";
+import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage } from "@langchain/core/messages";
+import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
 import {
@@ -15,13 +16,14 @@ import {
   DefaultLLMStreamHandler,
 } from '@/stream';
 import { GraphEvents, Providers } from '@/common';
-import { createVertexAgent } from '@/agents';
+// import { createVertexAgent } from '@/agents';
 
 const llmProviders: Record<Providers, t.ChatModelConstructor> = {
   [Providers.OPENAI]: ChatOpenAI,
   [Providers.VERTEXAI]: ChatVertexAI,
-  [Providers.AWS]: ChatBedrockConverse,
+  [Providers.BEDROCK]: BedrockChat,
   [Providers.MISTRALAI]: ChatMistralAI,
+  [Providers.AWS]: ChatBedrockConverse,
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
@@ -48,18 +50,32 @@ export class Processor {
   }
 
   private createGraph(llmConfig: t.LLMConfig, tools: StructuredTool[] = []): t.Graph {
+    const { provider, ...clientOptions } = llmConfig;
+
     const graphState: t.GraphState = {
       messages: {
-        value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
+        value: (x: BaseMessage[], y: BaseMessage[]) => {
+          // if (provider !== Providers.AWS) {
+          //   return x.concat(y);
+          // }
+          // const lastMessageX = x[x.length - 1] as AIMessageChunk;
+          // const lastMessageY = y[y.length - 1] as ToolMessage;
+          // if (lastMessageX?.tool_calls?.length && y.length === 1 && lastMessageY?.tool_call_id) {
+          //   const shallowCopy = x.slice(0, -1);
+          //   shallowCopy.push(['assistant', lastMessageX.content.toString() + lastMessageY.content.toString()]);
+          //   shallowCopy.push(['user', 'continue']);
+          //   return shallowCopy;
+          // }
+          return x.concat(y);
+        },
         default: () => [],
       },
     };
 
     const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
-    const { provider, ...clientOptions } = llmConfig;
 
     const ChatModelClass = this.getChatModelClass(provider);
-    const model = new ChatModelClass(clientOptions);
+    const model = new ChatModelClass(clientOptions as Record<string, unknown>);
     const boundModel = model.bindTools(tools);
 
     const routeMessage = (state: t.IState) => {
@@ -107,7 +123,7 @@ export class Processor {
   ) {
     const stream = this.graph.streamEvents(inputs, config);
     for await (const event of stream) {
-      console.log(event.event);
+      // console.log(event.event);
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);

@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types';
-import { Processor } from '@/processor';
 import { GraphEvents, Providers } from '@/common';
+import { Processor } from '@/processor';
 
 dotenv.config();
 
@@ -46,11 +46,11 @@ async function testStreaming() {
     },
   };
 
-  // const llmConfig: t.LLMConfig = {
-  //   provider: Providers.OPENAI,
-  //   model: 'gpt-4o',
-  //   temperature: 0.7,
-  // };
+  const llmConfig: t.LLMConfig = {
+    provider: Providers.OPENAI,
+    model: 'gpt-4o',
+    temperature: 0.7,
+  };
 
   // const llmConfig: t.LLMConfig = {
   //   provider: Providers.ANTHROPIC,
@@ -69,15 +69,15 @@ async function testStreaming() {
   //   streaming: true,
   // };
 
-  const llmConfig: t.LLMConfig = {
-    provider: Providers.AWS,
-    model: 'anthropic.claude-3-sonnet-20240229-v1:0',
-    region: process.env.BEDROCK_AWS_REGION,
-    credentials: {
-      accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
-    },
-  };
+  // const llmConfig: t.LLMConfig = {
+  //   provider: Providers.AWS,
+  //   model: 'anthropic.claude-3-sonnet-20240229-v1:0',
+  //   region: process.env.BEDROCK_AWS_REGION,
+  //   credentials: {
+  //     accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
+  //     secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
+  //   },
+  // };
 
   const processor = new Processor({ 
     llmConfig,
