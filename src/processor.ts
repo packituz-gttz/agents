@@ -5,8 +5,8 @@ import { ChatMistralAI } from "@langchain/mistralai";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { ChatVertexAI } from "@langchain/google-vertexai";
 import { RunnableConfig } from "@langchain/core/runnables";
-import { END, START, StateGraph } from "@langchain/langgraph";
-import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage } from "@langchain/core/messages";
+import { END, START, StateGraph, MemorySaver } from "@langchain/langgraph";
+import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, HumanMessage } from "@langchain/core/messages";
 import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
@@ -15,6 +15,7 @@ import {
   ChatModelStreamHandler,
   DefaultLLMStreamHandler,
 } from '@/stream';
+import { getConverseOverrideMessage } from '@/messages';
 import { GraphEvents, Providers } from '@/common';
 // import { createVertexAgent } from '@/agents';
 
@@ -30,6 +31,7 @@ const llmProviders: Record<Providers, t.ChatModelConstructor> = {
 export class Processor {
   private graph: t.Graph;
   private handlerRegistry: HandlerRegistry;
+  provider: Providers;
 
   constructor(config: {
     tools?: StructuredTool[];
@@ -46,6 +48,7 @@ export class Processor {
       }
     }
 
+    this.provider = config.llmConfig.provider;
     this.graph = this.createGraph(config.llmConfig, config.tools);
   }
 
@@ -54,20 +57,10 @@ export class Processor {
 
     const graphState: t.GraphState = {
       messages: {
-        value: (x: BaseMessage[], y: BaseMessage[]) => {
-          // if (provider !== Providers.AWS) {
-          //   return x.concat(y);
-          // }
-          // const lastMessageX = x[x.length - 1] as AIMessageChunk;
-          // const lastMessageY = y[y.length - 1] as ToolMessage;
-          // if (lastMessageX?.tool_calls?.length && y.length === 1 && lastMessageY?.tool_call_id) {
-          //   const shallowCopy = x.slice(0, -1);
-          //   shallowCopy.push(['assistant', lastMessageX.content.toString() + lastMessageY.content.toString()]);
-          //   shallowCopy.push(['user', 'continue']);
-          //   return shallowCopy;
-          // }
-          return x.concat(y);
-        },
+        value: (x: BaseMessage[], y: BaseMessage[]) => 
+          provider === Providers.AWS 
+            ? this.handleAWSMessages(x, y)
+            : x.concat(y),
         default: () => [],
       },
     };
@@ -96,6 +89,7 @@ export class Processor {
       return { messages: [responseMessage] };
     };
 
+    // const memory = new MemorySaver();
     const workflow: t.Workflow = new StateGraph<t.IState>({
       channels: graphState,
     })
@@ -129,5 +123,27 @@ export class Processor {
         handler.handle(event.event, event.data);
       }
     }
+  }
+
+  private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
+    const [lastMessageX, secondLastMessageX] = x.slice(-2);
+    const lastMessageY = y[y.length - 1];
+  
+    if (
+      lastMessageX instanceof AIMessageChunk &&
+      lastMessageY instanceof ToolMessage &&
+      Array.isArray(secondLastMessageX) &&
+      secondLastMessageX[0] === 'user'
+    ) {
+      const overrideMessage = getConverseOverrideMessage({
+        userMessage: secondLastMessageX,
+        lastMessageX,
+        lastMessageY,
+      });
+  
+      return [...x.slice(0, -4), overrideMessage];
+    }
+  
+    return x.concat(y);
   }
 }
