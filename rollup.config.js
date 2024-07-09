@@ -37,16 +37,56 @@ export default {
       sourceMap: !isProduction,
       inlineSources: !isProduction
     }),
-    isProduction && terser(),
-    isProduction && obfuscator({
-      global: true,
-      options: {
-        stringArray: true,
-        stringArrayEncoding: ['base64'],
-        splitStrings: true,
-        identifierNamesGenerator: 'hexadecimal',
-        sourceMap: false,
+    isProduction && terser({
+      format: {
+        comments: false
+      },
+      compress: {
+        dead_code: true,
+        drop_debugger: true,
+        conditionals: true,
+        evaluate: true,
+        booleans: true,
+        loops: true,
+        unused: true,
+        hoist_funs: true,
+        keep_fargs: false,
+        hoist_vars: true,
+        if_return: true,
+        join_vars: true,
+        side_effects: true,
+        warnings: false
+      },
+      mangle: {
+        properties: {
+          regex: /^_/
+        }
       }
+    }),
+    isProduction && obfuscator({
+      compact: true,
+      controlFlowFlattening: true,
+      controlFlowFlatteningThreshold: 0.75,
+      deadCodeInjection: true,
+      deadCodeInjectionThreshold: 0.4,
+      debugProtection: true,
+      debugProtectionInterval: 0, // Changed from true to 0
+      disableConsoleOutput: true,
+      identifierNamesGenerator: 'hexadecimal',
+      log: false,
+      numbersToExpressions: true,
+      renameGlobals: false,
+      rotateStringArray: true,
+      selfDefending: true,
+      shuffleStringArray: true,
+      simplify: true,
+      splitStrings: true,
+      splitStringsChunkLength: 10,
+      stringArray: true,
+      stringArrayEncoding: ['base64'],
+      stringArrayThreshold: 0.75,
+      transformObjectKeys: true,
+      unicodeEscapeSequence: false
     })
   ].filter(Boolean),
   external: [
