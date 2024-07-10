@@ -1,3 +1,4 @@
+// src/main.ts
 import dotenv from 'dotenv';
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types';

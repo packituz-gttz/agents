@@ -1,3 +1,4 @@
+// src/types/graph.ts
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
 

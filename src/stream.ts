@@ -1,3 +1,4 @@
+// src/stream.ts
 import type { ChatGenerationChunk } from "@langchain/core/outputs";
 import type { AIMessageChunk } from "@langchain/core/messages";
 import type * as t from '@/types/graph';
