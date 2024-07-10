@@ -1,4 +1,4 @@
-// src/main_collab_design_v5.ts.ts
+// src/main_collab_design_v5.ts
 import dotenv from 'dotenv';
 import { HumanMessage } from "@langchain/core/messages";
 import type * as t from '@/types';
@@ -10,8 +10,41 @@ import { CollaborativeProcessor, Member } from '@/collab_design_v5';
 import { tavilyTool, chartTool } from "@/tools/example";
 import { supervisorPrompt } from "@/prompts/collab";
 import { GraphEvents, Providers } from '@/common';
+import fs from 'fs';
+import util from 'util';
 
 dotenv.config();
+
+// Create a write stream
+const logFile = fs.createWriteStream('output.log', { flags: 'a' });
+
+// Redirect console.log and console.error
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+
+console.log = function(...args) {
+    logFile.write(util.format.apply(null, args) + '\n');
+    originalConsoleLog.apply(console, args);
+};
+
+console.error = function(...args) {
+    logFile.write(util.format.apply(null, args) + '\n');
+    originalConsoleError.apply(console, args);
+};
+
+// Redirect process.stdout.write
+const originalStdoutWrite = process.stdout.write;
+process.stdout.write = function(chunk: string | Uint8Array, encoding?: BufferEncoding, callback?: (error: Error | null | undefined) => void): boolean {
+    logFile.write(chunk, encoding);
+    return originalStdoutWrite.apply(process.stdout, [chunk, encoding, callback]);
+} as any;
+
+// Redirect process.stderr.write
+const originalStderrWrite = process.stderr.write;
+process.stderr.write = function(chunk: string | Uint8Array, encoding?: BufferEncoding, callback?: (error: Error | null | undefined) => void): boolean {
+    logFile.write(chunk, encoding);
+    return originalStderrWrite.apply(process.stderr, [chunk, encoding, callback]);
+} as any;
 
 async function testCollaborativeStreaming() {
   const customHandlers = {
@@ -97,4 +130,6 @@ async function main() {
   await testCollaborativeStreaming();
 }
 
-main().catch(console.error);
+main().catch(console.error).finally(() => {
+    logFile.end();
+});
