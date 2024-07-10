@@ -6,7 +6,7 @@ import {
   ChatModelStreamHandler,
   DefaultLLMStreamHandler,
 } from '@/stream';
-import { CollaborativeProcessor, Member } from '@/collab_design_v5';
+import { CollaborativeProcessor, Member } from '@/collab_design_v4';
 import { tavilyTool, chartTool } from "@/tools/example";
 import { supervisorPrompt } from "@/prompts/collab";
 import { GraphEvents, Providers } from '@/common';
@@ -38,7 +38,7 @@ async function testCollaborativeStreaming() {
     [GraphEvents.TOOL_END]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.log("Tool End:", event);
-        // console.dir(data, { depth: null });
+        console.dir(data, { depth: null });
       }
     },
   };
@@ -50,7 +50,7 @@ async function testCollaborativeStreaming() {
       tools: [tavilyTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0,
       },
     },
@@ -60,7 +60,7 @@ async function testCollaborativeStreaming() {
       tools: [chartTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0.2,
       },
     },
@@ -70,7 +70,7 @@ async function testCollaborativeStreaming() {
     systemPrompt: supervisorPrompt,
     llmConfig: {
       provider: Providers.OPENAI,
-      modelName: "gpt-4",
+      modelName: "gpt-4o",
       temperature: 0,
     },
   };
@@ -90,7 +90,7 @@ async function testCollaborativeStreaming() {
     messages: [new HumanMessage("Create a chart showing the population growth of the top 5 most populous countries over the last 50 years.")],
   };
 
-  await collaborativeProcessor.processParallel(input, config);
+  await collaborativeProcessor.processStream(input, config);
 }
 
 async function main() {
