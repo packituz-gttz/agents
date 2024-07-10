@@ -1,3 +1,4 @@
+// src/prompts/collab.ts
 export const supervisorPrompt = `You are a supervisor tasked with managing a conversation between the
 following workers: {members}. Given the following user request,
 respond with the worker to act next. Each worker will perform a
