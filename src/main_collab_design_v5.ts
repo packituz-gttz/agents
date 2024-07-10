@@ -6,7 +6,7 @@ import {
   ChatModelStreamHandler,
   DefaultLLMStreamHandler,
 } from '@/stream';
-import { CollaborativeProcessor, Member } from '@/collab_design_v4';
+import { CollaborativeProcessor, Member } from '@/collab_design_v5';
 import { tavilyTool, chartTool } from "@/tools/example";
 import { supervisorPrompt } from "@/prompts/collab";
 import { GraphEvents, Providers } from '@/common';
