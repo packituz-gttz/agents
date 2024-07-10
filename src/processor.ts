@@ -11,11 +11,7 @@ import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, HumanMessage } fro
 import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
-import {
-  HandlerRegistry,
-  ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
-} from '@/stream';
+import { HandlerRegistry } from '@/stream';
 import { getConverseOverrideMessage } from '@/messages';
 import { GraphEvents, Providers } from '@/common';
 // import { createVertexAgent } from '@/agents';
@@ -40,8 +36,6 @@ export class Processor {
     llmConfig: t.LLMConfig;
   }) {
     this.handlerRegistry = new HandlerRegistry();
-    this.handlerRegistry.register(GraphEvents.LLM_STREAM, new DefaultLLMStreamHandler());
-    this.handlerRegistry.register(GraphEvents.CHAT_MODEL_STREAM, new ChatModelStreamHandler());
 
     if (config.customHandlers) {
       for (const [eventType, handler] of Object.entries(config.customHandlers)) {

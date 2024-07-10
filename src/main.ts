@@ -2,6 +2,10 @@
 import dotenv from 'dotenv';
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import type * as t from '@/types';
+import {
+  ChatModelStreamHandler,
+  DefaultLLMStreamHandler,
+} from '@/stream';
 import { GraphEvents, Providers } from '@/common';
 import { Processor } from '@/processor';
 
@@ -15,6 +19,8 @@ async function testStreaming() {
   let conversationHistory: string[][] = [];
 
   const customHandlers = {
+    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+    [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.dir(data, { depth: null });
