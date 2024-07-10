@@ -16,6 +16,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatMistralAI } from "@langchain/mistralai";
 import { ChatVertexAI } from "@langchain/google-vertexai";
 import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
+import { supervisorPrompt } from "@/prompts/collab";
 import { Providers } from '@/common';
 
 interface AgentStateChannels {
@@ -109,12 +110,7 @@ export class CollaborativeProcessor {
 
     const memberNames = this.members.map(member => member.name);
 
-    const systemPrompt = this.supervisorConfig.systemPrompt ||
-      "You are a supervisor tasked with managing a conversation between the" +
-      " following workers: {members}. Given the following user request," +
-      " respond with the worker to act next. Each worker will perform a" +
-      " task and respond with their results and status. When finished," +
-      " respond with FINISH.";
+    const systemPrompt = this.supervisorConfig.systemPrompt || supervisorPrompt;
     const options = [END, ...memberNames];
 
     const functionDef = {
@@ -149,7 +145,7 @@ export class CollaborativeProcessor {
         " Or should we FINISH? Select one of: {options}",
       ],
     ]);
-
+  
     const formattedPrompt = await prompt.partial({
       options: options.join(", "),
       members: memberNames.join(", "),

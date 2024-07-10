@@ -1,16 +1,16 @@
-// src/collab.ts
+// src/collab_design_v2.ts
 import "dotenv/config";
-import { BaseMessage, HumanMessage } from "@langchain/core/messages";
+import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
 import { END, StateGraphArgs, START, StateGraph } from "@langchain/langgraph";
 import { AgentExecutor, createOpenAIToolsAgent } from "langchain/agents";
 import {
   ChatPromptTemplate,
   MessagesPlaceholder,
 } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
 import { Runnable, RunnableConfig } from "@langchain/core/runnables";
 import { JsonOutputToolsParser } from "langchain/output_parsers";
 import { HandlerRegistry } from '@/stream';
-import { ChatOpenAI } from "@langchain/openai";
 import { ChatBedrockConverse } from "@langchain/aws";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatMistralAI } from "@langchain/mistralai";
@@ -20,7 +20,8 @@ import { Providers } from '@/common';
 
 interface AgentStateChannels {
   messages: BaseMessage[];
-  next: string;
+  next: string | string[];
+  parallelResults: { [key: string]: string };
 }
 
 export interface Member {
@@ -33,11 +34,6 @@ export interface Member {
 interface LLMConfig {
   provider: Providers;
   [key: string]: any;
-}
-
-interface SupervisorConfig {
-  systemPrompt?: string;
-  llmConfig: LLMConfig;
 }
 
 const llmProviders: Record<Providers, any> = {
@@ -53,15 +49,9 @@ export class CollaborativeProcessor {
   private graph: Runnable | null = null;
   private handlerRegistry: HandlerRegistry;
   private members: Member[];
-  private supervisorConfig: SupervisorConfig;
 
-  constructor(
-    members: Member[],
-    supervisorConfig: SupervisorConfig,
-    customHandlers?: Record<string, any>
-  ) {
+  constructor(members: Member[], customHandlers?: Record<string, any>) {
     this.members = members;
-    this.supervisorConfig = supervisorConfig;
     this.handlerRegistry = new HandlerRegistry();
     if (customHandlers) {
       for (const [eventType, handler] of Object.entries(customHandlers)) {
@@ -81,8 +71,12 @@ export class CollaborativeProcessor {
         default: () => [],
       },
       next: {
-        value: (x?: string, y?: string) => y ?? x ?? END,
+        value: (x?: string | string[], y?: string | string[]) => y ?? x ?? END,
         default: () => END,
+      },
+      parallelResults: {
+        value: (x?: { [key: string]: string }, y?: { [key: string]: string }) => ({ ...x, ...y }),
+        default: () => ({}),
       },
     };
 
@@ -109,26 +103,30 @@ export class CollaborativeProcessor {
 
     const memberNames = this.members.map(member => member.name);
 
-    const systemPrompt = this.supervisorConfig.systemPrompt ||
+    const systemPrompt =
       "You are a supervisor tasked with managing a conversation between the" +
       " following workers: {members}. Given the following user request," +
-      " respond with the worker to act next. Each worker will perform a" +
+      " respond with the worker(s) to act next. You can choose multiple workers" +
+      " to act in parallel if appropriate. Each worker will perform a" +
       " task and respond with their results and status. When finished," +
       " respond with FINISH.";
     const options = [END, ...memberNames];
 
     const functionDef = {
       name: "route",
-      description: "Select the next role.",
+      description: "Select the next role(s).",
       parameters: {
         title: "routeSchema",
         type: "object",
         properties: {
           next: {
             title: "Next",
-            anyOf: [
-              { enum: options },
-            ],
+            type: "array",
+            items: {
+              type: "string",
+              enum: options,
+            },
+            minItems: 1,
           },
         },
         required: ["next"],
@@ -146,7 +144,8 @@ export class CollaborativeProcessor {
       [
         "system",
         "Given the conversation above, who should act next?" +
-        " Or should we FINISH? Select one of: {options}",
+        " You can choose multiple workers to act in parallel if appropriate." +
+        " Or should we FINISH? Select from: {options}",
       ],
     ]);
 
@@ -155,12 +154,10 @@ export class CollaborativeProcessor {
       members: memberNames.join(", "),
     });
 
-    const { provider, ...clientOptions } = this.supervisorConfig.llmConfig;
-    const LLMClass = llmProviders[provider];
-    if (!LLMClass) {
-      throw new Error(`Unsupported LLM provider for supervisor: ${provider}`);
-    }
-    const llm = new LLMClass(clientOptions);
+    const llm = new ChatOpenAI({
+      modelName: "gpt-4",
+      temperature: 0,
+    });
 
     const supervisorChain = formattedPrompt
       .pipe(llm.bindTools(
@@ -170,7 +167,7 @@ export class CollaborativeProcessor {
         },
       ))
       .pipe(new JsonOutputToolsParser())
-      .pipe((x) => (x[0].args));
+      .pipe((x) => x[0].args);
 
     const workflow = new StateGraph({
       channels: agentStateChannels,
@@ -186,20 +183,54 @@ export class CollaborativeProcessor {
         const result = await agent.invoke(state, config);
         return {
           messages: [
-            new HumanMessage({ content: result.output, name: member.name }),
+            new AIMessage({ content: result.output, name: member.name }),
           ],
+          parallelResults: { [member.name]: result.output },
         };
       };
       workflow.addNode(member.name, node);
-      workflow.addEdge(member.name, "supervisor");
     }
 
-    workflow.addNode("supervisor", supervisorChain);
+    // Add aggregator node
+    workflow.addNode("aggregator", async (state: AgentStateChannels) => {
+      const aggregatedContent = Object.entries(state.parallelResults)
+        .map(([name, result]) => `${name}: ${result}`)
+        .join("\n\n");
+      return {
+        messages: [new AIMessage({ content: aggregatedContent, name: "Aggregator" })],
+        parallelResults: {},  // Clear parallel results after aggregation
+      };
+    });
 
+    workflow.addNode("supervisor", async (state: AgentStateChannels) => {
+      const result = await supervisorChain.invoke(state);
+      return {
+        next: result.next,
+      };
+    });
+
+    // Add conditional edges for parallel execution
     workflow.addConditionalEdges(
       "supervisor",
-      (x: AgentStateChannels) => x.next,
+      (x: AgentStateChannels) => {
+        if (x.next === END) {
+          return [END];
+        }
+        return Array.isArray(x.next) ? x.next : [x.next];
+      },
+      {
+        ...Object.fromEntries(this.members.map(m => [m.name, m.name])),
+        [END]: END,
+      }
     );
+
+    // Add edges from all agent nodes to the aggregator
+    this.members.forEach(member => {
+      workflow.addEdge(member.name, "aggregator");
+    });
+
+    // Add edge from aggregator to supervisor
+    workflow.addEdge("aggregator", "supervisor");
 
     workflow.addEdge(START, "supervisor");
 
