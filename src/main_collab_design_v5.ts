@@ -1,4 +1,4 @@
-// src/collaborative_main.ts
+// src/main_collab_design_v5.ts.ts
 import dotenv from 'dotenv';
 import { HumanMessage } from "@langchain/core/messages";
 import type * as t from '@/types';
