@@ -1,6 +1,7 @@
 // src/collab_design_v4.ts
 import "dotenv/config";
 import { BaseMessage, HumanMessage } from "@langchain/core/messages";
+import { END, StateGraphArgs, START, StateGraph, MemorySaver } from "@langchain/langgraph";
 import { AgentExecutor, createOpenAIToolsAgent } from "langchain/agents";
 import {
   ChatPromptTemplate,
@@ -17,6 +18,11 @@ import { ChatVertexAI } from "@langchain/google-vertexai";
 import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
 import { supervisorPrompt } from "@/prompts/collab";
 import { Providers } from '@/common';
+
+interface AgentStateChannels {
+  messages: BaseMessage[];
+  next: string;
+}
 
 export interface Member {
   name: string;
@@ -44,69 +50,19 @@ const llmProviders: Record<Providers, any> = {
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
-interface State {
-  messages: BaseMessage[];
-  activeAgents: Set<string>;
-}
-
-interface AgentResult {
-  agentName: string;
-  output: string;
-}
-
-class Supervisor {
-  private llm: Runnable;
-  private prompt: ChatPromptTemplate;
-
-  constructor(private config: SupervisorConfig, private agentNames: string[]) {
-    const { provider, ...clientOptions } = this.config.llmConfig;
-    const LLMClass = llmProviders[provider];
-    if (!LLMClass) {
-      throw new Error(`Unsupported LLM provider for supervisor: ${provider}`);
-    }
-    this.llm = new LLMClass(clientOptions);
-
-    this.prompt = ChatPromptTemplate.fromMessages([
-      ["system", this.config.systemPrompt || supervisorPrompt],
-      new MessagesPlaceholder("messages"),
-      [
-        "system",
-        "Given the conversation above, who should act next? You can select multiple agents to act in parallel, or FINISH if the task is complete. Available agents: {agents}",
-      ],
-    ]);
-  }
-
-  async decide(state: State): Promise<{ nextAgents: string[], isFinished: boolean }> {
-    const formattedPrompt = await this.prompt.formatMessages({
-      messages: state.messages,
-      agents: this.agentNames.join(", "),
-      members: this.agentNames.join(", "), // Add this line
-    });
-
-    const result = await this.llm.invoke(formattedPrompt);
-    const content = result.content as string;
-    
-    if (content.toLowerCase().includes("finish")) {
-      return { nextAgents: [], isFinished: true };
-    }
-
-    const nextAgents = this.agentNames.filter(name => content.toLowerCase().includes(name.toLowerCase()));
-    return { nextAgents, isFinished: false };
-  }
-}
-
-
 export class CollaborativeProcessor {
-  private agents: Map<string, AgentExecutor> = new Map();
-  private supervisor: Supervisor;
+  private graph: Runnable | null = null;
   private handlerRegistry: HandlerRegistry;
+  private members: Member[];
+  private supervisorConfig: SupervisorConfig;
 
   constructor(
-    private members: Member[],
+    members: Member[],
     supervisorConfig: SupervisorConfig,
     customHandlers?: Record<string, any>
   ) {
-    this.supervisor = new Supervisor(supervisorConfig, members.map(m => m.name));
+    this.members = members;
+    this.supervisorConfig = supervisorConfig;
     this.handlerRegistry = new HandlerRegistry();
     if (customHandlers) {
       for (const [eventType, handler] of Object.entries(customHandlers)) {
@@ -116,73 +72,181 @@ export class CollaborativeProcessor {
   }
 
   async initialize(): Promise<void> {
-    await Promise.all(this.members.map(async member => {
-      const agent = await this.createAgent(member);
-      this.agents.set(member.name, agent);
-    }));
+    this.graph = await this.createGraph();
   }
 
-  private async createAgent(member: Member): Promise<AgentExecutor> {
-    const { provider, ...clientOptions } = member.llmConfig;
+  private async createGraph(): Promise<Runnable> {
+    const agentStateChannels: StateGraphArgs["channels"] = {
+      messages: {
+        value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),
+        default: () => [],
+      },
+      next: {
+        value: (x?: string, y?: string) => y ?? x ?? END,
+        default: () => END,
+      },
+    };
+
+    async function createAgent(
+      llmConfig: LLMConfig,
+      tools: any[],
+      systemPrompt: string
+    ): Promise<AgentExecutor> {
+      const { provider, ...clientOptions } = llmConfig;
+      const LLMClass = llmProviders[provider];
+      if (!LLMClass) {
+        throw new Error(`Unsupported LLM provider: ${provider}`);
+      }
+      const llm = new LLMClass(clientOptions);
+
+      const prompt = await ChatPromptTemplate.fromMessages([
+        ["system", systemPrompt],
+        new MessagesPlaceholder("messages"),
+        new MessagesPlaceholder("agent_scratchpad"),
+      ]);
+      const agent = await createOpenAIToolsAgent({ llm, tools, prompt });
+      return new AgentExecutor({ agent, tools });
+    }
+
+    const memberNames = this.members.map(member => member.name);
+
+    const systemPrompt = this.supervisorConfig.systemPrompt || supervisorPrompt;
+    const options = [END, ...memberNames];
+
+    const functionDef = {
+      name: "route",
+      description: "Select the next role.",
+      parameters: {
+        title: "routeSchema",
+        type: "object",
+        properties: {
+          next: {
+            title: "Next",
+            anyOf: [
+              { enum: options },
+            ],
+          },
+        },
+        required: ["next"],
+      },
+    };
+
+    const toolDef = {
+      type: "function",
+      function: functionDef,
+    } as const;
+
+    const prompt = ChatPromptTemplate.fromMessages([
+      ["system", systemPrompt],
+      new MessagesPlaceholder("messages"),
+      [
+        "system",
+        "Given the conversation above, who should act next?" +
+        " Or should we FINISH? Select one of: {options}",
+      ],
+    ]);
+  
+    const formattedPrompt = await prompt.partial({
+      options: options.join(", "),
+      members: memberNames.join(", "),
+    });
+
+    const { provider, ...clientOptions } = this.supervisorConfig.llmConfig;
     const LLMClass = llmProviders[provider];
     if (!LLMClass) {
-      throw new Error(`Unsupported LLM provider: ${provider}`);
+      throw new Error(`Unsupported LLM provider for supervisor: ${provider}`);
     }
     const llm = new LLMClass(clientOptions);
 
-    const prompt = await ChatPromptTemplate.fromMessages([
-      ["system", member.systemPrompt],
-      new MessagesPlaceholder("messages"),
-      new MessagesPlaceholder("agent_scratchpad"),
-    ]);
-    const agent = await createOpenAIToolsAgent({ llm, tools: member.tools, prompt });
-    return new AgentExecutor({ agent, tools: member.tools });
-  }
+    const supervisorChain = formattedPrompt
+      .pipe(llm.bindTools(
+        [toolDef],
+        {
+          tool_choice: { "type": "function", "function": { "name": "route" } },
+        },
+      ))
+      .pipe(new JsonOutputToolsParser())
+      .pipe((x) => (x[0].args));
 
-  async processParallel(inputs: { messages: BaseMessage[] }, config?: RunnableConfig): Promise<void> {
-    let currentState: State = { messages: inputs.messages, activeAgents: new Set<string>() };
 
-    while (true) {
-      const { nextAgents, isFinished } = await this.supervisor.decide(currentState);
-
-      if (isFinished) break;
-
-      const agentPromises = nextAgents.map(agentName => 
-        this.executeAgent(agentName, currentState.messages, config)
-      );
-
-      const results = await Promise.all(agentPromises);
-
-      currentState = this.updateState(currentState, results);
-
-      // Emit events for each agent result
-      results.forEach(result => {
-        this.handlerRegistry.getHandler('agentResponse')?.handle('agentResponse', {
-          agentName: result.agentName,
-          response: result.output
-        });
+      const workflow = new StateGraph({
+        channels: agentStateChannels,
       });
+    
+      // Dynamically create agents and add nodes for each member
+      for (const member of this.members) {
+        const agent = await createAgent(member.llmConfig, member.tools, member.systemPrompt);
+        const node = async (
+          state: AgentStateChannels,
+          config?: RunnableConfig,
+        ) => {
+          const agentPromise = agent.invoke(state, config);
+          
+          // Store the promise in the state
+          await this.graph?.updateState(config, {
+            [`${member.name}Promise`]: agentPromise,
+          });
+    
+          const result = await agentPromise;
+          return {
+            messages: [
+              new HumanMessage({ content: result.output, name: member.name }),
+            ],
+          };
+        };
+        workflow.addNode(member.name, node);
+        workflow.addEdge(member.name, "supervisor");
+      }
+    
+      const supervisorNode = async (
+        state: AgentStateChannels,
+        config?: RunnableConfig,
+      ) => {
+        // Get the current state
+        const currentState = await this.graph?.getState(config);
+    
+        // Wait for all member promises to resolve
+        const memberPromises = this.members.map(member => currentState[`${member.name}Promise`]);
+        await Promise.all(memberPromises);
+    
+        // Clear the promises for the next iteration
+        for (const member of this.members) {
+          await this.graph?.updateState(config, {
+            [`${member.name}Promise`]: undefined,
+          });
+        }
+    
+        const result = await supervisorChain.invoke(state, config);
+        return result;
+      };
+    
+      workflow.addNode("supervisor", supervisorNode);
+    
+      workflow.addConditionalEdges(
+        "supervisor",
+        (x: AgentStateChannels) => x.next,
+      );
+    
+      workflow.addEdge(START, "supervisor");
+    
+      const memory = new MemorySaver();
+      return workflow.compile({ checkpointer: memory });
     }
+    
 
-    // Emit event for process completion
-    this.handlerRegistry.getHandler('processComplete')?.handle('processComplete', {
-      finalMessages: currentState.messages
-    });
-  }
-
-  private async executeAgent(agentName: string, messages: BaseMessage[], config?: RunnableConfig): Promise<AgentResult> {
-    const agent = this.agents.get(agentName);
-    if (!agent) throw new Error(`Agent ${agentName} not found`);
-
-    const result = await agent.invoke({ messages }, config);
-    return { agentName, output: result.output };
-  }
-
-  private updateState(currentState: State, results: AgentResult[]): State {
-    const newMessages = results.map(r => new HumanMessage({ content: r.output, name: r.agentName }));
-    return {
-      messages: [...currentState.messages, ...newMessages],
-      activeAgents: new Set(results.map(r => r.agentName))
-    };
+  async processStream(
+    inputs: { messages: BaseMessage[] },
+    config: Partial<RunnableConfig> & { version: "v1" | "v2" },
+  ) {
+    if (!this.graph) {
+      throw new Error("CollaborativeProcessor not initialized. Call initialize() first.");
+    }
+    const stream = this.graph.streamEvents(inputs, config);
+    for await (const event of stream) {
+      const handler = this.handlerRegistry.getHandler(event.event);
+      if (handler) {
+        handler.handle(event.event, event.data);
+      }
+    }
   }
 }
