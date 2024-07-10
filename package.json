@@ -7,6 +7,7 @@
     "build:dev": "rollup -c",
     "start": "node dist/main.js",
     "clean": "node ./config/clean.js",
+    "start:collab": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main_collab.ts",
     "start:dev": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main.ts",
     "start:s": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_new.ts",
     "test": "jest",
