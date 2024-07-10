@@ -38,7 +38,7 @@ async function testCollaborativeStreaming() {
     [GraphEvents.TOOL_END]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.log("Tool End:", event);
-        // console.dir(data, { depth: null });
+        console.dir(data, { depth: null });
       }
     },
   };
@@ -50,7 +50,7 @@ async function testCollaborativeStreaming() {
       tools: [tavilyTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0,
       },
     },
@@ -60,7 +60,7 @@ async function testCollaborativeStreaming() {
       tools: [chartTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0.2,
       },
     },
@@ -70,7 +70,7 @@ async function testCollaborativeStreaming() {
     systemPrompt: supervisorPrompt,
     llmConfig: {
       provider: Providers.OPENAI,
-      modelName: "gpt-4",
+      modelName: "gpt-4o",
       temperature: 0,
     },
   };
