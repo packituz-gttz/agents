@@ -21,12 +21,12 @@ export function setupLogging(logFileName: string): void {
   };
 
   process.stdout.write = function(chunk: string | Uint8Array, encoding?: BufferEncoding, callback?: (error: Error | null | undefined) => void): boolean {
-    logFile.write(chunk, encoding);
+    logFile.write(chunk, encoding as BufferEncoding);
     return originalStdoutWrite.apply(process.stdout, [chunk, encoding, callback]);
   } as any;
 
   process.stderr.write = function(chunk: string | Uint8Array, encoding?: BufferEncoding, callback?: (error: Error | null | undefined) => void): boolean {
-    logFile.write(chunk, encoding);
+    logFile.write(chunk, encoding as BufferEncoding);
     return originalStderrWrite.apply(process.stderr, [chunk, encoding, callback]);
   } as any;
 }
