@@ -168,6 +168,7 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
       config?: RunnableConfig,
     ) => {
       const result = await this.supervisorChain?.invoke(state, config) as { tasks: Task[], end: boolean };
+      
       return {
         tasks: result.tasks,
         currentTurn: state.currentTurn + 1,
@@ -211,7 +212,7 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
       new MessagesPlaceholder("messages"),
       [
         "human",
-        "Based on the conversation above, assign tasks to team members. You can assign up to 10 tasks. Include the tool to use if applicable. Decide if this should be the final turn.",
+        "Based on the conversation above, assign tasks to team members. You can assign up to 5 tasks. Include the tool to use if applicable. Decide if this should be the final turn by setting 'end' to true if the original task is accomplished.",
       ],
     ]);
 
