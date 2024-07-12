@@ -1,40 +1,51 @@
 // src/processor.ts
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatBedrockConverse } from "@langchain/aws";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatMistralAI } from "@langchain/mistralai";
-import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { ChatVertexAI } from "@langchain/google-vertexai";
-import { RunnableConfig } from "@langchain/core/runnables";
-import { END, START, StateGraph, MemorySaver } from "@langchain/langgraph";
-import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, HumanMessage } from "@langchain/core/messages";
-import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
+
+import { RunnableConfig, Runnable } from "@langchain/core/runnables";
 import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
+import { StandardGraph } from './graphs/Graph';
+import { CollabGraph } from './graphs/CollabGraph'; // Import CollabGraph
 import { HandlerRegistry } from '@/stream';
-import { getConverseOverrideMessage } from '@/messages';
-import { GraphEvents, Providers } from '@/common';
-// import { createVertexAgent } from '@/agents';
+import { Providers } from '@/common';
+import { BaseMessage } from "@langchain/core/messages";
 
-const llmProviders: Record<Providers, t.ChatModelConstructor> = {
-  [Providers.OPENAI]: ChatOpenAI,
-  [Providers.VERTEXAI]: ChatVertexAI,
-  [Providers.BEDROCK]: BedrockChat,
-  [Providers.MISTRALAI]: ChatMistralAI,
-  [Providers.AWS]: ChatBedrockConverse,
-  [Providers.ANTHROPIC]: ChatAnthropic,
+type StandardGraphConfig = {
+  type: 'standard';
+  tools?: StructuredTool[];
+  llmConfig: t.LLMConfig;
 };
 
-export class Processor {
-  private graph: t.Graph;
+export interface AgentStateChannels {
+  messages: BaseMessage[];
+  next: string;
+  [key: string]: any;
+}
+
+export interface Member {
+  name: string;
+  systemPrompt: string;
+  tools: any[];
+  llmConfig: t.LLMConfig;
+}
+
+type CollaborativeGraphConfig = {
+  type: 'collaborative';
+  members: Member[];
+  supervisorConfig: { systemPrompt?: string; llmConfig: t.LLMConfig };
+};
+
+type ProcessorConfig = {
+  graphConfig: StandardGraphConfig | CollaborativeGraphConfig;
+  customHandlers?: Record<string, t.EventHandler>;
+};
+
+export class Processor<T extends t.IState | AgentStateChannels> {
+  graph?: t.CompiledWorkflow<T, Partial<T>, string> | t.CompiledWorkflow<AgentStateChannels, Partial<AgentStateChannels>, string>;
+  private collab!: CollabGraph;
   private handlerRegistry: HandlerRegistry;
   provider: Providers;
 
-  constructor(config: {
-    tools?: StructuredTool[];
-    customHandlers?: Record<string, t.EventHandler>;
-    llmConfig: t.LLMConfig;
-  }) {
+  private constructor(config: ProcessorConfig) {
     this.handlerRegistry = new HandlerRegistry();
 
     if (config.customHandlers) {
@@ -43,103 +54,53 @@ export class Processor {
       }
     }
 
-    this.provider = config.llmConfig.provider;
-    this.graph = this.createGraph(config.llmConfig, config.tools);
+    if (config.graphConfig.type === 'standard') {
+      this.provider = config.graphConfig.llmConfig.provider;
+      const standardGraph = new StandardGraph();
+      this.graph = this.createStandardGraph(standardGraph, config.graphConfig) as any;
+    } else {
+      this.provider = config.graphConfig.supervisorConfig.llmConfig.provider;
+      this.collab = new CollabGraph( // Initialize CollabGraph
+        config.graphConfig.members,
+        config.graphConfig.supervisorConfig
+      );
+    }
   }
 
-  private createGraph(llmConfig: t.LLMConfig, tools: StructuredTool[] = []): t.Graph {
+  private createStandardGraph(standardGraph: StandardGraph, config: StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
+    const { llmConfig, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
-    const graphState: t.GraphState = {
-      messages: {
-        value: (x: BaseMessage[], y: BaseMessage[]) => 
-          // provider === Providers.AWS 
-          //   ? this.handleAWSMessages(x, y) : 
-            x.concat(y),
-        default: () => [],
-      },
-    };
-
-    const toolNode = new ToolNode<{ messages: BaseMessage[] }>(tools);
-
-    const ChatModelClass = this.getChatModelClass(provider);
-    const model = new ChatModelClass(clientOptions as Record<string, unknown>);
-    const boundModel = model.bindTools(tools);
-
-    const routeMessage = (state: t.IState) => {
-      const { messages } = state;
-      const lastMessage = messages[messages.length - 1] as AIMessage;
-      if (!lastMessage?.tool_calls?.length) {
-        return END;
-      }
-      return "tools";
-    };
-
-    const callModel = async (
-      state: t.IState,
-      config?: RunnableConfig,
-    ) => {
-      const { messages } = state;
-      const responseMessage = await boundModel.invoke(messages, config);
-      return { messages: [responseMessage] };
-    };
-
-    // const memory = new MemorySaver();
-    const workflow: t.Workflow = new StateGraph<t.IState>({
-      channels: graphState,
-    })
-      .addNode("agent", callModel)
-      .addNode("tools", toolNode)
-      .addEdge(START, "agent")
-      .addConditionalEdges("agent", routeMessage)
-      .addEdge("tools", "agent");
-
-    return workflow.compile();
+    const graphState = standardGraph.createGraphState();
+    const toolNode = standardGraph.initializeTools(tools);
+    const boundModel = standardGraph.initializeModel(provider, clientOptions, tools);
+    const callModel = standardGraph.createCallModel(boundModel);
+    return standardGraph.createWorkflow(graphState, callModel, toolNode);
   }
 
-  private getChatModelClass(provider: Providers): t.ChatModelConstructor {
-    const ChatModelClass = llmProviders[provider];
-    if (!ChatModelClass) {
-      throw new Error(`Unsupported LLM provider: ${provider}`);
+  static async create<T extends t.IState | AgentStateChannels = t.IState>(config: ProcessorConfig): Promise<Processor<T>> {
+    const processor = new Processor<T>(config);
+    if (config.graphConfig.type === 'collaborative') {
+      await processor.collab.initialize(); // Initialize the CollabGraph
+      const graphState = processor.collab.createGraphState(); // Create graph state
+      processor.graph = processor.collab.createWorkflow(graphState); // Compile and assign the workflow
     }
-
-    return ChatModelClass;
+    return processor;
   }
 
-  async processStream<RunInput>(
-    inputs: RunInput,
+  async processStream(
+    inputs: { messages: BaseMessage[] },
     config: Partial<RunnableConfig> & { version: "v1" | "v2" },
   ) {
+    if (!this.graph) {
+      throw new Error("Processor not initialized. Make sure to use Processor.create() to instantiate the Processor.");
+    }
     const stream = this.graph.streamEvents(inputs, config);
     for await (const event of stream) {
-      // console.log(event.event);
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);
       }
     }
-  }
-
-  private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
-    const [lastMessageX, secondLastMessageX] = x.slice(0, -2);
-    const lastMessageY = y[y.length - 1];
-  
-    if (
-      lastMessageX instanceof AIMessageChunk &&
-      lastMessageY instanceof ToolMessage &&
-      Array.isArray(secondLastMessageX) &&
-      secondLastMessageX[0] === 'user'
-    ) {
-      const overrideMessage = getConverseOverrideMessage({
-        userMessage: secondLastMessageX,
-        lastMessageX,
-        lastMessageY,
-      });
-  
-      const initialMessages = x.slice(0, -4);
-      return [...initialMessages, overrideMessage];
-    }
-  
-    return x.concat(y);
   }
 }

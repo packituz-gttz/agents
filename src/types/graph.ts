@@ -1,21 +1,24 @@
 // src/types/graph.ts
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
+import type { RunnableConfig } from "@langchain/core/runnables";
 
 export interface IState {
   messages: BaseMessage[];
 }
+
 export interface EventHandler {
   handle(event: string, data: StreamEventData): void;
 }
 
 export type GraphState = StateGraphArgs<IState>["channels"];
 
-export type Workflow = StateGraph<IState, Partial<IState>, "__start__" | "agent" | "tools">;
+export type Workflow<T extends IState = IState, U extends Partial<T> = Partial<T>, N extends string = string> = StateGraph<T, U, N>;
 
-export type Graph = CompiledStateGraph<IState, Partial<IState>, "__start__" | "agent" | "tools">
+export type CompiledWorkflow<T extends IState = IState, U extends Partial<T> = Partial<T>, N extends string = string> = CompiledStateGraph<T, U, N>;
 
-export type EventStreamCallbackHandlerInput = Parameters<Graph['streamEvents']>[2] extends Omit<infer T, "autoClose"> ? T : never;
+export type EventStreamCallbackHandlerInput = Parameters<CompiledWorkflow['streamEvents']>[2] extends Omit<infer T, "autoClose"> ? T : never;
+
 
 /**
  * Data associated with a StreamEvent.

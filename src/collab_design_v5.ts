@@ -17,6 +17,7 @@ import { ChatMistralAI } from "@langchain/mistralai";
 import { ChatVertexAI } from "@langchain/google-vertexai";
 import { BedrockChat } from "@langchain/community/chat_models/bedrock/web";
 import { supervisorPrompt } from "@/prompts/collab";
+import type * as t from '@/types';
 import { Providers } from '@/common';
 
 interface AgentStateChannels {
@@ -51,7 +52,7 @@ const llmProviders: Record<Providers, any> = {
 };
 
 export class CollaborativeProcessor {
-  private graph: Runnable | null = null;
+  graph: t.CompiledWorkflow | null = null;
   private handlerRegistry: HandlerRegistry;
   private members: Member[];
   private supervisorConfig: SupervisorConfig;
@@ -75,7 +76,7 @@ export class CollaborativeProcessor {
     this.graph = await this.createGraph();
   }
 
-  private async createGraph(): Promise<Runnable> {
+  private async createGraph(): Promise<t.CompiledWorkflow> {
     const agentStateChannels: StateGraphArgs["channels"] = {
       messages: {
         value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),

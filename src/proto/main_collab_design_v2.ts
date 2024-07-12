@@ -6,7 +6,7 @@ import {
   ChatModelStreamHandler,
   DefaultLLMStreamHandler,
 } from '@/stream';
-import { CollaborativeProcessor, Member } from '@/collab_design_v2';
+import { CollaborativeProcessor, Member } from '@/collab_design_v5';
 import { tavilyTool, chartTool } from "@/tools/example";
 import { GraphEvents, Providers } from '@/common';
 
@@ -49,7 +49,7 @@ async function testCollaborativeStreaming() {
       tools: [tavilyTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0,
       },
     },
@@ -59,13 +59,19 @@ async function testCollaborativeStreaming() {
       tools: [chartTool],
       llmConfig: {
         provider: Providers.OPENAI,
-        modelName: "gpt-4",
+        modelName: "gpt-4o",
         temperature: 0.2,
       },
     },
   ];
 
-  const collaborativeProcessor = new CollaborativeProcessor(members, customHandlers);
+  const collaborativeProcessor = new CollaborativeProcessor(members, {
+    llmConfig: {
+      provider: Providers.OPENAI,
+      modelName: "gpt-4o",
+      temperature: 0.5,
+    },
+  }, customHandlers);
   await collaborativeProcessor.initialize();
 
   const config = { 

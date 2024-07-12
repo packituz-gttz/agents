@@ -1,6 +1,8 @@
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from "zod";
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const chartTool = new DynamicStructuredTool({
   name: "generate_bar_chart",

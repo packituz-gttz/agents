@@ -1,4 +1,4 @@
-// ./src/types/llm
+// src/types/llm.ts
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatMistralAI } from "@langchain/mistralai";
@@ -35,10 +35,4 @@ export type LLMConfig = {
 
 export type ChatModelInstance = ChatOpenAI | ChatAnthropic | ChatMistralAI | ChatVertexAI | BedrockChat | ChatBedrockConverse;
 
-export type ChatModelConstructor = 
-  | (new (config: OpenAIClientOptions) => ChatOpenAI)
-  | (new (config: AnthropicClientOptions) => ChatAnthropic)
-  | (new (config: MistralAIClientOptions) => ChatMistralAI)
-  | (new (config: VertexAIClientOptions) => ChatVertexAI)
-  | (new (config: BedrockClientOptions) => BedrockChat)
-  | (new (config: BedrockConverseClientOptions) => ChatBedrockConverse);
+export type ChatModelConstructor = new (config: any) => ChatModelInstance;

@@ -1,5 +1,5 @@
 // src/messages.ts
-import { AIMessageChunk, BaseMessage, HumanMessage, ToolMessage } from "@langchain/core/messages";
+import { AIMessageChunk, HumanMessage, ToolMessage } from "@langchain/core/messages";
 
 export const getConverseOverrideMessage = ({
   userMessage,
