@@ -9,6 +9,7 @@
     "clean": "node ./config/clean.js",
     "start:standard": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/script_standard.ts",
     "start:cg": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/script_collab.ts",
+    "start:tasks": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/script_tasks.ts",
     "start:collab": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main_collab.ts",
     "start:collab2": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main_collab_design_v2.ts",
     "start:collab4": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/main_collab_design_v4.ts",
