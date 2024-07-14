@@ -1,10 +1,18 @@
 // src/types/graph.ts
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from "@langchain/langgraph";
 import type { BaseMessage } from "@langchain/core/messages";
-import type { RunnableConfig } from "@langchain/core/runnables";
+
+export type ToolNodeState = {
+  messages: BaseMessage[];
+  [key: string]: any;
+};
 
 export interface IState {
   messages: BaseMessage[];
+  
+    instructions?: string;
+  
+    additional_instructions?: string;
 }
 
 export interface EventHandler {

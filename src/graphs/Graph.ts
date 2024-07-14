@@ -1,4 +1,5 @@
 // src/graphs/Graph.ts
+
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import type { StructuredTool } from "@langchain/core/tools";
@@ -9,13 +10,8 @@ import { getConverseOverrideMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { Providers } from '@/common';
 
-type ToolNodeState = {
-  messages: BaseMessage[];
-  [key: string]: any;
-};
-
 export abstract class Graph<
-  T extends ToolNodeState = { messages: BaseMessage[] },
+  T extends t.ToolNodeState = { messages: BaseMessage[] },
   TNodeName extends string = string
 > {
   abstract createGraphState(): t.GraphState;
@@ -39,6 +35,14 @@ export class StandardGraph extends Graph<
         value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
         default: () => [],
       },
+      instructions: {
+        value: (x: string | undefined, y: string | undefined) => y || x,
+        default: () => undefined,
+      },
+      additional_instructions: {
+        value: (x: string | undefined, y: string | undefined) => y || x,
+        default: () => undefined,
+      },
     };
   }
 
@@ -54,8 +58,15 @@ export class StandardGraph extends Graph<
 
   createCallModel(boundModel: any) {
     return async (state: t.IState, config?: RunnableConfig) => {
-      const { messages } = state;
-      const responseMessage = await boundModel.invoke(messages, config);
+      const { messages, instructions, additional_instructions } = state;
+      let finalInstructions = instructions;
+      if (additional_instructions) {
+        finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
+      }
+      const responseMessage = await boundModel.invoke(messages, {
+        ...config,
+        ...(finalInstructions && { overrideInstructions: finalInstructions }),
+      });
       return { messages: [responseMessage] };
     };
   }

@@ -1,59 +1,21 @@
 // src/processor.ts
-
-import { RunnableConfig } from "@langchain/core/runnables";
-import type { StructuredTool } from "@langchain/core/tools";
-import type * as t from '@/types';
-import { StandardGraph } from './graphs/Graph';
-import { CollabGraph } from './graphs/CollabGraph';
-import { TaskManager, TaskManagerStateChannels } from './graphs/TaskManager'; // Import TaskManager
-import { HandlerRegistry } from '@/stream';
-import { Providers } from '@/common';
 import { BaseMessage } from "@langchain/core/messages";
+import type { RunnableConfig } from "@langchain/core/runnables";
+import type { Providers } from '@/common';
+import type * as t from '@/types';
+import { TaskManager, TaskManagerStateChannels } from './graphs/TaskManager';
+import { CollabGraph } from './graphs/CollabGraph';
+import { StandardGraph } from './graphs/Graph';
+import { HandlerRegistry } from '@/stream';
 
-type StandardGraphConfig = {
-  type: 'standard';
-  tools?: StructuredTool[];
-  llmConfig: t.LLMConfig;
-};
-
-export interface AgentStateChannels {
-  messages: BaseMessage[];
-  next: string;
-  [key: string]: any;
-}
-
-export interface Member {
-  name: string;
-  systemPrompt: string;
-  tools: any[];
-  llmConfig: t.LLMConfig;
-}
-
-type CollaborativeGraphConfig = {
-  type: 'collaborative';
-  members: Member[];
-  supervisorConfig: { systemPrompt?: string; llmConfig: t.LLMConfig };
-};
-
-type TaskManagerGraphConfig = {
-  type: 'taskmanager';
-  members: Member[];
-  supervisorConfig: { systemPrompt?: string; llmConfig: t.LLMConfig };
-};
-
-type ProcessorConfig = {
-  graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
-  customHandlers?: Record<string, t.EventHandler>;
-};
-
-export class Processor<T extends t.IState | AgentStateChannels | TaskManagerStateChannels> {
+export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels> {
   graph?: t.CompiledWorkflow<T, Partial<T>, string>;
   private collab!: CollabGraph;
   private taskManager!: TaskManager;
   private handlerRegistry: HandlerRegistry;
   provider: Providers | undefined;
 
-  private constructor(config: ProcessorConfig) {
+  private constructor(config: t.ProcessorConfig) {
     this.handlerRegistry = new HandlerRegistry();
 
     if (config.customHandlers) {
@@ -81,7 +43,7 @@ export class Processor<T extends t.IState | AgentStateChannels | TaskManagerStat
     }
   }
 
-  private createStandardGraph(standardGraph: StandardGraph, config: StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
+  private createStandardGraph(standardGraph: StandardGraph, config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
     const { llmConfig, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
@@ -92,7 +54,7 @@ export class Processor<T extends t.IState | AgentStateChannels | TaskManagerStat
     return standardGraph.createWorkflow(graphState, callModel, toolNode);
   }
 
-  static async create<T extends t.IState | AgentStateChannels | TaskManagerStateChannels = t.IState>(config: ProcessorConfig): Promise<Processor<T>> {
+  static async create<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels = t.IState>(config: t.ProcessorConfig): Promise<Processor<T>> {
     const processor = new Processor<T>(config);
     if (config.graphConfig.type === 'collaborative') {
       await processor.collab.initialize();
@@ -107,7 +69,11 @@ export class Processor<T extends t.IState | AgentStateChannels | TaskManagerStat
   }
 
   async processStream(
-    inputs: { messages: BaseMessage[] },
+    inputs: { 
+      messages: BaseMessage[]; 
+      instructions?: string; 
+      additional_instructions?: string;
+    },
     config: Partial<RunnableConfig> & { version: "v1" | "v2" },
   ) {
     if (!this.graph) {
