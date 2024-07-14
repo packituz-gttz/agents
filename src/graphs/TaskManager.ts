@@ -1,16 +1,24 @@
 // src/graphs/TaskManager.ts
-import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
-import { END, StateGraphArgs, START, StateGraph, MemorySaver } from "@langchain/langgraph";
-import { AgentExecutor, createOpenAIToolsAgent } from "langchain/agents";
-import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
-import type { StructuredTool } from "@langchain/core/tools";
-import { Runnable, RunnableConfig } from "@langchain/core/runnables";
 import { JsonOutputToolsParser } from "langchain/output_parsers";
-import { Providers } from '@/common';
-import { getChatModelClass } from '@/llm/providers';
-import { Graph } from './Graph';
+import { AgentExecutor, createOpenAIToolsAgent } from "langchain/agents";
+import { BaseMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { END, START, StateGraph, MemorySaver } from "@langchain/langgraph";
+import type { Runnable, RunnableConfig } from "@langchain/core/runnables";
+import type { ToolNode } from "@langchain/langgraph/prebuilt";
+import type { StructuredTool } from "@langchain/core/tools";
+import type { StateGraphArgs } from "@langchain/langgraph";
 import type * as t from '@/types';
-import { taskManagerPrompt, taskManagerFunctionDescription, taskManagerFunctionParameters } from "@/prompts/taskmanager";
+import {
+  taskManagerPrompt,
+  endProcessFunctionParameters,
+  endProcessFunctionDescription,
+  assignTasksFunctionParameters,
+  assignTasksFunctionDescription,
+} from "@/prompts/taskmanager";
+import { getChatModelClass } from '@/llm/providers';
+import { Providers } from '@/common';
+import { Graph } from './Graph';
 
 export interface TaskManagerStateChannels {
   messages: BaseMessage[];
@@ -38,6 +46,15 @@ interface SupervisorConfig {
 }
 
 export class TaskManager extends Graph<TaskManagerStateChannels, string> {
+  initializeTools(tools: StructuredTool[]): ToolNode<TaskManagerStateChannels> {
+    throw new Error("Method not implemented.");
+  }
+  initializeModel(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[]) {
+    throw new Error("Method not implemented.");
+  }
+  createCallModel(boundModel: any): (state: TaskManagerStateChannels, config?: RunnableConfig) => Promise<Partial<TaskManagerStateChannels>> {
+    throw new Error("Method not implemented.");
+  }
   private graph: t.CompiledWorkflow<TaskManagerStateChannels, Partial<TaskManagerStateChannels>, string> | null = null;
   private members: TaskMember[];
   private supervisorConfig: SupervisorConfig;
@@ -114,10 +131,11 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
       state: TaskManagerStateChannels,
       config?: RunnableConfig,
     ) => {
-      const result = await this.supervisorChain?.invoke(state, config) as { action: string, tasks?: Task[] };
+      const result = await this.supervisorChain?.invoke(state, config) as { tasks?: Task[], reason?: string };
       console.log("Supervisor Node Output:", result);
 
-      if (result.action === "end") {
+      if (result && result.reason) {
+        console.log("Process ending. Reason:", result.reason);
         return { next: END };
       }
 
@@ -179,16 +197,22 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
   }
 
   private async createSupervisorChain(systemPrompt: string, memberNames: string[]): Promise<Runnable> {
-    const functionDef = {
+    const assignTasksDef = {
       name: "assign_tasks",
-      description: taskManagerFunctionDescription,
-      parameters: taskManagerFunctionParameters,
+      description: assignTasksFunctionDescription,
+      parameters: assignTasksFunctionParameters,
     };
 
-    const toolDef = {
-      type: "function",
-      function: functionDef,
-    } as const;
+    const endProcessDef = {
+      name: "end_process",
+      description: endProcessFunctionDescription,
+      parameters: endProcessFunctionParameters,
+    };
+
+    const toolDefs = [
+      { type: "function", function: assignTasksDef },
+      { type: "function", function: endProcessDef },
+    ];
 
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", systemPrompt],
@@ -196,7 +220,7 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
       new MessagesPlaceholder("completedTasks"),
       [
         "human",
-        "Based on the conversation above and the completed tasks, specify 'tasks' to assign new tasks or 'end' if the user's request is fulfilled. Assign only the most essential tasks to minimize the number of turns. Do not repeat tasks that have already been completed.",
+        "Based on the conversation above and the completed tasks, either assign new tasks using the 'assign_tasks' function or end the process using the 'end_process' function if the user's request is fulfilled. Assign only the most essential tasks to minimize the number of turns. Do not repeat tasks that have already been completed.",
       ],
     ]);
 
@@ -212,7 +236,7 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
     const llm = new LLMClass(clientOptions);
 
     return formattedPrompt
-      .pipe(llm.bindTools([toolDef]))
+      .pipe(llm.bindTools(toolDefs))
       .pipe(new JsonOutputToolsParser())
       .pipe((x: any) => x[0].args);
   }

@@ -1,5 +1,3 @@
-// src/prompts/taskmanager.ts
-
 export const taskManagerPrompt = `You are a Task Manager responsible for efficiently coordinating a team of specialized workers: {members}. Your PRIMARY and SOLE OBJECTIVE is to fulfill the user's specific request as quickly and effectively as possible.
 
 CRITICAL GUIDELINES:
@@ -30,16 +28,11 @@ After each round:
 
 REMEMBER: Your success is measured by how quickly and effectively you fulfill the user's request, not by the number of tasks assigned or turns taken. Excessive deliberation or unnecessary tasks are counterproductive. Focus solely on the user's needs and conclude the process as soon as those needs are met.`;
 
-export const taskManagerFunctionDescription = `Assign the minimum necessary tasks to team members to fulfill the user's request as quickly as possible. Assign up to 5 tasks maximum per turn, only if absolutely necessary. Each task must specify the team member, a concise description, and the tool to use if applicable. Set 'end' to true and assign no tasks when the user's request has been fulfilled.`;
+export const assignTasksFunctionDescription = `Assign the minimum necessary tasks to team members to fulfill the user's request as quickly as possible. Assign up to 5 tasks maximum per turn, only if absolutely necessary. Each task must specify the team member, a concise description, and the tool to use if applicable.`;
 
-export const taskManagerFunctionParameters = {
+export const assignTasksFunctionParameters = {
   type: "object",
   properties: {
-    action: {
-      type: "string",
-      description: "Specifies the next action: 'tasks' to assign further tasks or 'end' to conclude the process. Required.",
-      enum: ["tasks", "end"],
-    },
     tasks: {
       type: "array",
       items: {
@@ -51,8 +44,18 @@ export const taskManagerFunctionParameters = {
         },
         required: ["member", "description"],
       },
-      description: "List of essential tasks to be assigned, maximum 5 tasks per turn. Required if action is 'tasks'.",
+      description: "List of essential tasks to be assigned, maximum 5 tasks per turn.",
     },
   },
-  required: ["action"],
+  required: ["tasks"],
+};
+
+export const endProcessFunctionDescription = `End the process when the user's request has been fulfilled.`;
+
+export const endProcessFunctionParameters = {
+  type: "object",
+  properties: {
+    reason: { type: "string", description: "Brief explanation of why the process is ending" },
+  },
+  required: ["reason"],
 };
