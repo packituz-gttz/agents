@@ -35,6 +35,11 @@ export const taskManagerFunctionDescription = `Assign the minimum necessary task
 export const taskManagerFunctionParameters = {
   type: "object",
   properties: {
+    action: {
+      type: "string",
+      description: "Specifies the next action: 'tasks' to assign further tasks or 'end' to conclude the process. Required.",
+      enum: ["tasks", "end"],
+    },
     tasks: {
       type: "array",
       items: {
@@ -46,12 +51,8 @@ export const taskManagerFunctionParameters = {
         },
         required: ["member", "description"],
       },
-      description: "List of essential tasks to be assigned, maximum 5 tasks per turn",
-    },
-    end: { 
-      type: "boolean", 
-      description: "Set to true when the user's request has been fulfilled and no more tasks are needed, otherwise false" 
+      description: "List of essential tasks to be assigned, maximum 5 tasks per turn. Required if action is 'tasks'.",
     },
   },
-  required: ["tasks", "end"],
+  required: ["action"],
 };

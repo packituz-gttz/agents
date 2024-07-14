@@ -15,7 +15,7 @@ import { taskManagerPrompt, taskManagerFunctionDescription, taskManagerFunctionP
 export interface TaskManagerStateChannels {
   messages: BaseMessage[];
   tasks: Task[];
-  currentTurn: number;
+  completedTasks: string[];
   next: string;
 }
 
@@ -65,34 +65,14 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
         value: (x?: Task[], y?: Task[]) => y ?? x ?? [],
         default: () => [],
       },
-      currentTurn: {
-        value: (x?: number, y?: number) => y ?? x ?? 0,
-        default: () => 0,
+      completedTasks: {
+        value: (x?: string[], y?: string[]) => [...new Set([...(x ?? []), ...(y ?? [])])],
+        default: () => [],
       },
       next: {
-        value: (x?: string, y?: string) => y ?? x ?? "supervisor",
-        default: () => "supervisor",
+        value: (x?: string, y?: string) => y ?? x ?? END,
+        default: () => END,
       },
-    };
-  }
-
-  initializeTools(tools: StructuredTool[]): any {
-    // This method is not used in the task manager graph
-    return null;
-  }
-
-  initializeModel(provider: Providers, clientOptions: Record<string, unknown>, tools: any[]) {
-    const LLMClass = getChatModelClass(provider);
-    if (!LLMClass) {
-      throw new Error(`Unsupported LLM provider: ${provider}`);
-    }
-    return new LLMClass(clientOptions);
-  }
-
-  createCallModel(boundModel: any) {
-    // This method is not directly used in the task manager graph
-    return async (state: TaskManagerStateChannels, config?: RunnableConfig) => {
-      return { messages: [] };
     };
   }
 
@@ -121,7 +101,6 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
   createWorkflow(
     graphState: StateGraphArgs<TaskManagerStateChannels>['channels'],
     callModel?: any,
-    toolNode?: any
   ): t.CompiledWorkflow<TaskManagerStateChannels, Partial<TaskManagerStateChannels>, string> {
     if (!this.supervisorChain) {
       throw new Error("TaskManager not initialized. Call initialize() first.");
@@ -131,12 +110,33 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
       channels: graphState,
     });
 
-    const membersNode = async (
+    const supervisorNode = async (
+      state: TaskManagerStateChannels,
+      config?: RunnableConfig,
+    ) => {
+      const result = await this.supervisorChain?.invoke(state, config) as { action: string, tasks?: Task[] };
+      console.log("Supervisor Node Output:", result);
+
+      if (result.action === "end") {
+        return { next: END };
+      }
+
+      const newTasks = (result.tasks || []).filter(task => 
+        !state.completedTasks.includes(`${task.member}:${task.description}`)
+      );
+
+      return {
+        tasks: newTasks,
+        next: newTasks.length > 0 ? "execute_tasks" : END,
+      };
+    };
+
+    const executeTasksNode = async (
       state: TaskManagerStateChannels,
       config?: RunnableConfig,
     ) => {
       const results: BaseMessage[] = [];
-      const memberPromises: Promise<any>[] = [];
+      const completedTasks: string[] = [];
 
       for (const task of state.tasks) {
         const member = this.members.find(m => m.name === task.member);
@@ -146,49 +146,32 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
 
         const agent = await this.createAgent(member.llmConfig, member.tools, member.systemPrompt);
         const taskMessage = new HumanMessage(`Task: ${task.description}${task.tool ? ` Use the ${task.tool} tool.` : ''}`);
-        const agentPromise = agent.invoke({
+        const result = await agent.invoke({
           input: taskMessage.content,
           chat_history: state.messages,
         }, config);
-        memberPromises.push(agentPromise);
+
+        results.push(new AIMessage({ content: result.output, name: task.member }));
+        completedTasks.push(`${task.member}:${task.description}`);
       }
 
-      const memberResults = await Promise.all(memberPromises);
-      for (let i = 0; i < memberResults.length; i++) {
-        results.push(new AIMessage({ content: memberResults[i].output, name: state.tasks[i].member }));
-      }
-
-      return { messages: state.messages.concat(results), next: "supervisor" };
-    };
-
-    workflow.addNode("members", membersNode);
-
-    const supervisorNode = async (
-      state: TaskManagerStateChannels,
-      config?: RunnableConfig,
-    ) => {
-      const result = await this.supervisorChain?.invoke(state, config) as { tasks: Task[], end: boolean };
-      
       return {
-        tasks: result.tasks,
-        currentTurn: state.currentTurn + 1,
-        next: result.end ? END : "members",
+        messages: state.messages.concat(results),
+        completedTasks: state.completedTasks.concat(completedTasks),
+        tasks: [],
+        next: "supervisor",
       };
     };
 
     workflow.addNode("supervisor", supervisorNode);
+    workflow.addNode("execute_tasks", executeTasksNode);
 
+    workflow.addEdge(START, "supervisor");
     workflow.addConditionalEdges(
       "supervisor",
       (x: TaskManagerStateChannels) => x.next,
     );
-
-    workflow.addConditionalEdges(
-      "members",
-      (x: TaskManagerStateChannels) => x.next,
-    );
-
-    workflow.addEdge(START, "supervisor");
+    workflow.addEdge("execute_tasks", "supervisor");
 
     const memory = new MemorySaver();
     this.graph = workflow.compile({ checkpointer: memory });
@@ -210,9 +193,10 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
     const prompt = ChatPromptTemplate.fromMessages([
       ["system", systemPrompt],
       new MessagesPlaceholder("messages"),
+      new MessagesPlaceholder("completedTasks"),
       [
         "human",
-        "Based on the conversation above, assign tasks to team members. You can assign up to 5 tasks. Include the tool to use if applicable. Decide if this should be the final turn by setting 'end' to true if the original task is accomplished.",
+        "Based on the conversation above and the completed tasks, specify 'tasks' to assign new tasks or 'end' if the user's request is fulfilled. Assign only the most essential tasks to minimize the number of turns. Do not repeat tasks that have already been completed.",
       ],
     ]);
 
@@ -228,12 +212,7 @@ export class TaskManager extends Graph<TaskManagerStateChannels, string> {
     const llm = new LLMClass(clientOptions);
 
     return formattedPrompt
-      .pipe(llm.bindTools(
-        [toolDef],
-        {
-          tool_choice: { type: "function", function: { name: "assign_tasks" } } as any,
-        },
-      ))
+      .pipe(llm.bindTools([toolDef]))
       .pipe(new JsonOutputToolsParser())
       .pipe((x: any) => x[0].args);
   }
