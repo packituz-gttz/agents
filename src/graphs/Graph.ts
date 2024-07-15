@@ -4,8 +4,10 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { RunnableConfig } from "@langchain/core/runnables";
 import type { StructuredTool } from "@langchain/core/tools";
 import { END, START, StateGraph } from "@langchain/langgraph";
-import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage } from "@langchain/core/messages";
+import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage } from "@langchain/core/messages";
 import type * as t from '@/types';
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { JsonOutputToolsParser } from "langchain/output_parsers";
 import { getConverseOverrideMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { Providers } from '@/common';
@@ -63,10 +65,12 @@ export class StandardGraph extends Graph<
       if (additional_instructions) {
         finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
       }
-      const responseMessage = await boundModel.invoke(messages, {
-        ...config,
-        ...(finalInstructions && { overrideInstructions: finalInstructions }),
-      });
+
+      if (finalInstructions && messages[0]?.content !== finalInstructions) {
+        messages.unshift(new SystemMessage(finalInstructions));
+      }
+
+      const responseMessage = await boundModel.invoke(messages, config);
       return { messages: [responseMessage] };
     };
   }
