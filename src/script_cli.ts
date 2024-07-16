@@ -55,8 +55,7 @@ function getLLMConfig(provider: string): t.LLMConfig {
     case 'anthropic':
       return {
         provider: Providers.ANTHROPIC,
-        model: 'claude-3-haiku-20240307',
-        streaming: true,
+        model: 'claude-3-5-sonnet-20240620',
       };
     case 'mistralai':
       return {
@@ -111,8 +110,9 @@ async function testStandardStreaming() {
       handle: (event: string, data: t.StreamEventData) => {
         const response = data?.output?.content;
         
-        if (Array.isArray(response)) {
-          console.dir(response, { depth: null });
+        if (Array.isArray(response) && response[0] && response[0].text) {
+          // console.dir(response, { depth: null });
+          conversationHistory.push(new AIMessage(response[0].text));
         } else if (typeof response === 'string' && response.trim() !== '') {
           conversationHistory.push(new AIMessage(response));
           console.log("Updated conversation history:", conversationHistory);
@@ -132,7 +132,7 @@ async function testStandardStreaming() {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      tools: [new TavilySearchResults({})],
+      tools: [new TavilySearchResults()],
     },
     customHandlers,
   });

@@ -9,25 +9,30 @@ import { StandardGraph } from './graphs/Graph';
 import { HandlerRegistry } from '@/stream';
 
 export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels> {
-  graph?: t.CompiledWorkflow<T, Partial<T>, string>;
+  graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
   private collab!: CollabGraph;
   private taskManager!: TaskManager;
   private handlerRegistry: HandlerRegistry;
+  private Graph: StandardGraph | undefined;
   provider: Providers | undefined;
 
   private constructor(config: t.ProcessorConfig) {
-    this.handlerRegistry = new HandlerRegistry();
+     const handlerRegistry = new HandlerRegistry();
 
     if (config.customHandlers) {
       for (const [eventType, handler] of Object.entries(config.customHandlers)) {
-        this.handlerRegistry.register(eventType, handler);
+        handlerRegistry.register(eventType, handler);
       }
     }
 
+    this.handlerRegistry = handlerRegistry;
+
     if (config.graphConfig.type === 'standard') {
       this.provider = config.graphConfig.llmConfig.provider;
-      const standardGraph = new StandardGraph();
-      this.graph = this.createStandardGraph(standardGraph, config.graphConfig) as any;
+      this.graphRunnable = this.createStandardGraph(config.graphConfig) as any;
+      if (this.Graph) {
+        this.Graph.handlerRegistry = handlerRegistry;
+      }
     } else if (config.graphConfig.type === 'collaborative') {
       this.provider = config.graphConfig.supervisorConfig.llmConfig.provider;
       this.collab = new CollabGraph(
@@ -43,15 +48,13 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     }
   }
 
-  private createStandardGraph(standardGraph: StandardGraph, config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
+  private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
     const { llmConfig, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
-
-    const graphState = standardGraph.createGraphState();
-    const toolNode = standardGraph.initializeTools(tools);
-    const boundModel = standardGraph.initializeModel(provider, clientOptions, tools);
-    const callModel = standardGraph.createCallModel(boundModel);
-    return standardGraph.createWorkflow(graphState, callModel, toolNode);
+  
+    const standardGraph = new StandardGraph(provider, clientOptions, tools);
+    this.Graph = standardGraph;
+    return standardGraph.createWorkflow();
   }
 
   static async create<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels = t.IState>(config: t.ProcessorConfig): Promise<Processor<T>> {
@@ -59,11 +62,11 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     if (config.graphConfig.type === 'collaborative') {
       await processor.collab.initialize();
       const graphState = processor.collab.createGraphState();
-      processor.graph = processor.collab.createWorkflow(graphState) as any;
+      processor.graphRunnable = processor.collab.createWorkflow(graphState) as any;
     } else if (config.graphConfig.type === 'taskmanager') {
       await processor.taskManager.initialize();
       const graphState = processor.taskManager.createGraphState();
-      processor.graph = processor.taskManager.createWorkflow(graphState) as any;
+      processor.graphRunnable = processor.taskManager.createWorkflow(graphState) as any;
     }
     return processor;
   }
@@ -76,11 +79,12 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     },
     config: Partial<RunnableConfig> & { version: "v1" | "v2" },
   ) {
-    if (!this.graph) {
+    if (!this.graphRunnable) {
       throw new Error("Processor not initialized. Make sure to use Processor.create() to instantiate the Processor.");
     }
-    const stream = this.graph.streamEvents(inputs, config);
+    const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
+      console.log(event.event);
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);
