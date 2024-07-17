@@ -4,7 +4,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 
 export type ToolNodeState = {
   messages: BaseMessage[];
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export interface IState {
@@ -39,7 +39,7 @@ export type StreamEventData = {
      * won't be known until the *END* of the runnable when it has finished streaming
      * its inputs.
      */
-    input?: any;
+    input?: unknown;
     /**
      * The output of the runnable that generated the event.
      * Outputs will only be available at the *END* of the runnable.
@@ -47,13 +47,13 @@ export type StreamEventData = {
      * though there might be some exceptions for special cased runnables (e.g., like
      * chat models), which may return more information.
      */
-    output?: any;
+    output?: unknown;
     /**
      * A streaming chunk from the output that generated the event.
      * chunks support addition in general, and adding them up should result
      * in the output of the runnable that generated the event.
      */
-    chunk?: any;
+    chunk?: unknown;
 };
 /**
  * A streaming event.
@@ -96,7 +96,7 @@ export type StreamEvent = {
      */
     tags?: string[];
     /** Metadata associated with the runnable that generated this event. */
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     /**
      * Event data.
      *
