@@ -87,7 +87,6 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     }
     const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
-      console.log(event.event);
       const handler = this.handlerRegistry.getHandler(event.event);
       if (handler) {
         handler.handle(event.event, event.data);

@@ -93,10 +93,7 @@ export class StandardGraph extends Graph<
   
       const stream = await this.boundModel.stream(finalMessages, config);
       let finalChunk: AIMessageChunk | undefined;
-      const handler = this.handlerRegistry.getHandler(GraphEvents.CHAT_MODEL_STREAM);
       for await (const chunk of stream) {
-        // handler.handle(GraphEvents.CHAT_MODEL_STREAM, { chunk });
-        console.dir(chunk, { depth: null });
         if (!finalChunk) {
           finalChunk = chunk;
         } else {
