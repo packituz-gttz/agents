@@ -1,6 +1,7 @@
 // src/types/graph.ts
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/langgraph';
-import type { BaseMessage } from '@langchain/core/messages';
+import type { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
 
 export type ToolNodeState = {
   messages: BaseMessage[];
@@ -26,6 +27,10 @@ export type Workflow<T extends IState = IState, U extends Partial<T> = Partial<T
 export type CompiledWorkflow<T extends IState = IState, U extends Partial<T> = Partial<T>, N extends string = string> = CompiledStateGraph<T, U, N>;
 
 export type EventStreamCallbackHandlerInput = Parameters<CompiledWorkflow['streamEvents']>[2] extends Omit<infer T, 'autoClose'> ? T : never;
+
+export type StreamChunk = ChatGenerationChunk & {
+  message: AIMessageChunk;
+} | AIMessageChunk;
 
 /**
  * Data associated with a StreamEvent.
@@ -53,7 +58,7 @@ export type StreamEventData = {
      * chunks support addition in general, and adding them up should result
      * in the output of the runnable that generated the event.
      */
-    chunk?: unknown;
+    chunk?: StreamChunk;
 };
 /**
  * A streaming event.

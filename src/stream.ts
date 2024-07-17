@@ -1,12 +1,10 @@
 // src/stream.ts
-import type { ChatGenerationChunk } from '@langchain/core/outputs';
-import type { AIMessageChunk } from '@langchain/core/messages';
 import type * as t from '@/types/graph';
 
 export class HandlerRegistry {
     private handlers: Map<string, t.EventHandler> = new Map();
 
-    register(eventType: string, handler: t.EventHandler) {
+    register(eventType: string, handler: t.EventHandler): void {
         this.handlers.set(eventType, handler);
     }
 
@@ -16,12 +14,13 @@ export class HandlerRegistry {
 }
 
 export class DefaultLLMStreamHandler implements t.EventHandler {
-    handle(event: string, data: t.StreamEventData) {
-        const chunk: ChatGenerationChunk = data?.chunk;
-        const msg = chunk.message as AIMessageChunk;
-        if (msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
+    handle(event: string, data: t.StreamEventData): void {
+        const chunk = data?.chunk;
+        const  isMessageChunk = !!(chunk && 'message' in chunk);
+        const msg = isMessageChunk && chunk?.message;
+        if (msg && msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
             console.log(msg.tool_call_chunks);
-        } else {
+        } else if (msg) {
             const content = msg.content || '';
             if (typeof content === 'string') {
                 process.stdout.write(content);
@@ -29,10 +28,17 @@ export class DefaultLLMStreamHandler implements t.EventHandler {
         }
     }
 }
+
 export class ChatModelStreamHandler implements t.EventHandler {
-    handle(event: string, data: t.StreamEventData) {
+    handle(event: string, data: t.StreamEventData): void {
         const chunk = data?.chunk;
-        const content = chunk.content;
+        const  isContentChunk = !!(chunk && 'content' in chunk);
+        const content = isContentChunk && chunk?.content;
+
+        if (!content || !isContentChunk) {
+            return;
+        }
+
         if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
             console.log(chunk.tool_call_chunks);
         }
