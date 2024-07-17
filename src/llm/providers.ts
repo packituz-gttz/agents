@@ -9,19 +9,19 @@ import type * as t from '@/types';
 import { Providers } from '@/common';
 
 export const llmProviders: Record<Providers, t.ChatModelConstructor> = {
-    [Providers.OPENAI]: ChatOpenAI,
-    [Providers.VERTEXAI]: ChatVertexAI,
-    [Providers.BEDROCK]: BedrockChat,
-    [Providers.MISTRALAI]: ChatMistralAI,
-    [Providers.AWS]: ChatBedrockConverse,
-    [Providers.ANTHROPIC]: ChatAnthropic,
+  [Providers.OPENAI]: ChatOpenAI,
+  [Providers.VERTEXAI]: ChatVertexAI,
+  [Providers.BEDROCK]: BedrockChat,
+  [Providers.MISTRALAI]: ChatMistralAI,
+  [Providers.AWS]: ChatBedrockConverse,
+  [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
 export const getChatModelClass = (provider: Providers ): t.ChatModelConstructor => {
-    const ChatModelClass = llmProviders[provider];
-    if (!ChatModelClass) {
-        throw new Error(`Unsupported LLM provider: ${provider}`);
-    }
+  const ChatModelClass = llmProviders[provider];
+  if (!ChatModelClass) {
+    throw new Error(`Unsupported LLM provider: ${provider}`);
+  }
 
-    return ChatModelClass;
+  return ChatModelClass;
 };

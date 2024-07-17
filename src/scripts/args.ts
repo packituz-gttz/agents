@@ -3,40 +3,40 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 export async function getArgs() {
-    const argv = yargs(hideBin(process.argv))
-        .option('name', {
-            alias: 'n',
-            type: 'string',
-            description: 'User name',
-            default: 'Jo'
-        })
-        .option('location', {
-            alias: 'l',
-            type: 'string',
-            description: 'User location',
-            default: 'New York'
-        })
-        .option('provider', {
-            alias: 'p',
-            type: 'string',
-            description: 'LLM provider',
-            choices: ['openai', 'anthropic', 'mistralai', 'vertexai', 'aws'],
-            default: 'openai'
-        })
-        .help()
-        .alias('help', 'h')
-        .argv;
+  const argv = yargs(hideBin(process.argv))
+    .option('name', {
+      alias: 'n',
+      type: 'string',
+      description: 'User name',
+      default: 'Jo'
+    })
+    .option('location', {
+      alias: 'l',
+      type: 'string',
+      description: 'User location',
+      default: 'New York'
+    })
+    .option('provider', {
+      alias: 'p',
+      type: 'string',
+      description: 'LLM provider',
+      choices: ['openai', 'anthropic', 'mistralai', 'vertexai', 'aws'],
+      default: 'openai'
+    })
+    .help()
+    .alias('help', 'h')
+    .argv;
 
-    const args = await argv;
-    const userName = args.name as string;
-    const location = args.location as string;
-    const provider = args.provider as string;
-    const currentDate = new Date().toLocaleString();
+  const args = await argv;
+  const userName = args.name as string;
+  const location = args.location as string;
+  const provider = args.provider as string;
+  const currentDate = new Date().toLocaleString();
 
-    return {
-        userName,
-        location,
-        provider,
-        currentDate
-    };
+  return {
+    userName,
+    location,
+    provider,
+    currentDate
+  };
 }

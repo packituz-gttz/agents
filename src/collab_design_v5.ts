@@ -4,8 +4,8 @@ import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { END, StateGraphArgs, START, StateGraph, MemorySaver } from '@langchain/langgraph';
 import { AgentExecutor, createOpenAIToolsAgent } from 'langchain/agents';
 import {
-    ChatPromptTemplate,
-    MessagesPlaceholder,
+  ChatPromptTemplate,
+  MessagesPlaceholder,
 } from '@langchain/core/prompts';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { JsonOutputToolsParser } from 'langchain/output_parsers';
@@ -43,209 +43,209 @@ interface SupervisorConfig {
 }
 
 const llmProviders: Record<Providers, any> = {
-    [Providers.OPENAI]: ChatOpenAI,
-    [Providers.VERTEXAI]: ChatVertexAI,
-    [Providers.BEDROCK]: BedrockChat,
-    [Providers.MISTRALAI]: ChatMistralAI,
-    [Providers.AWS]: ChatBedrockConverse,
-    [Providers.ANTHROPIC]: ChatAnthropic,
+  [Providers.OPENAI]: ChatOpenAI,
+  [Providers.VERTEXAI]: ChatVertexAI,
+  [Providers.BEDROCK]: BedrockChat,
+  [Providers.MISTRALAI]: ChatMistralAI,
+  [Providers.AWS]: ChatBedrockConverse,
+  [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
 export class CollaborativeProcessor {
-    graph: t.CompiledWorkflow | null = null;
-    private handlerRegistry: HandlerRegistry;
-    private members: Member[];
-    private supervisorConfig: SupervisorConfig;
+  graph: t.CompiledWorkflow | null = null;
+  private handlerRegistry: HandlerRegistry;
+  private members: Member[];
+  private supervisorConfig: SupervisorConfig;
 
-    constructor(
-        members: Member[],
-        supervisorConfig: SupervisorConfig,
-        customHandlers?: Record<string, any>
-    ) {
-        this.members = members;
-        this.supervisorConfig = supervisorConfig;
-        this.handlerRegistry = new HandlerRegistry();
-        if (customHandlers) {
-            for (const [eventType, handler] of Object.entries(customHandlers)) {
-                this.handlerRegistry.register(eventType, handler);
-            }
-        }
+  constructor(
+    members: Member[],
+    supervisorConfig: SupervisorConfig,
+    customHandlers?: Record<string, any>
+  ) {
+    this.members = members;
+    this.supervisorConfig = supervisorConfig;
+    this.handlerRegistry = new HandlerRegistry();
+    if (customHandlers) {
+      for (const [eventType, handler] of Object.entries(customHandlers)) {
+        this.handlerRegistry.register(eventType, handler);
+      }
+    }
+  }
+
+  async initialize(): Promise<void> {
+    this.graph = await this.createGraph();
+  }
+
+  private async createGraph(): Promise<t.CompiledWorkflow> {
+    const agentStateChannels: StateGraphArgs['channels'] = {
+      messages: {
+        value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),
+        default: () => [],
+      },
+      next: {
+        value: (x?: string, y?: string) => y ?? x ?? END,
+        default: () => END,
+      },
+    };
+
+    async function createAgent(
+      llmConfig: LLMConfig,
+      tools: any[],
+      systemPrompt: string
+    ): Promise<AgentExecutor> {
+      const { provider, ...clientOptions } = llmConfig;
+      const LLMClass = llmProviders[provider];
+      if (!LLMClass) {
+        throw new Error(`Unsupported LLM provider: ${provider}`);
+      }
+      const llm = new LLMClass(clientOptions);
+
+      const prompt = await ChatPromptTemplate.fromMessages([
+        ['system', systemPrompt],
+        new MessagesPlaceholder('messages'),
+        new MessagesPlaceholder('agent_scratchpad'),
+      ]);
+      const agent = await createOpenAIToolsAgent({ llm, tools, prompt });
+      return new AgentExecutor({ agent, tools });
     }
 
-    async initialize(): Promise<void> {
-        this.graph = await this.createGraph();
-    }
+    const memberNames = this.members.map(member => member.name);
 
-    private async createGraph(): Promise<t.CompiledWorkflow> {
-        const agentStateChannels: StateGraphArgs['channels'] = {
-            messages: {
-                value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),
-                default: () => [],
-            },
-            next: {
-                value: (x?: string, y?: string) => y ?? x ?? END,
-                default: () => END,
-            },
-        };
+    const systemPrompt = this.supervisorConfig.systemPrompt || supervisorPrompt;
+    const options = [END, ...memberNames];
 
-        async function createAgent(
-            llmConfig: LLMConfig,
-            tools: any[],
-            systemPrompt: string
-        ): Promise<AgentExecutor> {
-            const { provider, ...clientOptions } = llmConfig;
-            const LLMClass = llmProviders[provider];
-            if (!LLMClass) {
-                throw new Error(`Unsupported LLM provider: ${provider}`);
-            }
-            const llm = new LLMClass(clientOptions);
-
-            const prompt = await ChatPromptTemplate.fromMessages([
-                ['system', systemPrompt],
-                new MessagesPlaceholder('messages'),
-                new MessagesPlaceholder('agent_scratchpad'),
-            ]);
-            const agent = await createOpenAIToolsAgent({ llm, tools, prompt });
-            return new AgentExecutor({ agent, tools });
-        }
-
-        const memberNames = this.members.map(member => member.name);
-
-        const systemPrompt = this.supervisorConfig.systemPrompt || supervisorPrompt;
-        const options = [END, ...memberNames];
-
-        const functionDef = {
-            name: 'route',
-            description: 'Select the next role.',
-            parameters: {
-                title: 'routeSchema',
-                type: 'object',
-                properties: {
-                    next: {
-                        title: 'Next',
-                        anyOf: [
-                            { enum: options },
-                        ],
-                    },
-                },
-                required: ['next'],
-            },
-        };
-
-        const toolDef = {
-            type: 'function',
-            function: functionDef,
-        } as const;
-
-        const prompt = ChatPromptTemplate.fromMessages([
-            ['system', systemPrompt],
-            new MessagesPlaceholder('messages'),
-            [
-                'system',
-                'Given the conversation above, who should act next?' +
-        ' Or should we FINISH? Select one of: {options}',
+    const functionDef = {
+      name: 'route',
+      description: 'Select the next role.',
+      parameters: {
+        title: 'routeSchema',
+        type: 'object',
+        properties: {
+          next: {
+            title: 'Next',
+            anyOf: [
+              { enum: options },
             ],
-        ]);
+          },
+        },
+        required: ['next'],
+      },
+    };
 
-        const formattedPrompt = await prompt.partial({
-            options: options.join(', '),
-            members: memberNames.join(', '),
+    const toolDef = {
+      type: 'function',
+      function: functionDef,
+    } as const;
+
+    const prompt = ChatPromptTemplate.fromMessages([
+      ['system', systemPrompt],
+      new MessagesPlaceholder('messages'),
+      [
+        'system',
+        'Given the conversation above, who should act next?' +
+        ' Or should we FINISH? Select one of: {options}',
+      ],
+    ]);
+
+    const formattedPrompt = await prompt.partial({
+      options: options.join(', '),
+      members: memberNames.join(', '),
+    });
+
+    const { provider, ...clientOptions } = this.supervisorConfig.llmConfig;
+    const LLMClass = llmProviders[provider];
+    if (!LLMClass) {
+      throw new Error(`Unsupported LLM provider for supervisor: ${provider}`);
+    }
+    const llm = new LLMClass(clientOptions);
+
+    const supervisorChain = formattedPrompt
+      .pipe(llm.bindTools(
+        [toolDef],
+        {
+          tool_choice: { 'type': 'function', 'function': { 'name': 'route' } },
+        },
+      ))
+      .pipe(new JsonOutputToolsParser())
+      .pipe((x) => (x[0].args));
+
+    const workflow = new StateGraph({
+      channels: agentStateChannels,
+    });
+
+    // Dynamically create agents and add nodes for each member
+    for (const member of this.members) {
+      const agent = await createAgent(member.llmConfig, member.tools, member.systemPrompt);
+      const node = async (
+        state: AgentStateChannels,
+        config?: RunnableConfig,
+      ) => {
+        const agentPromise = agent.invoke(state, config);
+
+        // Store the promise in the state
+        await this.graph?.updateState(config, {
+          [`${member.name}Promise`]: agentPromise,
         });
 
-        const { provider, ...clientOptions } = this.supervisorConfig.llmConfig;
-        const LLMClass = llmProviders[provider];
-        if (!LLMClass) {
-            throw new Error(`Unsupported LLM provider for supervisor: ${provider}`);
-        }
-        const llm = new LLMClass(clientOptions);
-
-        const supervisorChain = formattedPrompt
-            .pipe(llm.bindTools(
-                [toolDef],
-                {
-                    tool_choice: { 'type': 'function', 'function': { 'name': 'route' } },
-                },
-            ))
-            .pipe(new JsonOutputToolsParser())
-            .pipe((x) => (x[0].args));
-
-        const workflow = new StateGraph({
-            channels: agentStateChannels,
-        });
-
-        // Dynamically create agents and add nodes for each member
-        for (const member of this.members) {
-            const agent = await createAgent(member.llmConfig, member.tools, member.systemPrompt);
-            const node = async (
-                state: AgentStateChannels,
-                config?: RunnableConfig,
-            ) => {
-                const agentPromise = agent.invoke(state, config);
-
-                // Store the promise in the state
-                await this.graph?.updateState(config, {
-                    [`${member.name}Promise`]: agentPromise,
-                });
-
-                const result = await agentPromise;
-                return {
-                    messages: [
-                        new HumanMessage({ content: result.output, name: member.name }),
-                    ],
-                };
-            };
-            workflow.addNode(member.name, node);
-            workflow.addEdge(member.name, 'supervisor');
-        }
-
-        const supervisorNode = async (
-            state: AgentStateChannels,
-            config?: RunnableConfig,
-        ) => {
-        // Get the current state
-            const currentState = await this.graph?.getState(config);
-
-            // Wait for all member promises to resolve
-            const memberPromises = this.members.map(member => currentState[`${member.name}Promise`]);
-            await Promise.all(memberPromises);
-
-            // Clear the promises for the next iteration
-            for (const member of this.members) {
-                await this.graph?.updateState(config, {
-                    [`${member.name}Promise`]: undefined,
-                });
-            }
-
-            const result = await supervisorChain.invoke(state, config);
-            return result;
+        const result = await agentPromise;
+        return {
+          messages: [
+            new HumanMessage({ content: result.output, name: member.name }),
+          ],
         };
-
-        workflow.addNode('supervisor', supervisorNode);
-
-        workflow.addConditionalEdges(
-            'supervisor',
-            (x: AgentStateChannels) => x.next,
-        );
-
-        workflow.addEdge(START, 'supervisor');
-
-        const memory = new MemorySaver();
-        return workflow.compile({ checkpointer: memory });
+      };
+      workflow.addNode(member.name, node);
+      workflow.addEdge(member.name, 'supervisor');
     }
 
-    async processStream(
-        inputs: { messages: BaseMessage[] },
-        config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
-    ) {
-        if (!this.graph) {
-            throw new Error('CollaborativeProcessor not initialized. Call initialize() first.');
-        }
-        const stream = this.graph.streamEvents(inputs, config);
-        for await (const event of stream) {
-            const handler = this.handlerRegistry.getHandler(event.event);
-            if (handler) {
-                handler.handle(event.event, event.data);
-            }
-        }
+    const supervisorNode = async (
+      state: AgentStateChannels,
+      config?: RunnableConfig,
+    ) => {
+      // Get the current state
+      const currentState = await this.graph?.getState(config);
+
+      // Wait for all member promises to resolve
+      const memberPromises = this.members.map(member => currentState[`${member.name}Promise`]);
+      await Promise.all(memberPromises);
+
+      // Clear the promises for the next iteration
+      for (const member of this.members) {
+        await this.graph?.updateState(config, {
+          [`${member.name}Promise`]: undefined,
+        });
+      }
+
+      const result = await supervisorChain.invoke(state, config);
+      return result;
+    };
+
+    workflow.addNode('supervisor', supervisorNode);
+
+    workflow.addConditionalEdges(
+      'supervisor',
+      (x: AgentStateChannels) => x.next,
+    );
+
+    workflow.addEdge(START, 'supervisor');
+
+    const memory = new MemorySaver();
+    return workflow.compile({ checkpointer: memory });
+  }
+
+  async processStream(
+    inputs: { messages: BaseMessage[] },
+    config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
+  ) {
+    if (!this.graph) {
+      throw new Error('CollaborativeProcessor not initialized. Call initialize() first.');
     }
+    const stream = this.graph.streamEvents(inputs, config);
+    for await (const event of stream) {
+      const handler = this.handlerRegistry.getHandler(event.event);
+      if (handler) {
+        handler.handle(event.event, event.data);
+      }
+    }
+  }
 }

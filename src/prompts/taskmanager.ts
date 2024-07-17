@@ -31,31 +31,31 @@ REMEMBER: Your success is measured by how quickly and effectively you fulfill th
 export const assignTasksFunctionDescription = 'Assign the minimum necessary tasks to team members to fulfill the user\'s request as quickly as possible. Assign up to 5 tasks maximum per turn, only if absolutely necessary. Each task must specify the team member, a concise description, and the tool to use if applicable.';
 
 export const assignTasksFunctionParameters = {
-    type: 'object',
-    properties: {
-        tasks: {
-            type: 'array',
-            items: {
-                type: 'object',
-                properties: {
-                    member: { type: 'string', description: 'Name of the team member assigned to the task' },
-                    description: { type: 'string', description: 'Concise description of the essential task to be performed' },
-                    tool: { type: 'string', description: 'Specific tool to be used for the task, if applicable' },
-                },
-                required: ['member', 'description'],
-            },
-            description: 'List of essential tasks to be assigned, maximum 5 tasks per turn.',
+  type: 'object',
+  properties: {
+    tasks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          member: { type: 'string', description: 'Name of the team member assigned to the task' },
+          description: { type: 'string', description: 'Concise description of the essential task to be performed' },
+          tool: { type: 'string', description: 'Specific tool to be used for the task, if applicable' },
         },
+        required: ['member', 'description'],
+      },
+      description: 'List of essential tasks to be assigned, maximum 5 tasks per turn.',
     },
-    required: ['tasks'],
+  },
+  required: ['tasks'],
 };
 
 export const endProcessFunctionDescription = 'End the process when the user\'s request has been fulfilled.';
 
 export const endProcessFunctionParameters = {
-    type: 'object',
-    properties: {
-        reason: { type: 'string', description: 'Brief explanation of why the process is ending' },
-    },
-    required: ['reason'],
+  type: 'object',
+  properties: {
+    reason: { type: 'string', description: 'Brief explanation of why the process is ending' },
+  },
+  required: ['reason'],
 };
