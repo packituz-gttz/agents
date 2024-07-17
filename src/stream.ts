@@ -42,6 +42,8 @@ export class ChatModelStreamHandler implements t.EventHandler {
     if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
       console.log(chunk.tool_call_chunks);
     }
-    process.stdout.write(content);
+    if (typeof content === 'string') {
+      process.stdout.write(content);
+    }
   }
 }
