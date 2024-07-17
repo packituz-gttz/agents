@@ -1,90 +1,22 @@
 /* eslint-disable no-console */
 // src/scripts/cli.ts
-import yargs from 'yargs';
 import { config } from 'dotenv';
-import { hideBin } from 'yargs/helpers';
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { HumanMessage, BaseMessage } from '@langchain/core/messages';
+import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
   DefaultLLMStreamHandler,
 } from '@/stream';
-import { GraphEvents, Providers } from '@/common';
+import { getLLMConfig } from '@/utils/llmConfig';
+import { getArgs } from '@/scripts/args';
 import { Processor } from '@/processor';
+import { GraphEvents } from '@/common';
 
 config();
 
-const argv = yargs(hideBin(process.argv))
-  .option('name', {
-    alias: 'n',
-    type: 'string',
-    description: 'User name',
-    default: 'Jo'
-  })
-  .option('location', {
-    alias: 'l',
-    type: 'string',
-    description: 'User location',
-    default: 'New York'
-  })
-  .option('provider', {
-    alias: 'p',
-    type: 'string',
-    description: 'LLM provider',
-    choices: ['openai', 'anthropic', 'mistralai', 'vertexai', 'aws'],
-    default: 'openai'
-  })
-  .help()
-  .alias('help', 'h')
-  .argv;
-
-const args = await argv;
-const userName = args.name as string;
-const location = args.location as string;
-const provider = args.provider as string;
-const currentDate = new Date().toLocaleString();
-
-function getLLMConfig(provider: string): t.LLMConfig {
-  switch (provider) {
-  case 'openai':
-    return {
-      provider: Providers.OPENAI,
-      model: 'gpt-4o',
-      temperature: 0.7,
-    };
-  case 'anthropic':
-    return {
-      provider: Providers.ANTHROPIC,
-      model: 'claude-3-5-sonnet-20240620',
-    };
-  case 'mistralai':
-    return {
-      provider: Providers.MISTRALAI,
-      model: 'mistral-large-latest',
-    };
-  case 'vertexai':
-    return {
-      provider: Providers.VERTEXAI,
-      modelName: 'gemini-1.5-flash-001',
-      streaming: true,
-    };
-  case 'aws':
-    return {
-      provider: Providers.AWS,
-      model: 'anthropic.claude-3-sonnet-20240229-v1:0',
-      region: process.env.BEDROCK_AWS_REGION,
-      credentials: {
-        accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
-      },
-    };
-  default:
-    throw new Error(`Unsupported provider: ${provider}`);
-  }
-}
-
 async function testStandardStreaming(): Promise<void> {
+  const { userName, location, provider, currentDate } = await getArgs();
   const conversationHistory: BaseMessage[] = [];
 
   const customHandlers = {
