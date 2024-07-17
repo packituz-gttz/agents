@@ -1,8 +1,8 @@
-// src/script_cli.ts
+// src/scripts/args.ts
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-export async function getArgs() {
+export async function getArgs(): Promise<{ userName: string; location: string; provider: string; currentDate: string; }> {
   const argv = yargs(hideBin(process.argv))
     .option('name', {
       alias: 'n',
