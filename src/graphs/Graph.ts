@@ -7,7 +7,10 @@ import { END, START, StateGraph } from '@langchain/langgraph';
 import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage, HumanMessage } from '@langchain/core/messages';
 import { getConverseOverrideMessage, modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
-import { Providers, GraphEvents } from '@/common';
+import { Providers } from '@/common';
+
+import { config } from 'dotenv';
+config();
 
 export abstract class Graph<
   T extends t.ToolNodeState = { messages: BaseMessage[] },
@@ -24,7 +27,7 @@ export class StandardGraph extends Graph<
   { messages: BaseMessage[] },
   'agent' | 'tools' | typeof START
 > {
-  private finalChunk: AIMessageChunk | undefined;
+  private finalMessage: AIMessageChunk | undefined;
   private graphState: t.GraphState;
   private tools: StructuredTool[];
   private provider: Providers;
@@ -91,19 +94,25 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2] = formatAnthropicMessage(finalMessages[finalMessages.length - 2] as AIMessageChunk);
       }
 
-      const stream = await this.boundModel.stream(finalMessages, config);
-      let finalChunk: AIMessageChunk | undefined;
-      for await (const chunk of stream) {
-        if (!finalChunk) {
-          finalChunk = chunk;
-        } else {
-          finalChunk = concat(finalChunk, chunk);
+      if (this.provider === Providers.ANTHROPIC) {
+        const stream = await this.boundModel.stream(finalMessages, config);
+        let finalChunk: AIMessageChunk | undefined;
+        for await (const chunk of stream) {
+          if (!finalChunk) {
+            finalChunk = chunk;
+          } else {
+            finalChunk = concat(finalChunk, chunk);
+          }
         }
+
+        finalChunk = modifyDeltaProperties(finalChunk);
+        this.finalMessage = finalChunk;
+        return { messages: finalChunk ? [finalChunk] : [] };
       }
 
-      finalChunk = modifyDeltaProperties(finalChunk);
-      this.finalChunk = finalChunk;
-      return { messages: finalChunk ? [finalChunk] : [] };
+      const responseMessage = await this.boundModel.invoke(finalMessages, config);
+      this.finalMessage = responseMessage;
+      return { messages: [responseMessage] };
     };
   }
 
@@ -129,7 +138,7 @@ export class StandardGraph extends Graph<
   }
 
   getFinalChunk(): AIMessageChunk | undefined {
-    return this.finalChunk;
+    return this.finalMessage;
   }
 
   private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
