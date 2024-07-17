@@ -1,7 +1,6 @@
-import { AgentExecutor } from 'langchain/agents';
+import { AgentExecutor , createToolCallingAgent } from 'langchain/agents';
 import { StructuredTool } from '@langchain/core/tools';
 import { BaseMessage } from '@langchain/core/messages';
-import { createToolCallingAgent } from 'langchain/agents';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatVertexAI, ChatVertexAIInput } from '@langchain/google-vertexai';
 import { RunnableSequence, RunnablePassthrough } from '@langchain/core/runnables';
