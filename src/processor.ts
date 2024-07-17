@@ -82,6 +82,9 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     if (!this.graphRunnable) {
       throw new Error("Processor not initialized. Make sure to use Processor.create() to instantiate the Processor.");
     }
+    if (!this.Graph) { 
+      throw new Error("Graph not initialized. Make sure to use Processor.create() to instantiate the Processor.");
+    }
     const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
       console.log(event.event);
@@ -90,5 +93,6 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
         handler.handle(event.event, event.data);
       }
     }
+    return this.Graph.getFinalChunk();
   }
 }

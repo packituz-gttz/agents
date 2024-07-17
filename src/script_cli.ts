@@ -97,26 +97,10 @@ async function testStandardStreaming() {
     [GraphEvents.LLM_END]: {
       handle: (event: string, data: t.StreamEventData) => {
         console.dir(data, { depth: null });
-
-        const response = data.output.generations[0][0].message.content;
-        
-        if (response.trim() !== '') {
-          conversationHistory.push(new AIMessage(response));
-          console.log("Updated conversation history:", conversationHistory);
-        }
       }
     },
     [GraphEvents.CHAT_MODEL_END]: {
       handle: (event: string, data: t.StreamEventData) => {
-        const response = data?.output?.content;
-        
-        if (Array.isArray(response) && response[0] && response[0].text) {
-          // console.dir(response, { depth: null });
-          conversationHistory.push(new AIMessage(response[0].text));
-        } else if (typeof response === 'string' && response.trim() !== '') {
-          conversationHistory.push(new AIMessage(response));
-          console.log("Updated conversation history:", conversationHistory);
-        }
       }
     },
     [GraphEvents.TOOL_END]: {
@@ -151,7 +135,10 @@ async function testStandardStreaming() {
     instructions: "You are a friendly AI assistant. Always address the user by their name.",
     additional_instructions: `The user's name is ${userName} and they are located in ${location}.`
   };
-  await processor.processStream(inputs, config);
+  const finalMessage = await processor.processStream(inputs, config);
+  if (finalMessage) {
+    conversationHistory.push(finalMessage);
+  }
 
   console.log("\nTest 2: Weather query");
 

@@ -5,7 +5,7 @@ import type { StructuredTool } from "@langchain/core/tools";
 import type * as t from '@/types';
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage, HumanMessage } from "@langchain/core/messages";
-import { getConverseOverrideMessage } from '@/messages';
+import { getConverseOverrideMessage, modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { Providers, GraphEvents } from '@/common';
 
@@ -24,6 +24,7 @@ export class StandardGraph extends Graph<
   { messages: BaseMessage[] },
   "agent" | "tools" | typeof START
 > {
+  private finalChunk: AIMessageChunk | undefined;
   private graphState: t.GraphState;
   private tools: StructuredTool[];
   private provider: Providers;
@@ -81,8 +82,16 @@ export class StandardGraph extends Graph<
       if (finalInstructions && messages[0]?.content !== finalInstructions) {
         messages.unshift(new SystemMessage(finalInstructions));
       }
+
+      let finalMessages = messages;
+      if (this.provider === Providers.ANTHROPIC
+        && finalMessages[finalMessages.length - 1] instanceof ToolMessage
+        && finalMessages[finalMessages.length - 2] instanceof AIMessageChunk
+      ) {
+        finalMessages[finalMessages.length - 2] = formatAnthropicMessage(finalMessages[finalMessages.length - 2] as AIMessageChunk);
+      }  
   
-      const stream = await this.boundModel.stream(messages, config);
+      const stream = await this.boundModel.stream(finalMessages, config);
       let finalChunk: AIMessageChunk | undefined;
       const handler = this.handlerRegistry.getHandler(GraphEvents.CHAT_MODEL_STREAM);
       for await (const chunk of stream) {
@@ -95,6 +104,8 @@ export class StandardGraph extends Graph<
         }
       }
   
+      finalChunk = modifyDeltaProperties(finalChunk);
+      this.finalChunk = finalChunk;
       return { messages: finalChunk ? [finalChunk] : [] };
     };
   }  
@@ -120,6 +131,10 @@ export class StandardGraph extends Graph<
     return workflow.compile();
   }
 
+  getFinalChunk(): AIMessageChunk | undefined {
+    return this.finalChunk;
+  }
+
   private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
     const [lastMessageX, secondLastMessageX] = x.slice(-2);
     const lastMessageY = y[y.length - 1];
@@ -141,5 +156,54 @@ export class StandardGraph extends Graph<
     }
   
     return x.concat(y);
+  }
+
+  private convertToolMessagesForAnthropic(messages: BaseMessage[]): BaseMessage[] {
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) {
+      return messages;
+    }
+  
+    let toolResultIndex = -1;
+    const convertedMessages: BaseMessage[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      if (message instanceof ToolMessage && message.tool_call_id) {
+        // Append tool result to the current human message
+
+        let currentHumanMessage = convertedMessages[toolResultIndex];
+
+        const toolResult = {
+          type: "tool_result",
+          tool_call_id: message.tool_call_id,
+          name: message.name,
+          content: message.content
+        };
+
+        if (currentHumanMessage) {
+          currentHumanMessage.content.push(toolResult)
+        } else {
+          convertedMessages.push({
+            role: 'user',
+            content: [toolResult]
+          });
+        }
+
+        toolResultIndex = i;
+      } else {
+        // For other message types (like AIMessage or SystemMessage), just add them as is
+        convertedMessages.push(message);
+      }
+    }
+
+    if (convertedMessages[toolResultIndex]) {
+      convertedMessages[toolResultIndex] = new ToolMessage({
+        tool_call_id: convertedMessages[toolResultIndex].content[0].tool_call_id,
+        name: convertedMessages[toolResultIndex].content[0].name,
+        content: convertedMessages[toolResultIndex].content
+      })
+    }
+  
+    return convertedMessages;
   }
 }
