@@ -16,7 +16,7 @@ export const chartTool = new DynamicStructuredTool({
             })
             .array(),
     }),
-    func: async ({ data }) => {
+    func: async ({ data }): Promise<string> => {
         const maxValue = Math.max(...data.map(d => d.value));
         const chartHeight = 20;
         const chartWidth = 50;
@@ -34,35 +34,18 @@ export const chartTool = new DynamicStructuredTool({
                 i === 0 ? '0'.padStart(4) :
                     i % 5 === 0 ? Math.round((i / chartHeight) * maxValue).toString().padStart(4) : '    ';
 
-            chart += `${yLabel} │${row.join(' ')}\n`;
+            chart += `${yLabel} │${row.join(' ')} `;
         }
 
         // Generate X-axis
-        chart += '     ├' + '─'.repeat(chartWidth) + '\n';
+        chart += '     ├' + '─'.repeat(chartWidth) + ' ';
 
         // Generate X-axis labels
         const xLabels = data.map(d => d.label.padEnd(5).substring(0, 5)).join(' ');
-        chart += `     ${xLabels}\n`;
+        chart += `     ${xLabels} `;
 
         return chart;
     },
 });
 
 export const tavilyTool = new TavilySearchResults();
-
-// Example usage
-const exampleData = [
-    { label: 'A', value: 5 },
-    { label: 'B', value: 10 },
-    { label: 'C', value: 15 },
-    { label: 'D', value: 8 },
-    { label: 'E', value: 12 }
-];
-
-async function runExample() {
-    const result = await chartTool.call({ data: exampleData });
-    console.log(result);
-}
-
-// Uncomment the following line to run the example
-// runExample();
