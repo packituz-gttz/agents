@@ -31,28 +31,7 @@ User: ${userMessage[1]}
 }
 
 export function modifyDeltaProperties(obj?: AIMessageChunk) {
-  // let toolCallMap;
   if (obj && typeof obj === 'object') {
-    // const tool_calls = obj.tool_calls;
-    // if (tool_calls && Array.isArray(tool_calls) && tool_calls.length > 0) {
-    //   toolCallMap = tool_calls.reduce((map, tool_call) => {
-    //     if (tool_call && tool_call.args) {
-    //       const args = tool_call.args;
-    //       if (args.input && !map.has(args.input)) {
-    //         map.set(args.input, tool_call);
-    //       }
-    //     }
-    //     return map;
-    //   }, new Map());
-  
-    //   // Now toolCallMap is a Map where:
-    //   // - Keys are the function names
-    //   // - Values are arrays of tool calls with that function name
-      
-    //   console.log(toolCallMap);
-    // }
-
-
     const modifyContent = (content: any[]) => {
       return content.map(item => {
         if (item && typeof item === 'object' && item.type) {
@@ -66,30 +45,7 @@ export function modifyDeltaProperties(obj?: AIMessageChunk) {
           // Check if the type is not one of the allowed types
           const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
           if (!allowedTypes.includes(newType)) {
-            // If it has a text property, convert to 'text'
-            if (item.text) {
-              newType = 'text';
-            }
-            // If it has an input property, convert to 'text' and move input to text
-            // else if (item.input && toolCallMap) {
-            //   newType = 'tool_use';
-            //   const parsedItem = JSON.parse(item.input);
-            //   if (parsedItem.input) {
-            //     const toolCall = toolCallMap.get(parsedItem.input);
-            //     if (toolCall) {
-            //         item.id = toolCall.id;
-            //         item.name = toolCall.name;
-            //         item.input = item.input;
-            //     }
-            // } else {
-            //   newType = 'text';
-            // }
-            // }
-          
-            // For any other unrecognized type, convert to 'text'
-            else {
-              newType = 'text';
-            }
+            newType = 'text';
           }
           
           return { ...item, type: newType };
