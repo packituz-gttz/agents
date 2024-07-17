@@ -1,5 +1,5 @@
-import type { StructuredTool } from "@langchain/core/tools";
-import type { BaseMessage } from "@langchain/core/messages";
+import type { StructuredTool } from '@langchain/core/tools';
+import type { BaseMessage } from '@langchain/core/messages';
 import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
 

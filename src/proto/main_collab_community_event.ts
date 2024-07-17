@@ -1,14 +1,14 @@
 // src/main_collab_community_event.ts
 import dotenv from 'dotenv';
-import { HumanMessage } from "@langchain/core/messages";
+import { HumanMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import {
-  ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+    ChatModelStreamHandler,
+    DefaultLLMStreamHandler,
 } from '@/stream';
 import { CollaborativeProcessor, Member } from '@/collab_design_v5';
-import { tavilyTool, chartTool } from "@/tools/example";
-import { supervisorPrompt } from "@/prompts/collab";
+import { tavilyTool, chartTool } from '@/tools/example';
+import { supervisorPrompt } from '@/prompts/collab';
 import { GraphEvents, Providers } from '@/common';
 import fs from 'fs';
 import util from 'util';
@@ -47,85 +47,85 @@ process.stderr.write = function(chunk: string | Uint8Array, encoding?: BufferEnc
 } as any;
 
 async function testCollaborativeCommunityEvent() {
-  const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
-    [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
-    [GraphEvents.LLM_START]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("LLM Start:", event);
-      }
-    },
-    [GraphEvents.LLM_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("LLM End:", event);
-      }
-    },
-    [GraphEvents.CHAT_MODEL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("Chat Model End:", event);
-      }
-    },
-    [GraphEvents.TOOL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("Tool End:", event);
-        console.dir(data, { depth: null });
-      }
-    },
-  };
+    const customHandlers = {
+        [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+        [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
+        [GraphEvents.LLM_START]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('LLM Start:', event);
+            }
+        },
+        [GraphEvents.LLM_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('LLM End:', event);
+            }
+        },
+        [GraphEvents.CHAT_MODEL_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('Chat Model End:', event);
+            }
+        },
+        [GraphEvents.TOOL_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('Tool End:', event);
+                console.dir(data, { depth: null });
+            }
+        },
+    };
 
-  // Define the collaborative members
-  const members: Member[] = [
-    {
-      name: "resource_finder",
-      systemPrompt: "You are a resource finder. You utilize the Tavily search engine to gather necessary resources and contacts needed for the community event.",
-      tools: [tavilyTool],
-      llmConfig: {
-        provider: Providers.OPENAI,
-        modelName: "gpt-4o",
-        temperature: 0,
-      },
-    },
-    {
-      name: "event_scheduler",
-      systemPrompt: "You are an event scheduler. You manage the timeline of the event activities using the Chart Generator to visualize the schedule.",
-      tools: [chartTool],
-      llmConfig: {
-        provider: Providers.OPENAI,
-        modelName: "gpt-4o",
-        temperature: 0.2,
-      },
-    },
-  ];
+    // Define the collaborative members
+    const members: Member[] = [
+        {
+            name: 'resource_finder',
+            systemPrompt: 'You are a resource finder. You utilize the Tavily search engine to gather necessary resources and contacts needed for the community event.',
+            tools: [tavilyTool],
+            llmConfig: {
+                provider: Providers.OPENAI,
+                modelName: 'gpt-4o',
+                temperature: 0,
+            },
+        },
+        {
+            name: 'event_scheduler',
+            systemPrompt: 'You are an event scheduler. You manage the timeline of the event activities using the Chart Generator to visualize the schedule.',
+            tools: [chartTool],
+            llmConfig: {
+                provider: Providers.OPENAI,
+                modelName: 'gpt-4o',
+                temperature: 0.2,
+            },
+        },
+    ];
 
-  const supervisorConfig = {
-    systemPrompt: supervisorPrompt,
-    llmConfig: {
-      provider: Providers.OPENAI,
-      modelName: "gpt-4o",
-      temperature: 0,
-    },
-  };
+    const supervisorConfig = {
+        systemPrompt: supervisorPrompt,
+        llmConfig: {
+            provider: Providers.OPENAI,
+            modelName: 'gpt-4o',
+            temperature: 0,
+        },
+    };
 
-  const collaborativeProcessor = new CollaborativeProcessor(members, supervisorConfig, customHandlers);
-  await collaborativeProcessor.initialize();
+    const collaborativeProcessor = new CollaborativeProcessor(members, supervisorConfig, customHandlers);
+    await collaborativeProcessor.initialize();
 
-  const config = { 
-    configurable: { thread_id: "collaborative-event-planning-1" },
-    streamMode: "events",
-    version: "v2",
-  };
+    const config = {
+        configurable: { thread_id: 'collaborative-event-planning-1' },
+        streamMode: 'events',
+        version: 'v2',
+    };
 
-  console.log("\nCollaborative Test: Plan a community event");
+    console.log('\nCollaborative Test: Plan a community event');
 
-  const input = {
-    messages: [new HumanMessage("Plan a community fair including activities for all ages, food vendors, and a performance stage.")],
-  };
+    const input = {
+        messages: [new HumanMessage('Plan a community fair including activities for all ages, food vendors, and a performance stage.')],
+    };
 
-  await collaborativeProcessor.processStream(input, config);
+    await collaborativeProcessor.processStream(input, config);
 }
 
 async function main() {
-  await testCollaborativeCommunityEvent();
+    await testCollaborativeCommunityEvent();
 }
 
 main().catch(console.error).finally(() => {

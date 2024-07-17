@@ -1,15 +1,15 @@
 // src/main_collaborative.ts
 import dotenv from 'dotenv';
-import { HumanMessage } from "@langchain/core/messages";
+import { HumanMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import {
-  ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+    ChatModelStreamHandler,
+    DefaultLLMStreamHandler,
 } from '@/stream';
 import { Processor } from '@/processor';
 import { AgentStateChannels } from '@/graphs/CollabGraph';
-import { tavilyTool, chartTool } from "@/tools/example";
-import { supervisorPrompt } from "@/prompts/collab";
+import { tavilyTool, chartTool } from '@/tools/example';
+import { supervisorPrompt } from '@/prompts/collab';
 import { GraphEvents, Providers } from '@/common';
 import fs from 'fs';
 import util from 'util';
@@ -34,88 +34,88 @@ console.error = function(...args) {
 };
 
 async function testCollaborativeStreaming() {
-  const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
-    [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
-    [GraphEvents.LLM_START]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("LLM Start:", event);
-      }
-    },
-    [GraphEvents.LLM_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("LLM End:", event);
-      }
-    },
-    [GraphEvents.CHAT_MODEL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("Chat Model End:", event);
-      }
-    },
-    [GraphEvents.TOOL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
-        console.log("Tool End:", event);
-        console.dir(data, { depth: null });
-      }
-    },
-  };
-
-  const processor = await Processor.create<AgentStateChannels>({
-    graphConfig: {
-      type: 'collaborative',
-      members: [
-        {
-          name: "researcher",
-          systemPrompt: "You are a web researcher. You may use the Tavily search engine to search the web for important information, so the Chart Generator in your team can make useful plots.",
-          tools: [tavilyTool],
-          llmConfig: {
-            provider: Providers.OPENAI,
-            
-              model: "gpt-4o",
-              temperature: 0,
-          },
+    const customHandlers = {
+        [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+        [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
+        [GraphEvents.LLM_START]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('LLM Start:', event);
+            }
         },
-        {
-          name: "chart_generator",
-          systemPrompt: "You excel at generating bar charts. Use the researcher's information to generate the charts.",
-          tools: [chartTool],
-          llmConfig: {
-            provider: Providers.OPENAI,
-          
-              model: "gpt-4o",
-              temperature: 0.2,
-          },
+        [GraphEvents.LLM_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('LLM End:', event);
+            }
         },
-      ],
-      supervisorConfig: {
-        systemPrompt: supervisorPrompt,
-        llmConfig: {
-          provider: Providers.OPENAI,
-            model: "gpt-4o",
-            temperature: 0,
+        [GraphEvents.CHAT_MODEL_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('Chat Model End:', event);
+            }
         },
-      },
-    },
-    customHandlers,
-  });
+        [GraphEvents.TOOL_END]: {
+            handle: (event: string, data: t.StreamEventData) => {
+                console.log('Tool End:', event);
+                console.dir(data, { depth: null });
+            }
+        },
+    };
 
-  const config = { 
-    configurable: { thread_id: "collaborative-conversation-1" },
-    streamMode: "values",
-    version: "v2" as const,
-  };
+    const processor = await Processor.create<AgentStateChannels>({
+        graphConfig: {
+            type: 'collaborative',
+            members: [
+                {
+                    name: 'researcher',
+                    systemPrompt: 'You are a web researcher. You may use the Tavily search engine to search the web for important information, so the Chart Generator in your team can make useful plots.',
+                    tools: [tavilyTool],
+                    llmConfig: {
+                        provider: Providers.OPENAI,
 
-  console.log("\nCollaborative Test: Create a chart");
+                        model: 'gpt-4o',
+                        temperature: 0,
+                    },
+                },
+                {
+                    name: 'chart_generator',
+                    systemPrompt: 'You excel at generating bar charts. Use the researcher\'s information to generate the charts.',
+                    tools: [chartTool],
+                    llmConfig: {
+                        provider: Providers.OPENAI,
 
-  const input = {
-    messages: [new HumanMessage("Create a chart showing the population growth of the top 5 most populous countries over the last 50 years.")],
-  };
+                        model: 'gpt-4o',
+                        temperature: 0.2,
+                    },
+                },
+            ],
+            supervisorConfig: {
+                systemPrompt: supervisorPrompt,
+                llmConfig: {
+                    provider: Providers.OPENAI,
+                    model: 'gpt-4o',
+                    temperature: 0,
+                },
+            },
+        },
+        customHandlers,
+    });
 
-  await processor.processStream(input, config);
+    const config = {
+        configurable: { thread_id: 'collaborative-conversation-1' },
+        streamMode: 'values',
+        version: 'v2' as const,
+    };
+
+    console.log('\nCollaborative Test: Create a chart');
+
+    const input = {
+        messages: [new HumanMessage('Create a chart showing the population growth of the top 5 most populous countries over the last 50 years.')],
+    };
+
+    await processor.processStream(input, config);
 }
 
 async function main() {
-  await testCollaborativeStreaming();
+    await testCollaborativeStreaming();
 }
 
 main().catch(console.error).finally(() => {
