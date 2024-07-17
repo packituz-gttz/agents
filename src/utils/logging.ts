@@ -10,12 +10,12 @@ export function setupLogging(logFileName: string): void {
     const originalStdoutWrite = process.stdout.write;
     const originalStderrWrite = process.stderr.write;
 
-    console.log = function(...args) {
+    console.log = function(...args): void {
         logFile.write(util.format.apply(null, args) + '\n');
         originalConsoleLog.apply(console, args);
     };
 
-    console.error = function(...args) {
+    console.error = function(...args): void {
         logFile.write(util.format.apply(null, args) + '\n');
         originalConsoleError.apply(console, args);
     };

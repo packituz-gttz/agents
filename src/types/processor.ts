@@ -1,3 +1,4 @@
+// src/types/processor.ts
 import type { StructuredTool } from '@langchain/core/tools';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as g from '@/types/graph';
@@ -14,13 +15,13 @@ export interface AgentStateChannels {
   next: string;
   instructions?: string;
   additional_instructions?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface Member {
   name: string;
   systemPrompt: string;
-  tools: any[];
+  tools: StructuredTool[];
   llmConfig: l.LLMConfig;
 }
 

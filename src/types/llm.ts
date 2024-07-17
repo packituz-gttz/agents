@@ -35,4 +35,4 @@ export type LLMConfig = {
 
 export type ChatModelInstance = ChatOpenAI | ChatAnthropic | ChatMistralAI | ChatVertexAI | BedrockChat | ChatBedrockConverse;
 
-export type ChatModelConstructor = new (config: any) => ChatModelInstance;
+export type ChatModelConstructor = new (config: ClientOptions) => ChatModelInstance;

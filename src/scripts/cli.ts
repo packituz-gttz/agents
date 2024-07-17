@@ -1,4 +1,4 @@
-// src/script_cli.ts
+// src/scripts/cli.ts
 import yargs from 'yargs';
 import dotenv from 'dotenv';
 import { hideBin } from 'yargs/helpers';
