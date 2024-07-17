@@ -1,20 +1,21 @@
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import dotenv from 'dotenv';
-dotenv.config();
+import { config } from 'dotenv';
+
+config();
 
 export const chartTool = new DynamicStructuredTool({
   name: 'generate_bar_chart',
   description:
     'Generates a text-based bar chart from an array of data points and returns it as a string.',
   schema: z.object({
-    data: z
-      .object({
+    data: z.array(
+      z.object({
         label: z.string(),
         value: z.number(),
       })
-      .array(),
+    ),
   }),
   func: async ({ data }): Promise<string> => {
     const maxValue = Math.max(...data.map(d => d.value));
@@ -34,15 +35,15 @@ export const chartTool = new DynamicStructuredTool({
         i === 0 ? '0'.padStart(4) :
           i % 5 === 0 ? Math.round((i / chartHeight) * maxValue).toString().padStart(4) : '    ';
 
-      chart += `${yLabel} │${row.join(' ')} `;
+      chart += `${yLabel} │${row.join(' ')} \n`;
     }
 
     // Generate X-axis
-    chart += '     ├' + '─'.repeat(chartWidth) + ' ';
+    chart += '     ├' + '─'.repeat(chartWidth) + '\n';
 
     // Generate X-axis labels
     const xLabels = data.map(d => d.label.padEnd(5).substring(0, 5)).join(' ');
-    chart += `     ${xLabels} `;
+    chart += `     ${xLabels}`;
 
     return chart;
   },
