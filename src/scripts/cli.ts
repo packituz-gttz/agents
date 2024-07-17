@@ -15,10 +15,9 @@ import { Processor } from '@/processor';
 import { GraphEvents } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
+const conversationHistory: BaseMessage[] = [];
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
-  const conversationHistory: BaseMessage[] = [];
-
   const customHandlers = {
     [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
@@ -96,4 +95,9 @@ async function testStandardStreaming(): Promise<void> {
   }
 }
 
-testStandardStreaming().catch(console.error);
+testStandardStreaming().catch((err) => {
+  console.error(err);
+  console.log('Conversation history:');
+  console.dir(conversationHistory, { depth: null });
+  process.exit(1);
+});
