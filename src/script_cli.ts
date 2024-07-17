@@ -49,7 +49,7 @@ function getLLMConfig(provider: string): t.LLMConfig {
     case 'openai':
       return {
         provider: Providers.OPENAI,
-        model: 'gpt-4',
+        model: 'gpt-4o',
         temperature: 0.7,
       };
     case 'anthropic':
@@ -155,7 +155,11 @@ async function testStandardStreaming() {
     instructions: "You are a friendly AI assistant with expertise in weather forecasting. Always address the user by their name.",
     additional_instructions: `The user's name is ${userName} and they are located in ${location}. Today's date is ${currentDate}.`
   };
-  await processor.processStream(inputs, config);
+  const finalMessage2 = await processor.processStream(inputs, config);
+  if (finalMessage2) {
+    conversationHistory.push(finalMessage2);
+    console.dir(conversationHistory, { depth: null });
+  }
 }
 
 testStandardStreaming();
