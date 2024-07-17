@@ -2,9 +2,6 @@
 import { Providers } from '@/common';
 import type * as t from '@/types';
 
-import { config } from 'dotenv';
-config();
-
 const llmConfigs: Record<string, t.LLMConfig> = {
   openai: {
     provider: Providers.OPENAI,

@@ -9,9 +9,6 @@ import { getConverseOverrideMessage, modifyDeltaProperties, formatAnthropicMessa
 import { getChatModelClass } from '@/llm/providers';
 import { Providers } from '@/common';
 
-import { config } from 'dotenv';
-config();
-
 export abstract class Graph<
   T extends t.ToolNodeState = { messages: BaseMessage[] },
   TNodeName extends string = string
