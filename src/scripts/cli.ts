@@ -1,9 +1,10 @@
+/* eslint-disable no-console */
 // src/scripts/cli.ts
 import yargs from 'yargs';
-import dotenv from 'dotenv';
+import { config } from 'dotenv';
 import { hideBin } from 'yargs/helpers';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
-import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
+import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
@@ -12,7 +13,7 @@ import {
 import { GraphEvents, Providers } from '@/common';
 import { Processor } from '@/processor';
 
-dotenv.config();
+config();
 
 const argv = yargs(hideBin(process.argv))
   .option('name', {
@@ -83,28 +84,29 @@ function getLLMConfig(provider: string): t.LLMConfig {
   }
 }
 
-async function testStandardStreaming() {
+async function testStandardStreaming(): Promise<void> {
   const conversationHistory: BaseMessage[] = [];
 
   const customHandlers = {
     [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
-      handle: (event: string, data: t.StreamEventData) => {
+      handle: (_event: string, data: t.StreamEventData): void => {
         console.dir(data, { depth: null });
       }
     },
     [GraphEvents.LLM_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
+      handle: (_event: string, data: t.StreamEventData): void => {
         console.dir(data, { depth: null });
       }
     },
     [GraphEvents.CHAT_MODEL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
+      handle: (_event: string, _data: t.StreamEventData): void => {
+        // Intentionally left empty
       }
     },
     [GraphEvents.TOOL_END]: {
-      handle: (event: string, data: t.StreamEventData) => {
+      handle: (_event: string, data: t.StreamEventData): void => {
         console.dir(data, { depth: null });
       }
     },
@@ -127,7 +129,7 @@ async function testStandardStreaming() {
     version: 'v2' as const,
   };
 
-  console.log('\nTest 1: Initial greeting');
+  console.log(' Test 1: Initial greeting');
 
   conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
   let inputs = {
@@ -140,7 +142,7 @@ async function testStandardStreaming() {
     conversationHistory.push(finalMessage);
   }
 
-  console.log('\nTest 2: Weather query');
+  console.log(' Test 2: Weather query');
 
   const userMessage = `
   Make a search for the weather in ${location} today, which is ${currentDate}.
@@ -162,4 +164,4 @@ async function testStandardStreaming() {
   }
 }
 
-testStandardStreaming();
+testStandardStreaming().catch(console.error);
