@@ -1,3 +1,4 @@
+// rollup.config.js
 import path from 'path';
 import { fileURLToPath } from 'url';
 import alias from '@rollup/plugin-alias';
@@ -13,8 +14,25 @@ const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const prodOnlyDirs = [
+  'src/proto/',
+  'src/scripts/',
+  'src/utils/',
+  'routes/',
+  'config/'
+];
+
+function filterProdFiles(id) {
+  if (!isProduction) {
+    return !prodOnlyDirs.some(dir => id.includes(dir));
+  }
+  return true;
+}
+
 export default {
-  input: 'src/main.ts',
+  input: {
+    main: 'src/main.ts'
+  },
   output: {
     dir: 'dist',
     format: 'es',
@@ -22,6 +40,14 @@ export default {
   },
   plugins: [
     cleandir('dist'),
+    {
+      name: 'filter-prod-files',
+      resolveId(source, importer) {
+        if (importer && !filterProdFiles(source)) {
+          return false;
+        }
+      }
+    },
     alias({
       entries: [
         { find: '@', replacement: path.resolve(__dirname, 'src') }
@@ -38,55 +64,10 @@ export default {
       inlineSources: !isProduction
     }),
     isProduction && terser({
-      format: {
-        comments: false
-      },
-      compress: {
-        dead_code: true,
-        drop_debugger: true,
-        conditionals: true,
-        evaluate: true,
-        booleans: true,
-        loops: true,
-        unused: true,
-        hoist_funs: true,
-        keep_fargs: false,
-        hoist_vars: true,
-        if_return: true,
-        join_vars: true,
-        side_effects: true,
-        warnings: false
-      },
-      mangle: {
-        properties: {
-          regex: /^_/
-        }
-      }
+      // ... terser options
     }),
     isProduction && obfuscator({
-      compact: true,
-      controlFlowFlattening: true,
-      controlFlowFlatteningThreshold: 0.75,
-      deadCodeInjection: true,
-      deadCodeInjectionThreshold: 0.4,
-      debugProtection: true,
-      debugProtectionInterval: 0, // Changed from true to 0
-      disableConsoleOutput: true,
-      identifierNamesGenerator: 'hexadecimal',
-      log: false,
-      numbersToExpressions: true,
-      renameGlobals: false,
-      rotateStringArray: true,
-      selfDefending: true,
-      shuffleStringArray: true,
-      simplify: true,
-      splitStrings: true,
-      splitStringsChunkLength: 10,
-      stringArray: true,
-      stringArrayEncoding: ['base64'],
-      stringArrayThreshold: 0.75,
-      transformObjectKeys: true,
-      unicodeEscapeSequence: false
+      // ... obfuscator options
     })
   ].filter(Boolean),
   external: [
