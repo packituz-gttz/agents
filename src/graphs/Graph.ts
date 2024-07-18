@@ -95,6 +95,7 @@ export class StandardGraph extends Graph<
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {
+          console.log(chunk);
           if (!finalChunk) {
             finalChunk = chunk;
           } else {
@@ -104,7 +105,7 @@ export class StandardGraph extends Graph<
 
         finalChunk = modifyDeltaProperties(finalChunk);
         this.finalMessage = finalChunk;
-        return { messages: finalChunk ? [finalChunk] : [] };
+        return { messages: [finalChunk] };
       }
 
       const responseMessage = await this.boundModel.invoke(finalMessages, config);

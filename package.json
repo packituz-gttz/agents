@@ -7,7 +7,7 @@
     "build:dev": "rollup -c",
     "start": "node dist/main.js",
     "clean": "node ./config/clean.js",
-    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Danny' --location 'Brooklyn, NY' --provider 'aws'",
+    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Danny' --location 'Brooklyn, NY' --provider 'anthropic'",
     "start:standard": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/standard.ts",
     "start:cg": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/collab.ts",
     "start:tasks": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tasks.ts",

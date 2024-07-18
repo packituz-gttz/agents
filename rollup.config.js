@@ -31,7 +31,7 @@ function filterProdFiles(id) {
 
 export default {
   input: {
-    main: 'src/main.ts'
+    main: 'src/index.ts'
   },
   output: {
     dir: 'dist',

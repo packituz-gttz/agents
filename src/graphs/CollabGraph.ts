@@ -12,13 +12,13 @@ import { Graph } from './Graph';
 import type * as t from '@/types';
 import { supervisorPrompt } from '@/prompts/collab';
 
-export interface AgentStateChannels {
+export interface CollabAgentStateChannels {
   messages: BaseMessage[];
   next: string;
   [key: string]: any;
 }
 
-export interface Member {
+export interface CollabMember {
   name: string;
   systemPrompt: string;
   tools: any[];
@@ -30,8 +30,8 @@ interface SupervisorConfig {
   llmConfig: t.LLMConfig;
 }
 
-export class CollabGraph extends Graph<AgentStateChannels, string> {
-  private graph: t.CompiledWorkflow<AgentStateChannels, Partial<AgentStateChannels>, string> | null = null;
+export class CollabGraph extends Graph<CollabAgentStateChannels, string> {
+  private graph: t.CompiledWorkflow<CollabAgentStateChannels, Partial<CollabAgentStateChannels>, string> | null = null;
   private members: Member[];
   private supervisorConfig: SupervisorConfig;
   private supervisorChain: Runnable | null = null;
@@ -49,7 +49,7 @@ export class CollabGraph extends Graph<AgentStateChannels, string> {
     this.supervisorChain = await this.createSupervisorChain(systemPrompt, options);
   }
 
-  createGraphState(): StateGraphArgs<AgentStateChannels>['channels'] {
+  createGraphState(): StateGraphArgs<CollabAgentStateChannels>['channels'] {
     return {
       messages: {
         value: (x?: BaseMessage[], y?: BaseMessage[]) => (x ?? []).concat(y ?? []),
@@ -77,7 +77,7 @@ export class CollabGraph extends Graph<AgentStateChannels, string> {
 
   createCallModel(boundModel: any) {
     // This method is not directly used in the collaborative graph
-    return async (state: AgentStateChannels, config?: RunnableConfig) => {
+    return async (state: CollabAgentStateChannels, config?: RunnableConfig) => {
       return { messages: [] };
     };
   }
@@ -104,22 +104,22 @@ export class CollabGraph extends Graph<AgentStateChannels, string> {
   }
 
   createWorkflow(
-    graphState: StateGraphArgs<AgentStateChannels>['channels'],
+    graphState: StateGraphArgs<CollabAgentStateChannels>['channels'],
     callModel?: any,
     toolNode?: any
-  ): t.CompiledWorkflow<AgentStateChannels, Partial<AgentStateChannels>, string> {
+  ): t.CompiledWorkflow<CollabAgentStateChannels, Partial<CollabAgentStateChannels>, string> {
     if (!this.supervisorChain) {
       throw new Error('CollabGraph not initialized. Call initialize() first.');
     }
 
-    const workflow = new StateGraph<AgentStateChannels, Partial<AgentStateChannels>, string>({
+    const workflow = new StateGraph<CollabAgentStateChannels, Partial<CollabAgentStateChannels>, string>({
       channels: graphState,
     });
 
     // Dynamically create agents and add nodes for each member
     for (const member of this.members) {
       const node = async (
-        state: AgentStateChannels,
+        state: CollabAgentStateChannels,
         config?: RunnableConfig,
       ) => {
         const agent = await this.createAgent(member.llmConfig, member.tools, member.systemPrompt);
@@ -142,7 +142,7 @@ export class CollabGraph extends Graph<AgentStateChannels, string> {
     }
 
     const supervisorNode = async (
-      state: AgentStateChannels,
+      state: CollabAgentStateChannels,
       config?: RunnableConfig,
     ) => {
       // Get the current state
@@ -167,7 +167,7 @@ export class CollabGraph extends Graph<AgentStateChannels, string> {
 
     workflow.addConditionalEdges(
       'supervisor',
-      (x: AgentStateChannels) => x.next,
+      (x: CollabAgentStateChannels) => x.next,
     );
 
     workflow.addEdge(START, 'supervisor');

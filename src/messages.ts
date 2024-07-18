@@ -84,7 +84,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
               type: 'tool_use',
               id: extendedItem.id,
               name: toolCall.name,
-              input: JSON.stringify(toolCall.args)
+              input: toolCall.args
             });
           }
         } else if ('input' in extendedItem && extendedItem.input) {
@@ -96,7 +96,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
                 type: 'tool_use',
                 id: toolCall.id,
                 name: toolCall.name,
-                input: JSON.stringify(toolCall.args)
+                input: toolCall.args
               });
             }
           } catch (e) {
@@ -121,7 +121,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
     type: 'function',
     function: {
       name: toolCall.name,
-      arguments: JSON.stringify(toolCall.args)
+      arguments: toolCall.args
     }
   }));
 
