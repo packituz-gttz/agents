@@ -29,7 +29,7 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
 
     if (config.graphConfig.type === 'standard') {
       this.provider = config.graphConfig.llmConfig.provider;
-      this.graphRunnable = this.createStandardGraph(config.graphConfig) as any;
+      this.graphRunnable = this.createStandardGraph(config.graphConfig) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
       if (this.Graph) {
         this.Graph.handlerRegistry = handlerRegistry;
       }
@@ -62,11 +62,11 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     if (config.graphConfig.type === 'collaborative') {
       await processor.collab.initialize();
       const graphState = processor.collab.createGraphState();
-      processor.graphRunnable = processor.collab.createWorkflow(graphState) as any;
+      processor.graphRunnable = processor.collab.createWorkflow(graphState) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
     } else if (config.graphConfig.type === 'taskmanager') {
       await processor.taskManager.initialize();
       const graphState = processor.taskManager.createGraphState();
-      processor.graphRunnable = processor.taskManager.createWorkflow(graphState) as any;
+      processor.graphRunnable = processor.taskManager.createWorkflow(graphState) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
     }
     return processor;
   }
@@ -78,7 +78,7 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
       additional_instructions?: string;
     },
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
-  ) {
+  ): Promise<BaseMessage | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Processor not initialized. Make sure to use Processor.create() to instantiate the Processor.');
     }
