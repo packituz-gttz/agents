@@ -84,11 +84,20 @@ export class StandardGraph extends Graph<
       }
 
       const finalMessages = messages;
+      const lastMessageX = finalMessages[finalMessages.length - 2];
+      const lastMessageY = finalMessages[finalMessages.length - 1];
+
       if (this.provider === Providers.ANTHROPIC
-        && finalMessages[finalMessages.length - 1] instanceof ToolMessage
-        && finalMessages[finalMessages.length - 2] instanceof AIMessageChunk
+        && lastMessageX instanceof AIMessageChunk
+        && lastMessageY instanceof ToolMessage
       ) {
-        finalMessages[finalMessages.length - 2] = formatAnthropicMessage(finalMessages[finalMessages.length - 2] as AIMessageChunk);
+        finalMessages[finalMessages.length - 2] = formatAnthropicMessage(lastMessageX as AIMessageChunk);
+      } else if (this.provider === Providers.AWS
+        && lastMessageX instanceof AIMessageChunk
+        && lastMessageY instanceof ToolMessage
+        && typeof lastMessageX.content === 'string'
+      ) {
+        finalMessages[finalMessages.length - 2].content = '';
       }
 
       if (this.provider === Providers.ANTHROPIC) {
@@ -105,12 +114,11 @@ export class StandardGraph extends Graph<
 
         finalChunk = modifyDeltaProperties(finalChunk);
         this.finalMessage = finalChunk;
-        return { messages: [finalChunk] };
+        return { messages: [this.finalMessage as AIMessageChunk] };
       }
 
-      const responseMessage = await this.boundModel.invoke(finalMessages, config);
-      this.finalMessage = responseMessage;
-      return { messages: [responseMessage] };
+      this.finalMessage = await this.boundModel.invoke(finalMessages, config);
+      return { messages: [this.finalMessage as AIMessageChunk] };
     };
   }
 

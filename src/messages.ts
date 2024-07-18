@@ -2,11 +2,15 @@
 import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage } from '@langchain/core/messages';
 import { ToolCall } from '@langchain/core/tools';
 
-export function getConverseOverrideMessage(
-  userMessage: string[],
-  lastMessageX: AIMessageChunk,
-  lastMessageY: ToolMessage
-): HumanMessage {
+export function getConverseOverrideMessage({
+  userMessage,
+  lastMessageX,
+  lastMessageY
+}: {
+  userMessage: string[];
+  lastMessageX: AIMessageChunk;
+  lastMessageY: ToolMessage;
+}): HumanMessage {
   const content = `
 User: ${userMessage[1]}
 
