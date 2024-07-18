@@ -1,16 +1,12 @@
 // src/messages.ts
-import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage, MessageContentComplex } from '@langchain/core/messages';
+import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage } from '@langchain/core/messages';
+import { ToolCall } from '@langchain/core/tools';
 
-export const getConverseOverrideMessage = ({
-  userMessage,
-  lastMessageX,
-  lastMessageY,
-} : {
+export function getConverseOverrideMessage(
   userMessage: string[],
   lastMessageX: AIMessageChunk,
-  lastMessageY: ToolMessage,
-}) => {
-
+  lastMessageY: ToolMessage
+): HumanMessage {
   const content = `
 User: ${userMessage[1]}
 
@@ -27,81 +23,86 @@ User: ${userMessage[1]}
 - ${lastMessageY.content}
 `;
 
-  return new HumanMessage({ content });
-};
+  return new HumanMessage(content);
+}
 
-export function modifyDeltaProperties(obj?: AIMessageChunk) {
-  if (obj && typeof obj === 'object') {
-    const modifyContent = (content: any[]) => {
-      return content.map(item => {
-        if (item && typeof item === 'object' && item.type) {
-          let newType = item.type;
+export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | undefined {
+  if (!obj || typeof obj !== 'object') return obj;
 
-          // Remove _delta suffix if present
-          if (newType.endsWith('_delta')) {
-            newType = newType.replace('_delta', '');
-          }
-
-          // Check if the type is not one of the allowed types
-          const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
-          if (!allowedTypes.includes(newType)) {
-            newType = 'text';
-          }
-
-          return { ...item, type: newType };
+  const modifyContent = (content: any[]): any[] => {
+    return content.map(item => {
+      if (item && typeof item === 'object' && 'type' in item) {
+        let newType = item.type;
+        if (newType.endsWith('_delta')) {
+          newType = newType.replace('_delta', '');
         }
-        return item;
-      });
-    };
+        const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
+        if (!allowedTypes.includes(newType)) {
+          newType = 'text';
+        }
+        return { ...item, type: newType };
+      }
+      return item;
+    });
+  };
 
-    if (Array.isArray(obj.content)) {
-      obj.content = modifyContent(obj.content);
-    }
-    if (obj.lc_kwargs && Array.isArray(obj.lc_kwargs.content)) {
-      obj.lc_kwargs.content = modifyContent(obj.lc_kwargs.content);
-    }
+  if (Array.isArray(obj.content)) {
+    obj.content = modifyContent(obj.content);
+  }
+  if (obj.lc_kwargs && Array.isArray(obj.lc_kwargs.content)) {
+    obj.lc_kwargs.content = modifyContent(obj.lc_kwargs.content);
   }
   return obj;
 }
 
-export function formatAnthropicMessage(message: AIMessageChunk): any {
+interface ExtendedMessageContent {
+  type?: string;
+  text?: string;
+  input?: string;
+  id?: string;
+  name?: string;
+}
+
+export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
   if (!message.tool_calls || message.tool_calls.length === 0) {
-    return message;
+    return new AIMessage(message.content);
   }
 
   const toolCallMap = new Map(message.tool_calls.map(tc => [tc.id, tc]));
-
-  let formattedContent: MessageContentComplex;
+  let formattedContent: string | ExtendedMessageContent[];
 
   if (Array.isArray(message.content)) {
-    formattedContent = message.content.reduce((acc, item) => {
-      if (Array.isArray(acc) && item.type === 'text' && item.text) {
-        acc.push({ type: 'text', text: item.text });
-      } else if (Array.isArray(acc) && item.type === 'tool_use') {
-        const toolCall = toolCallMap.get(item.id);
-        if (toolCall) {
-          acc.push({
-            type: 'tool_use',
-            id: item.id,
-            name: toolCall.name,
-            input: toolCall.args // Use the args from the tool call
-          });
-        }
-      } else if (Array.isArray(acc) && item.input && message.tool_calls) {
-        try {
-          const parsedInput = JSON.parse(item.input);
-          const toolCall = message.tool_calls.find(tc => tc.args.input === parsedInput.input);
+    formattedContent = message.content.reduce<ExtendedMessageContent[]>((acc, item) => {
+      if (typeof item === 'object' && item !== null) {
+        const extendedItem = item as ExtendedMessageContent;
+        if (extendedItem.type === 'text' && extendedItem.text) {
+          acc.push({ type: 'text', text: extendedItem.text });
+        } else if (extendedItem.type === 'tool_use' && extendedItem.id) {
+          const toolCall = toolCallMap.get(extendedItem.id);
           if (toolCall) {
             acc.push({
               type: 'tool_use',
-              id: toolCall.id,
+              id: extendedItem.id,
               name: toolCall.name,
-              input: toolCall.args
+              input: JSON.stringify(toolCall.args)
             });
           }
-        } catch (e) {
-          if (item.input && item.input.trim()) {
-            acc.push({ type: 'text', text: item.input });
+        } else if ('input' in extendedItem && extendedItem.input) {
+          try {
+            const parsedInput = JSON.parse(extendedItem.input);
+            const toolCall = message.tool_calls.find(tc => tc.args.input === parsedInput.input);
+            if (toolCall) {
+              acc.push({
+                type: 'tool_use',
+                id: toolCall.id,
+                name: toolCall.name,
+                input: JSON.stringify(toolCall.args)
+              });
+            }
+          } catch (e) {
+            if (extendedItem.input.trim()) {
+              acc.push({ type: 'text', text: extendedItem.input });
+            }
           }
         }
       } else if (typeof item === 'string' && item.trim()) {
@@ -110,13 +111,13 @@ export function formatAnthropicMessage(message: AIMessageChunk): any {
       return acc;
     }, []);
   } else if (typeof message.content === 'string' && message.content.trim()) {
-    formattedContent = [{ type: 'text', text: message.content }];
+    formattedContent = message.content;
   } else {
     formattedContent = [];
   }
 
-  const formattedToolCalls = message.tool_calls.map(toolCall => ({
-    id: toolCall.id,
+  const formattedToolCalls: ToolCall[] = message.tool_calls.map(toolCall => ({
+    id: toolCall.id ?? '',
     type: 'function',
     function: {
       name: toolCall.name,
