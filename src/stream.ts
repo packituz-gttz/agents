@@ -32,7 +32,7 @@ export class DefaultLLMStreamHandler implements t.EventHandler {
 export class ChatModelStreamHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData): void {
     const chunk = data?.chunk;
-    const  isContentChunk = !!(chunk && 'content' in chunk);
+    const isContentChunk = !!(chunk && 'content' in chunk);
     const content = isContentChunk && chunk?.content;
 
     if (!content || !isContentChunk) {
@@ -40,10 +40,13 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     if (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) {
-      console.log(chunk.tool_call_chunks);
+      console.dir(chunk.tool_call_chunks, { depth: null });
     }
+
     if (typeof content === 'string') {
       process.stdout.write(content);
+    } else {
+      console.dir(content, { depth: null });
     }
   }
 }

@@ -7,9 +7,9 @@
     "build:dev": "rollup -c",
     "start": "node dist/main.js",
     "clean": "node ./config/clean.js",
-    "bun:cli": "bun -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Tyler' --location 'Hamilton County, NY' --provider 'aws'",
-    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Tyler' --location 'Hamilton County, NY' --provider 'aws'",
-    "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --name 'Tyler' --location 'Hamilton County, NY' --provider 'aws'",
+    "bun:cli": "bun -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Dessa' --location 'Hamilton County, NY' --provider 'anthropic'",
+    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --name 'Dessa' --location 'Hamilton County, NY' --provider 'anthropic'",
+    "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --name 'Dessa' --location 'Hamilton County, NY' --provider 'anthropic'",
     "start:standard": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/standard.ts",
     "start:cg": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/collab.ts",
     "start:tasks": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tasks.ts",
@@ -49,7 +49,7 @@
     "langchain": "^0.2.10"
   },
   "resolutions": {
-    "@langchain/core": "0.2.16",
+    "@langchain/core": "0.2.17",
     "@smithy/eventstream-codec": "^2.0.5",
     "@smithy/protocol-http": "^3.0.6",
     "@smithy/signature-v4": "^2.0.10",

@@ -5,6 +5,8 @@
  * @enum {string}
  */
 export enum GraphEvents {
+  /** Custom event, emitted by system */
+  ON_CUSTOM_EVENT = 'on_custom_event',
   /** Emitted when a chat model starts processing. */
   CHAT_MODEL_START = 'on_chat_model_start',
 

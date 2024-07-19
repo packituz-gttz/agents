@@ -3,10 +3,11 @@ import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
 import type * as t from '@/types';
-import { TaskManager, TaskManagerStateChannels } from './graphs/TaskManager';
-import { CollabGraph } from './graphs/CollabGraph';
-import { StandardGraph } from './graphs/Graph';
+import { TaskManager, TaskManagerStateChannels } from '@/graphs/TaskManager';
+import { CollabGraph } from '@/graphs/CollabGraph';
+import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/stream';
+import { GraphEvents } from '@/common';
 
 export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -87,9 +88,13 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     }
     const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
-      const handler = this.handlerRegistry.getHandler(event.event);
+      let eventName = event.event;
+      if (eventName && eventName === GraphEvents.ON_CUSTOM_EVENT) {
+        eventName = event.name;
+      }
+      const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {
-        handler.handle(event.event, event.data);
+        handler.handle(eventName, event.data);
       }
     }
     return this.Graph.getFinalChunk();

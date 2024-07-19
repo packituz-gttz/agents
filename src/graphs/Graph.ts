@@ -1,13 +1,14 @@
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { RunnableConfig } from '@langchain/core/runnables';
+import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { END, START, StateGraph } from '@langchain/langgraph';
-import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import { getConverseOverrideMessage, modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
-import { Providers } from '@/common';
+import { Providers, GraphEvents } from '@/common';
 
 export abstract class Graph<
   T extends t.ToolNodeState = { messages: BaseMessage[] },
@@ -104,7 +105,7 @@ export class StandardGraph extends Graph<
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {
-          console.log(chunk);
+          dispatchCustomEvent(GraphEvents.CHAT_MODEL_STREAM, { chunk }, config);
           if (!finalChunk) {
             finalChunk = chunk;
           } else {
