@@ -131,9 +131,9 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
 
   return new AIMessage({
     content: formattedContent,
+    tool_calls: formattedToolCalls,
     additional_kwargs: {
       ...message.additional_kwargs,
-      tool_calls: formattedToolCalls
     }
   });
 }
