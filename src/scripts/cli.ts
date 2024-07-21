@@ -2,7 +2,7 @@
 // src/scripts/cli.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, BaseMessage } from '@langchain/core/messages';
+import { HumanMessage, BaseMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import {
@@ -23,21 +23,37 @@ async function testStandardStreaming(): Promise<void> {
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== LLM_START ======');
         console.dir(data, { depth: null });
       }
     },
     [GraphEvents.LLM_END]: {
       handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== LLM_END ======');
         console.dir(data, { depth: null });
+      }
+    },
+    [GraphEvents.CHAT_MODEL_START]: {
+      handle: (_event: string, _data: t.StreamEventData): void => {
+        console.log('====== CHAT_MODEL_START ======');
+        // Intentionally left empty
       }
     },
     [GraphEvents.CHAT_MODEL_END]: {
       handle: (_event: string, _data: t.StreamEventData): void => {
+        console.log('====== CHAT_MODEL_END ======');
         // Intentionally left empty
+      }
+    },
+    [GraphEvents.TOOL_START]: {
+      handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== TOOL_START ======');
+        console.dir(data, { depth: null });
       }
     },
     [GraphEvents.TOOL_END]: {
       handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== TOOL_END ======');
         console.dir(data, { depth: null });
       }
     },
