@@ -1,6 +1,7 @@
 // src/messages.ts
 import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage } from '@langchain/core/messages';
-import { ToolCall } from '@langchain/core/tools';
+import type { ToolCall } from '@langchain/core/messages/tool';
+import type * as t from '@/types';
 
 export function getConverseOverrideMessage({
   userMessage,
@@ -33,9 +34,9 @@ User: ${userMessage[1]}
 export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | undefined {
   if (!obj || typeof obj !== 'object') return obj;
 
-  const modifyContent = (content: any[]): any[] => {
+  const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
     return content.map(item => {
-      if (item && typeof item === 'object' && 'type' in item) {
+      if (item && typeof item === 'object' && 'type' in item && item.type) {
         let newType = item.type;
         if (newType.endsWith('_delta')) {
           newType = newType.replace('_delta', '');
@@ -59,26 +60,18 @@ export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | un
   return obj;
 }
 
-interface ExtendedMessageContent {
-  type?: string;
-  text?: string;
-  input?: string;
-  id?: string;
-  name?: string;
-}
-
 export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
   if (!message.tool_calls || message.tool_calls.length === 0) {
-    return new AIMessage(message.content);
+    return new AIMessage({ content: message.content });
   }
 
   const toolCallMap = new Map(message.tool_calls.map(tc => [tc.id, tc]));
-  let formattedContent: string | ExtendedMessageContent[];
+  let formattedContent: string | t.ExtendedMessageContent[];
 
   if (Array.isArray(message.content)) {
-    formattedContent = message.content.reduce<ExtendedMessageContent[]>((acc, item) => {
+    formattedContent = message.content.reduce<t.ExtendedMessageContent[]>((acc, item) => {
       if (typeof item === 'object' && item !== null) {
-        const extendedItem = item as ExtendedMessageContent;
+        const extendedItem = item as t.ExtendedMessageContent;
         if (extendedItem.type === 'text' && extendedItem.text) {
           acc.push({ type: 'text', text: extendedItem.text });
         } else if (extendedItem.type === 'tool_use' && extendedItem.id) {
@@ -88,19 +81,19 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
               type: 'tool_use',
               id: extendedItem.id,
               name: toolCall.name,
-              input: toolCall.args
+              input: toolCall.args as unknown as string
             });
           }
         } else if ('input' in extendedItem && extendedItem.input) {
           try {
             const parsedInput = JSON.parse(extendedItem.input);
-            const toolCall = message.tool_calls.find(tc => tc.args.input === parsedInput.input);
+            const toolCall = message.tool_calls?.find(tc => tc.args.input === parsedInput.input);
             if (toolCall) {
               acc.push({
                 type: 'tool_use',
                 id: toolCall.id,
                 name: toolCall.name,
-                input: toolCall.args
+                input: toolCall.args as unknown as string
               });
             }
           } catch (e) {
@@ -109,7 +102,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
             }
           }
         }
-      } else if (typeof item === 'string' && item.trim()) {
+      } else if (typeof item === 'string' && (item as string).trim()) {
         acc.push({ type: 'text', text: item });
       }
       return acc;
@@ -120,7 +113,14 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
     formattedContent = [];
   }
 
-  const formattedToolCalls: ToolCall[] = message.tool_calls.map(toolCall => ({
+  // const formattedToolCalls: ToolCall[] = message.tool_calls.map(toolCall => ({
+  //   id: toolCall.id ?? '',
+  //   name: toolCall.name,
+  //   args: toolCall.args,
+  //   type: 'tool_call',
+  // }));
+
+  const formattedToolCalls: t.AgentToolCall[] = message.tool_calls.map(toolCall => ({
     id: toolCall.id ?? '',
     type: 'function',
     function: {
@@ -131,7 +131,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
 
   return new AIMessage({
     content: formattedContent,
-    tool_calls: formattedToolCalls,
+    tool_calls: formattedToolCalls as ToolCall[],
     additional_kwargs: {
       ...message.additional_kwargs,
     }

@@ -1,6 +1,7 @@
 // src/types/processor.ts
 import type { StructuredTool } from '@langchain/core/tools';
 import type { BaseMessage } from '@langchain/core/messages';
+import type { ToolCall } from '@langchain/core/messages/tool';
 import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
 import { StepTypes } from '@/common/enum';
@@ -64,7 +65,7 @@ export type EventName = string;
 
 export type RunStep = {
   // id: string;
-  object: 'run.step';
+  // object: 'thread.run.step'; // Updated from 'run.step' # missing
   // created_at: number;
   run_id: string;
   assistant_id: string;
@@ -76,13 +77,44 @@ export type RunStep = {
   // expires_at: number;
   // failed_at: number | null;
   // last_error: string | null;
-  step_details: {
-    type: StepTypes;
-    message_creation: {
-      message_id: string;
-    };
-  };
+  step_details: StepDetails; // Updated to use StepDetails type
   usage: null | {
     // Define usage structure if it's ever non-null
+    // prompt_tokens: number; // #new
+    // completion_tokens: number; // #new
+    // total_tokens: number; // #new
   };
 };
+
+type StepDetails =
+  | MessageCreationDetails
+  | ToolCallsDetails;
+
+type MessageCreationDetails = {
+  type: StepTypes.MESSAGE_CREATION;
+  message_creation: {
+    message_id: string;
+  };
+};
+
+type ToolCallsDetails = {
+  type: StepTypes.TOOL_CALLS;
+  tool_calls: AgentToolCall[]; // #new
+};
+
+export type AgentToolCall = {
+  id: string; // #new
+  type: 'function'; // #new
+  function: {
+    name: string; // #new
+    arguments: string | object; // JSON string // #new
+  };
+} | ToolCall;
+
+export interface ExtendedMessageContent {
+  type?: string;
+  text?: string;
+  input?: string;
+  id?: string;
+  name?: string;
+}
