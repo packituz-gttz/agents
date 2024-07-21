@@ -6,7 +6,7 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { END, START, StateGraph } from '@langchain/langgraph';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
-import { HandlerRegistry, DefaultLLMStreamHandler, GraphStreamProcessor } from '@/proto/stream';
+import { HandlerRegistry, LLMStreamHandler, GraphStreamProcessor } from '@/proto/stream';
 import type * as t from '@/types/graph';
 
 dotenv.config();
@@ -61,7 +61,7 @@ const graph = workflow.compile();
 // Test the streaming functionality
 async function testStreaming() {
     const handlerRegistry = new HandlerRegistry();
-    handlerRegistry.register('on_llm_stream', new DefaultLLMStreamHandler());
+    handlerRegistry.register('on_llm_stream', new LLMStreamHandler());
 
     // Register custom handlers
     handlerRegistry.register('on_llm_start', {

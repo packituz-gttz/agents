@@ -19,7 +19,7 @@ export class HandlerRegistry {
     }
 }
 
-export class DefaultLLMStreamHandler implements EventHandler {
+export class LLMStreamHandler implements EventHandler {
     handle(event: string, data: t.StreamEventData) {
         const chunk: ChatGenerationChunk = data?.chunk;
         const msg = chunk.message as AIMessageChunk;

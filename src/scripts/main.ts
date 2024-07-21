@@ -4,7 +4,7 @@ import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+  LLMStreamHandler,
 } from '@/stream';
 import { GraphEvents, Providers } from '@/common';
 import { Processor } from '@/processor';
@@ -19,7 +19,7 @@ async function testStreaming() {
   const conversationHistory: string[][] = [];
 
   const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (event: string, data: t.StreamEventData) => {

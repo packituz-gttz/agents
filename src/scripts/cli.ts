@@ -7,7 +7,7 @@ import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+  LLMStreamHandler,
 } from '@/stream';
 
 import { getArgs } from '@/scripts/args';
@@ -19,7 +19,7 @@ const conversationHistory: BaseMessage[] = [];
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (_event: string, data: t.StreamEventData): void => {
@@ -33,15 +33,29 @@ async function testStandardStreaming(): Promise<void> {
         console.dir(data, { depth: null });
       }
     },
+    [GraphEvents.CHAIN_START]: {
+      handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== CHAIN_START ======');
+        console.dir(data, { depth: null });
+      }
+    },
+    [GraphEvents.CHAIN_END]: {
+      handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== CHAIN_END ======');
+        console.dir(data, { depth: null });
+      }
+    },
     [GraphEvents.CHAT_MODEL_START]: {
       handle: (_event: string, _data: t.StreamEventData): void => {
         console.log('====== CHAT_MODEL_START ======');
+        console.dir(_data, { depth: null });
         // Intentionally left empty
       }
     },
     [GraphEvents.CHAT_MODEL_END]: {
       handle: (_event: string, _data: t.StreamEventData): void => {
         console.log('====== CHAT_MODEL_END ======');
+        console.dir(_data, { depth: null });
         // Intentionally left empty
       }
     },

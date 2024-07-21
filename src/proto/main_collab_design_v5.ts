@@ -4,7 +4,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import {
     ChatModelStreamHandler,
-    DefaultLLMStreamHandler,
+    LLMStreamHandler,
 } from '@/stream';
 import { CollaborativeProcessor, Member } from '@/collab_design_v5';
 import { tavilyTool, chartTool } from '@/tools/example';
@@ -48,7 +48,7 @@ process.stderr.write = function(chunk: string | Uint8Array, encoding?: BufferEnc
 
 async function testCollaborativeStreaming() {
     const customHandlers = {
-        [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+        [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
         [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
         [GraphEvents.LLM_START]: {
             handle: (event: string, data: t.StreamEventData) => {

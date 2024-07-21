@@ -7,7 +7,7 @@ import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+  LLMStreamHandler,
 } from '@/stream';
 
 import { getArgs } from '@/scripts/args';
@@ -21,7 +21,7 @@ async function executePersonalizedQuerySuite(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   
   const eventHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: { handle: logEvent },
     [GraphEvents.LLM_END]: { handle: logEvent },

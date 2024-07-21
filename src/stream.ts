@@ -13,17 +13,16 @@ export class HandlerRegistry {
   }
 }
 
-export class DefaultLLMStreamHandler implements t.EventHandler {
+export class LLMStreamHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData): void {
     const chunk = data?.chunk;
     const  isMessageChunk = !!(chunk && 'message' in chunk);
     const msg = isMessageChunk && chunk?.message;
     if (msg && msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
       console.log(msg.tool_call_chunks);
-    } else if (msg) {
-      const content = msg.content || '';
-      if (typeof content === 'string') {
-        process.stdout.write(content);
+    } else if (msg && msg.content) {
+      if (typeof msg.content === 'string') {
+        process.stdout.write(msg.content);
       }
     }
   }

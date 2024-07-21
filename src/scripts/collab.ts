@@ -4,7 +4,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import {
   ChatModelStreamHandler,
-  DefaultLLMStreamHandler,
+  LLMStreamHandler,
 } from '@/stream';
 import { Processor } from '@/processor';
 import { AgentStateChannels } from '@/graphs/CollabGraph';
@@ -35,7 +35,7 @@ console.error = function(...args) {
 
 async function testCollaborativeStreaming() {
   const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new DefaultLLMStreamHandler(),
+    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (event: string, data: t.StreamEventData) => {
