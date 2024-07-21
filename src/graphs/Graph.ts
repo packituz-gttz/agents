@@ -1,16 +1,20 @@
 // src/graphs/Graph.ts
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
+import { END, START, StateGraph } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
-import { END, START, StateGraph } from '@langchain/langgraph';
 import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
+import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
-import { Providers, GraphEvents } from '@/common';
 import { HandlerRegistry } from '@/stream';
+
+const { AGENT, TOOLS } = GraphNodeKeys;
+
+type GraphNode = typeof AGENT | typeof TOOLS | typeof START;
 
 export abstract class Graph<
   T extends t.ToolNodeState = { messages: BaseMessage[] },
@@ -25,7 +29,7 @@ export abstract class Graph<
 
 export class StandardGraph extends Graph<
   { messages: BaseMessage[] },
-  'agent' | 'tools' | typeof START
+  GraphNode
 > {
   private finalMessage: AIMessageChunk | undefined;
   private graphState: t.GraphState;
@@ -125,23 +129,23 @@ export class StandardGraph extends Graph<
     };
   }
 
-  createWorkflow(): t.CompiledWorkflow<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, 'agent' | 'tools' | typeof START> {
+  createWorkflow(): t.CompiledWorkflow<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, GraphNode> {
     const routeMessage = (state: { messages: BaseMessage[] }): string => {
       const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
       if (!lastMessage?.tool_calls?.length) {
         return END;
       }
-      return 'tools';
+      return TOOLS;
     };
 
-    const workflow = new StateGraph<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, 'agent' | 'tools' | typeof START>({
+    const workflow = new StateGraph<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, GraphNode>({
       channels: this.graphState,
     })
-      .addNode('agent', this.createCallModel())
-      .addNode('tools', this.initializeTools())
-      .addEdge(START, 'agent')
-      .addConditionalEdges('agent', routeMessage)
-      .addEdge('tools', 'agent');
+      .addNode(AGENT, this.createCallModel())
+      .addNode(TOOLS, this.initializeTools())
+      .addEdge(START, AGENT)
+      .addConditionalEdges(AGENT, routeMessage)
+      .addEdge(TOOLS, AGENT);
 
     return workflow.compile();
   }

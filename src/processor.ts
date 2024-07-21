@@ -4,10 +4,10 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
 import type * as t from '@/types';
 import { TaskManager, TaskManagerStateChannels } from '@/graphs/TaskManager';
+import { GraphEvents, CommonEvents } from '@/common';
 import { CollabGraph } from '@/graphs/CollabGraph';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/stream';
-import { GraphEvents } from '@/common';
 
 export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -16,6 +16,7 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
   private handlerRegistry: HandlerRegistry;
   private Graph: StandardGraph | undefined;
   provider: Providers | undefined;
+  run_id: string | undefined;
 
   private constructor(config: t.ProcessorConfig) {
     const handlerRegistry = new HandlerRegistry();
@@ -88,13 +89,18 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     }
     const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
-      let eventName = event.event;
+      const { data, name, metadata, ...info } = event;
+
+      let eventName: t.EventName = info.event;
       if (eventName && eventName === GraphEvents.ON_CUSTOM_EVENT) {
-        eventName = event.name;
+        eventName = name;
+      }
+      if (name === CommonEvents.LANGGRAPH && !this.run_id && info.run_id) {
+        this.run_id = info.run_id;
       }
       const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {
-        handler.handle(eventName, event.data);
+        handler.handle(eventName, data, metadata);
       }
     }
     return this.Graph.getFinalMessage();

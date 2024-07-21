@@ -5,6 +5,11 @@
  * @enum {string}
  */
 export enum GraphEvents {
+  /* Custom Events */
+  /** Message Delta */
+
+  /* Official Events */
+
   /** Custom event, emitted by system */
   ON_CUSTOM_EVENT = 'on_custom_event',
   /** Emitted when a chat model starts processing. */
@@ -60,4 +65,24 @@ export enum Providers {
   VERTEXAI = 'vertexai',
   MISTRALAI = 'mistralai',
   ANTHROPIC = 'anthropic'
+}
+
+export enum GraphNodeKeys {
+  TOOLS = 'tools',
+  AGENT = 'agent',
+}
+
+export enum GraphNodeActions {
+  TOOL_NODE = 'tool_node',
+  CALL_MODEL = 'call_model',
+  ROUTE_MESSAGE = 'route_message',
+}
+
+export enum CommonEvents {
+  LANGGRAPH = 'LangGraph',
+}
+
+export declare enum StepTypes {
+  TOOL_CALLS = 'tool_calls',
+  MESSAGE_CREATION = 'message_creation'
 }

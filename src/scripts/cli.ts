@@ -33,18 +33,20 @@ async function testStandardStreaming(): Promise<void> {
         console.dir(data, { depth: null });
       }
     },
+    /*
     [GraphEvents.CHAIN_START]: {
       handle: (_event: string, data: t.StreamEventData): void => {
         console.log('====== CHAIN_START ======');
-        console.dir(data, { depth: null });
+        // console.dir(data, { depth: null });
       }
     },
     [GraphEvents.CHAIN_END]: {
       handle: (_event: string, data: t.StreamEventData): void => {
         console.log('====== CHAIN_END ======');
-        console.dir(data, { depth: null });
+        // console.dir(data, { depth: null });
       }
     },
+    */
     [GraphEvents.CHAT_MODEL_START]: {
       handle: (_event: string, _data: t.StreamEventData): void => {
         console.log('====== CHAT_MODEL_START ======');

@@ -17,7 +17,7 @@ export interface IState {
 }
 
 export interface EventHandler {
-  handle(event: string, data: StreamEventData): void;
+  handle(event: string, data: StreamEventData, metadata?: Record<string, unknown>): void;
 }
 
 export type GraphState = StateGraphArgs<IState>['channels'];
