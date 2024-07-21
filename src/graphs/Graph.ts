@@ -1,14 +1,16 @@
+// src/graphs/Graph.ts
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-import { RunnableConfig } from '@langchain/core/runnables';
+import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { END, START, StateGraph } from '@langchain/langgraph';
 import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
-import { getConverseOverrideMessage, modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
+import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { Providers, GraphEvents } from '@/common';
+import { HandlerRegistry } from '@/stream';
 
 export abstract class Graph<
   T extends t.ToolNodeState = { messages: BaseMessage[] },
@@ -16,7 +18,7 @@ export abstract class Graph<
 > {
   abstract createGraphState(): t.GraphState;
   abstract initializeTools(): ToolNode<T>;
-  abstract initializeModel(): any;
+  abstract initializeModel(): Runnable;
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
 }
@@ -30,8 +32,8 @@ export class StandardGraph extends Graph<
   private tools: StructuredTool[];
   private provider: Providers;
   private clientOptions: Record<string, unknown>;
-  private boundModel: any;
-  handlerRegistry: any;
+  private boundModel: Runnable;
+  handlerRegistry: HandlerRegistry | undefined;
 
   constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[]) {
     super();
@@ -63,7 +65,7 @@ export class StandardGraph extends Graph<
     return new ToolNode<{ messages: BaseMessage[] }>(this.tools);
   }
 
-  initializeModel() {
+  initializeModel(): Runnable {
     const ChatModelClass = getChatModelClass(this.provider);
     const model = new ChatModelClass(this.clientOptions);
     return model.bindTools(this.tools);
@@ -124,7 +126,7 @@ export class StandardGraph extends Graph<
   }
 
   createWorkflow(): t.CompiledWorkflow<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, 'agent' | 'tools' | typeof START> {
-    const routeMessage = (state: { messages: BaseMessage[] }) => {
+    const routeMessage = (state: { messages: BaseMessage[] }): string => {
       const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
       if (!lastMessage?.tool_calls?.length) {
         return END;
@@ -144,79 +146,79 @@ export class StandardGraph extends Graph<
     return workflow.compile();
   }
 
-  getFinalChunk(): AIMessageChunk | undefined {
+  getFinalMessage(): AIMessageChunk | undefined {
     return this.finalMessage;
   }
 
-  private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
-    const [lastMessageX, secondLastMessageX] = x.slice(-2);
-    const lastMessageY = y[y.length - 1];
+  // private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
+  //   const [lastMessageX, secondLastMessageX] = x.slice(-2);
+  //   const lastMessageY = y[y.length - 1];
 
-    if (
-      lastMessageX instanceof AIMessageChunk &&
-      lastMessageY instanceof ToolMessage &&
-      Array.isArray(secondLastMessageX) &&
-      secondLastMessageX[0] === 'user'
-    ) {
-      const overrideMessage = getConverseOverrideMessage({
-        userMessage: secondLastMessageX,
-        lastMessageX,
-        lastMessageY,
-      });
+  //   if (
+  //     lastMessageX instanceof AIMessageChunk &&
+  //     lastMessageY instanceof ToolMessage &&
+  //     Array.isArray(secondLastMessageX) &&
+  //     secondLastMessageX[0] === 'user'
+  //   ) {
+  //     const overrideMessage = getConverseOverrideMessage({
+  //       userMessage: secondLastMessageX,
+  //       lastMessageX,
+  //       lastMessageY,
+  //     });
 
-      const initialMessages = x.slice(0, -4);
-      return [...initialMessages, overrideMessage];
-    }
+  //     const initialMessages = x.slice(0, -4);
+  //     return [...initialMessages, overrideMessage];
+  //   }
 
-    return x.concat(y);
-  }
+  //   return x.concat(y);
+  // }
 
-  private convertToolMessagesForAnthropic(messages: BaseMessage[]): BaseMessage[] {
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage) {
-      return messages;
-    }
+  // private convertToolMessagesForAnthropic(messages: BaseMessage[]): BaseMessage[] {
+  //   const lastMessage = messages[messages.length - 1];
+  //   if (!lastMessage) {
+  //     return messages;
+  //   }
 
-    let toolResultIndex = -1;
-    const convertedMessages: BaseMessage[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      const message = messages[i];
-      if (message instanceof ToolMessage && message.tool_call_id) {
-        // Append tool result to the current human message
+  //   let toolResultIndex = -1;
+  //   const convertedMessages: BaseMessage[] = [];
+  //   for (let i = 0; i < messages.length; i++) {
+  //     const message = messages[i];
+  //     if (message instanceof ToolMessage && message.tool_call_id) {
+  //       // Append tool result to the current human message
 
-        const currentHumanMessage = convertedMessages[toolResultIndex];
+  //       const currentHumanMessage = convertedMessages[toolResultIndex];
 
-        const toolResult = {
-          type: 'tool_result',
-          tool_call_id: message.tool_call_id,
-          name: message.name,
-          content: message.content
-        };
+  //       const toolResult = {
+  //         type: 'tool_result',
+  //         tool_call_id: message.tool_call_id,
+  //         name: message.name,
+  //         content: message.content
+  //       };
 
-        if (currentHumanMessage) {
-          currentHumanMessage.content.push(toolResult);
-        } else {
-          convertedMessages.push({
-            role: 'user',
-            content: [toolResult]
-          });
-        }
+  //       if (currentHumanMessage) {
+  //         currentHumanMessage.content.push(toolResult);
+  //       } else {
+  //         convertedMessages.push({
+  //           role: 'user',
+  //           content: [toolResult]
+  //         });
+  //       }
 
-        toolResultIndex = i;
-      } else {
-        // For other message types (like AIMessage or SystemMessage), just add them as is
-        convertedMessages.push(message);
-      }
-    }
+  //       toolResultIndex = i;
+  //     } else {
+  //       // For other message types (like AIMessage or SystemMessage), just add them as is
+  //       convertedMessages.push(message);
+  //     }
+  //   }
 
-    if (convertedMessages[toolResultIndex]) {
-      convertedMessages[toolResultIndex] = new ToolMessage({
-        tool_call_id: convertedMessages[toolResultIndex].content[0].tool_call_id,
-        name: convertedMessages[toolResultIndex].content[0].name,
-        content: convertedMessages[toolResultIndex].content
-      });
-    }
+  //   if (convertedMessages[toolResultIndex]) {
+  //     convertedMessages[toolResultIndex] = new ToolMessage({
+  //       tool_call_id: convertedMessages[toolResultIndex].content[0].tool_call_id,
+  //       name: convertedMessages[toolResultIndex].content[0].name,
+  //       content: convertedMessages[toolResultIndex].content
+  //     });
+  //   }
 
-    return convertedMessages;
-  }
+  //   return convertedMessages;
+  // }
 }

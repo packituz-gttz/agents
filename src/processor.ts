@@ -97,6 +97,6 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
         handler.handle(eventName, event.data);
       }
     }
-    return this.Graph.getFinalChunk();
+    return this.Graph.getFinalMessage();
   }
 }
