@@ -25,7 +25,13 @@
     "format": "prettier --write ."
   },
   "author": "Danny Avila",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
+  "licenses": [
+    {
+      "type": "GPL-3.0-or-later",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.en.html"
+    }
+  ],
   "description": "",
   "type": "module",
   "packageManager": "npm@10.5.2",
