@@ -25,6 +25,9 @@ export abstract class Graph<
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
+  contentIds: Map<string, string> = new Map();
+  stepKeys: Map<string, string> = new Map();
+  contentData: unknown[] = [];
 }
 
 export class StandardGraph extends Graph<

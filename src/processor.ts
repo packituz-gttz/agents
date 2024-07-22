@@ -94,9 +94,10 @@ export class Processor<T extends t.BaseGraphState> {
       if (name === CommonEvents.LANGGRAPH && !this.run_id && info.run_id) {
         this.run_id = info.run_id;
       }
+
       const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {
-        handler.handle(eventName, data, metadata);
+        handler.handle(eventName, data, metadata, this.Graph);
       }
     }
     return this.Graph.getFinalMessage();

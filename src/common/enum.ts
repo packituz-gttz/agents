@@ -6,8 +6,9 @@
  */
 export enum GraphEvents {
   /* Custom Events */
-  /** Message Delta */
-
+  /** Delta */
+  THREAD_MESSAGE_DELTA = 'on_thread_message_delta',
+  TOOL_CALL_DELTA = 'on_tool_call_delta',
   /* Official Events */
 
   /** Custom event, emitted by system */

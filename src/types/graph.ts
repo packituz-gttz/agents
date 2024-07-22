@@ -2,6 +2,7 @@
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/langgraph';
 import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
 import type { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { Graph } from '@/graphs';
 // import type { RunnableConfig } from '@langchain/core/runnables';
 
 export type BaseGraphState = {
@@ -17,7 +18,7 @@ export type IState = BaseGraphState;
 // }
 
 export interface EventHandler {
-  handle(event: string, data: StreamEventData, metadata?: Record<string, unknown>): void;
+  handle(event: string, data: StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void;
 }
 
 export type GraphStateChannels<T extends BaseGraphState> = StateGraphArgs<T>['channels'];
