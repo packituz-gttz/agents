@@ -11,7 +11,7 @@ import type * as t from '@/types/graph';
 
 dotenv.config();
 
-const graphState: t.GraphState = {
+const graphState: t.GraphStateChannels = {
     messages: {
         value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
         default: () => [],

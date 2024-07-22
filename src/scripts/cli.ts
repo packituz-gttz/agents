@@ -87,7 +87,12 @@ async function testStandardStreaming(): Promise<void> {
   });
 
   const config = {
-    configurable: { thread_id: 'conversation-num-1' },
+    configurable: {
+      provider,
+      thread_id: 'conversation-num-1',
+      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
+      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`
+    },
     streamMode: 'values',
     version: 'v2' as const,
   };
@@ -97,8 +102,6 @@ async function testStandardStreaming(): Promise<void> {
   conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
   let inputs = {
     messages: conversationHistory,
-    instructions: 'You are a friendly AI assistant. Always address the user by their name.',
-    additional_instructions: `The user's name is ${userName} and they are located in ${location}.`
   };
   const finalMessage = await processor.processStream(inputs, config);
   if (finalMessage) {
@@ -117,8 +120,6 @@ async function testStandardStreaming(): Promise<void> {
 
   inputs = {
     messages: conversationHistory,
-    instructions: 'You are a friendly AI assistant with expertise in weather forecasting. Always address the user by their name.',
-    additional_instructions: `The user's name is ${userName} and they are located in ${location}. Today's date is ${currentDate}.`
   };
   const finalMessage2 = await processor.processStream(inputs, config);
   if (finalMessage2) {

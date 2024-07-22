@@ -1,30 +1,30 @@
 // src/types/graph.ts
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/langgraph';
-import type { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
+import type { ChatGenerationChunk } from '@langchain/core/outputs';
+// import type { RunnableConfig } from '@langchain/core/runnables';
 
-export type ToolNodeState = {
+export type BaseGraphState = {
   messages: BaseMessage[];
-  [key: string]: unknown;
+  // [key: string]: unknown;
 };
 
-export interface IState {
-  messages: BaseMessage[];
+export type IState = BaseGraphState;
 
-    instructions?: string;
-
-    additional_instructions?: string;
-}
+// export interface IState extends BaseGraphState {
+//   instructions?: string;
+//   additional_instructions?: string;
+// }
 
 export interface EventHandler {
   handle(event: string, data: StreamEventData, metadata?: Record<string, unknown>): void;
 }
 
-export type GraphState = StateGraphArgs<IState>['channels'];
+export type GraphStateChannels<T extends BaseGraphState> = StateGraphArgs<T>['channels'];
 
-export type Workflow<T extends IState = IState, U extends Partial<T> = Partial<T>, N extends string = string> = StateGraph<T, U, N>;
+export type Workflow<T extends BaseGraphState = BaseGraphState, U extends Partial<T> = Partial<T>, N extends string = string> = StateGraph<T, U, N>;
 
-export type CompiledWorkflow<T extends IState = IState, U extends Partial<T> = Partial<T>, N extends string = string> = CompiledStateGraph<T, U, N>;
+export type CompiledWorkflow<T extends BaseGraphState = BaseGraphState, U extends Partial<T> = Partial<T>, N extends string = string> = CompiledStateGraph<T, U, N>;
 
 export type EventStreamCallbackHandlerInput = Parameters<CompiledWorkflow['streamEvents']>[2] extends Omit<infer T, 'autoClose'> ? T : never;
 
@@ -108,4 +108,11 @@ export type StreamEvent = {
      * The contents of the event data depend on the event type.
      */
     data: StreamEventData;
+};
+
+export type GraphConfig = {
+    provider: string;
+    thread_id?: string;
+    instructions?: string;
+    additional_instructions?: string;
 };

@@ -3,13 +3,13 @@ import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
 import type * as t from '@/types';
-import { TaskManager, TaskManagerStateChannels } from '@/graphs/TaskManager';
 import { GraphEvents, CommonEvents } from '@/common';
+import { TaskManager } from '@/graphs/TaskManager';
 import { CollabGraph } from '@/graphs/CollabGraph';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/stream';
 
-export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels> {
+export class Processor<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
   private collab!: CollabGraph;
   private taskManager!: TaskManager;
@@ -59,7 +59,7 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
     return standardGraph.createWorkflow();
   }
 
-  static async create<T extends t.IState | t.AgentStateChannels | TaskManagerStateChannels = t.IState>(config: t.ProcessorConfig): Promise<Processor<T>> {
+  static async create<T extends t.BaseGraphState>(config: t.ProcessorConfig): Promise<Processor<T>> {
     const processor = new Processor<T>(config);
     if (config.graphConfig.type === 'collaborative') {
       await processor.collab.initialize();
@@ -74,11 +74,7 @@ export class Processor<T extends t.IState | t.AgentStateChannels | TaskManagerSt
   }
 
   async processStream(
-    inputs: {
-      messages: BaseMessage[];
-      instructions?: string;
-      additional_instructions?: string;
-    },
+    inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
   ): Promise<BaseMessage | undefined> {
     if (!this.graphRunnable) {

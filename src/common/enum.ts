@@ -59,12 +59,12 @@ export enum GraphEvents {
 }
 
 export enum Providers {
-  AWS = 'aws',
   OPENAI = 'openai',
   BEDROCK = 'bedrock',
   VERTEXAI = 'vertexai',
+  AWS = 'amazon_bedrock',
+  ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
-  ANTHROPIC = 'anthropic'
 }
 
 export enum GraphNodeKeys {

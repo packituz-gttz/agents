@@ -13,26 +13,26 @@ import { getChatModelClass } from '@/llm/providers';
 import { HandlerRegistry } from '@/stream';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
-
-type GraphNode = typeof AGENT | typeof TOOLS | typeof START;
+type GraphNode = GraphNodeKeys | typeof START;
 
 export abstract class Graph<
-  T extends t.ToolNodeState = { messages: BaseMessage[] },
-  TNodeName extends string = string
+  T extends t.BaseGraphState = t.BaseGraphState,
+  TNodeName extends string = string,
 > {
-  abstract createGraphState(): t.GraphState;
+  abstract createGraphState(): t.GraphStateChannels<T>;
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
+
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
 }
 
 export class StandardGraph extends Graph<
-  { messages: BaseMessage[] },
+  t.IState,
   GraphNode
 > {
   private finalMessage: AIMessageChunk | undefined;
-  private graphState: t.GraphState;
+  private graphState: t.GraphStateChannels<t.IState>;
   private tools: StructuredTool[];
   private provider: Providers;
   private clientOptions: Record<string, unknown>;
@@ -48,25 +48,25 @@ export class StandardGraph extends Graph<
     this.boundModel = this.initializeModel();
   }
 
-  createGraphState(): t.GraphState {
+  createGraphState(): t.GraphStateChannels<t.IState> {
     return {
       messages: {
-        value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
+        value: (x: BaseMessage[], y: BaseMessage[]): BaseMessage[] => x.concat(y),
         default: () => [],
       },
-      instructions: {
-        value: (x: string | undefined, y: string | undefined) => y || x,
-        default: () => undefined,
-      },
-      additional_instructions: {
-        value: (x: string | undefined, y: string | undefined) => y || x,
-        default: () => undefined,
-      },
+      // instructions: {
+      //   value: (x: string | undefined, y: string | undefined) => y || x,
+      //   default: () => undefined,
+      // },
+      // additional_instructions: {
+      //   value: (x: string | undefined, y: string | undefined) => y || x,
+      //   default: () => undefined,
+      // },
     };
   }
 
-  initializeTools(): ToolNode<{ messages: BaseMessage[] }> {
-    return new ToolNode<{ messages: BaseMessage[] }>(this.tools);
+  initializeTools(): ToolNode<t.IState> {
+    return new ToolNode<t.IState>(this.tools);
   }
 
   initializeModel(): Runnable {
@@ -76,10 +76,12 @@ export class StandardGraph extends Graph<
   }
 
   createCallModel() {
-    return async (state: { messages: BaseMessage[] }, config?: RunnableConfig): Promise<Partial<{ messages: BaseMessage[] }>> => {
+    return async (state: t.IState, config?: RunnableConfig): Promise<Partial<t.IState>> => {
+      const { provider, instructions, additional_instructions } = (config?.configurable as t.GraphConfig) ?? {} ;
+      if (!config || !provider) {
+        throw new Error(`No ${config ? 'provider' : 'config'} provided`);
+      }
       const { messages } = state;
-      const instructions = (state as t.IState).instructions;
-      const additional_instructions = (state as t.IState).additional_instructions;
 
       let finalInstructions = instructions;
       if (additional_instructions) {
@@ -94,12 +96,12 @@ export class StandardGraph extends Graph<
       const lastMessageX = finalMessages[finalMessages.length - 2];
       const lastMessageY = finalMessages[finalMessages.length - 1];
 
-      if (this.provider === Providers.ANTHROPIC
+      if (provider === Providers.ANTHROPIC
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
       ) {
         finalMessages[finalMessages.length - 2] = formatAnthropicMessage(lastMessageX as AIMessageChunk);
-      } else if (this.provider === Providers.AWS
+      } else if (provider === Providers.AWS
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
         && typeof lastMessageX.content === 'string'
@@ -107,7 +109,7 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
-      if (this.provider === Providers.ANTHROPIC) {
+      if (provider === Providers.ANTHROPIC) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {
@@ -129,8 +131,8 @@ export class StandardGraph extends Graph<
     };
   }
 
-  createWorkflow(): t.CompiledWorkflow<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, GraphNode> {
-    const routeMessage = (state: { messages: BaseMessage[] }): string => {
+  createWorkflow(): t.CompiledWorkflow<t.IState, Partial<t.IState>, GraphNode> {
+    const routeMessage = (state: t.IState): string => {
       const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
       if (!lastMessage?.tool_calls?.length) {
         return END;
@@ -138,7 +140,7 @@ export class StandardGraph extends Graph<
       return TOOLS;
     };
 
-    const workflow = new StateGraph<{ messages: BaseMessage[] }, Partial<{ messages: BaseMessage[] }>, GraphNode>({
+    const workflow = new StateGraph<t.IState, Partial<t.IState>, GraphNode>({
       channels: this.graphState,
     })
       .addNode(AGENT, this.createCallModel())

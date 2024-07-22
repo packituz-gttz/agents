@@ -11,6 +11,7 @@ const llmConfigs: Record<string, t.LLMConfig> = {
   anthropic: {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-5-sonnet-20240620',
+    streaming: true,
   },
   mistralai: {
     provider: Providers.MISTRALAI,
