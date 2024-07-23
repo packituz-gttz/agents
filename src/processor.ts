@@ -83,6 +83,8 @@ export class Processor<T extends t.BaseGraphState> {
     if (!this.Graph) {
       throw new Error('Graph not initialized. Make sure to use Processor.create() to instantiate the Processor.');
     }
+
+    this.Graph.resetValues();
     const stream = this.graphRunnable.streamEvents(inputs, config);
     for await (const event of stream) {
       const { data, name, metadata, ...info } = event;

@@ -7,22 +7,33 @@ import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
-import { Providers, GraphEvents, GraphNodeKeys, StepTypes } from '@/common';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
+import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
 import { HandlerRegistry } from '@/stream';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
 type GraphNode = GraphNodeKeys | typeof START;
 
+const resetIfNotEmpty = <T>(value: T, resetValue: T): T => {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? resetValue : value;
+  }
+  if (value instanceof Set || value instanceof Map) {
+    return value.size > 0 ? resetValue : value;
+  }
+  return value !== undefined ? resetValue : value;
+};
+
 export abstract class Graph<
   T extends t.BaseGraphState = t.BaseGraphState,
   TNodeName extends string = string,
 > {
+  abstract resetValues(): void;
   abstract createGraphState(): t.GraphStateChannels<T>;
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
-  abstract dispatchRunStep(stepKey: string, type: StepTypes, stepDetails: t.StepDetails): void;
+  abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
@@ -56,6 +67,15 @@ export class StandardGraph extends Graph<
     this.tools = tools;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
+  }
+
+  resetValues(): void {
+    this.config = resetIfNotEmpty(this.config, undefined);
+    this.contentData = resetIfNotEmpty(this.contentData, []);
+    this.stepKeys = resetIfNotEmpty(this.stepKeys, new Map());
+    this.toolCallIds = resetIfNotEmpty(this.toolCallIds, new Set());
+    this.messageIdsBySI = resetIfNotEmpty(this.messageIdsBySI, new Map());
+    this.prelimMessageIdsBySI = resetIfNotEmpty(this.prelimMessageIdsBySI, new Map());
   }
 
   createGraphState(): t.GraphStateChannels<t.BaseGraphState> {
@@ -167,13 +187,13 @@ export class StandardGraph extends Graph<
     return this.finalMessage;
   }
 
-  dispatchRunStep(stepKey: string, type: StepTypes, stepDetails: t.StepDetails): void {
+  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
     if (!this.config) {
       throw new Error('No config provided');
     }
     const runStep: t.RunStep = {
-      type,
       stepKey,
+      type: stepDetails.type,
       index: this.contentData.length,
       stepDetails,
       usage: null,
