@@ -11,6 +11,8 @@
     "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "script": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts",
+    "script2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_test.ts",
+    "script3": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_test_anthropic.ts",
     "start:standard": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/standard.ts",
     "start:cg": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/collab.ts",
     "start:tasks": "node --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tasks.ts",
