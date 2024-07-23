@@ -3,6 +3,7 @@ import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/
 import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
 import type { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { Graph } from '@/graphs';
+import { RunnableConfig } from '@langchain/core/runnables';
 // import type { RunnableConfig } from '@langchain/core/runnables';
 
 export type BaseGraphState = {
@@ -60,6 +61,10 @@ export type StreamEventData = {
      * in the output of the runnable that generated the event.
      */
     chunk?: StreamChunk;
+    /**
+     * Runnable config for invoking other runnables within handlers.
+     */
+    config?: RunnableConfig;
 };
 /**
  * A streaming event.

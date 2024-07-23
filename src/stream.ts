@@ -1,9 +1,10 @@
 // src/stream.ts
-// import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
-import type { AIMessageChunk, MessageContent } from '@langchain/core/messages';
-import type * as t from '@/types/graph';
+import { v4 as uuidv4 } from 'uuid';
+import type { AIMessageChunk } from '@langchain/core/messages';
+import type { ToolCall } from '@langchain/core/messages/tool';
+import type * as t from '@/types';
 import type { Graph } from '@/graphs';
-// import { GraphEvents } from '@/common';
+import { StepTypes } from '@/common';
 
 export class HandlerRegistry {
   private handlers: Map<string, t.EventHandler> = new Map();
@@ -72,30 +73,24 @@ export class LLMStreamHandler implements t.EventHandler {
   }
 }
 
-const generateStepKey = ({
-  node,
-  step,
-  graph,
-  content,
-}: {
-  node: string | unknown;
-  step: string | unknown;
-  graph: Graph;
-  content: string | MessageContent; // Update the type of 'content' to include 'index' property
-}): string[] => {
-  let stepIndex = 0;
-  if (Array.isArray(content)) {
-    stepIndex = (content[content.length - 1] as MessageContent & {
-      index?: number;
-    })?.index ?? 0;
+const joinKeys = (args: (string | number | undefined)[]): string => args.join('_');
+const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>): string | undefined => {
+  const messageId = graph.messageIdsBySI.get(stepKey);
+  if (messageId) {
+    console.log(`Message ID already exists for ${stepKey}`);
+    return;
   }
-  const stepKey = `${node}-${step}-${stepIndex}`;
-  if (graph.stepKeys.has(stepKey)) {
-    const index = graph.stepKeys.get(stepKey);
-    return [stepKey, index ?? '0'];
+
+  const prelimMessageId = graph.prelimMessageIdsBySI.get(stepKey);
+  if (prelimMessageId) {
+    graph.prelimMessageIdsBySI.delete(stepKey);
+    graph.messageIdsBySI.set(stepKey, prelimMessageId);
+    return prelimMessageId;
   }
-  const currentIndex = (stepIndex + graph.contentData.length).toString();
-  return [stepKey, currentIndex];
+
+  const message_id = uuidv4();
+  graph.messageIdsBySI.set(stepKey, message_id);
+  return message_id;
 };
 
 export class ChatModelStreamHandler implements t.EventHandler {
@@ -104,44 +99,99 @@ export class ChatModelStreamHandler implements t.EventHandler {
       throw new Error('Graph not found');
     }
 
-    const chunk = data?.chunk as AIMessageChunk;
+    const { chunk } = (data as {
+      chunk?: AIMessageChunk;
+    }) ?? {};
     const content = chunk?.content;
-    const { langgraph_node: node, langgraph_step: step, langgraph_task_idx } = metadata ?? {};
-    console.log({ node, step, langgraph_task_idx });
+
+    if (!graph.config) {
+      throw new Error('Config not found in graph');
+    }
+
+    if (!chunk) {
+      console.warn(`No chunk found in ${event} event`);
+      return;
+    }
 
     const hasToolCalls = chunk?.tool_calls && chunk.tool_calls.length > 0;
     const hasToolCallChunks = chunk?.tool_call_chunks && chunk.tool_call_chunks.length > 0;
 
+    const keyList: (string | number | undefined)[] = [
+      metadata?.thread_id as string,
+      metadata?.langgraph_node as string,
+      metadata?.langgraph_step as number,
+      metadata?.langgraph_task_idx as number,
+    ];
+
+    console.log('[ run_id, node, step, task_idx ]', keyList);
+
     if (hasToolCalls && chunk.tool_calls?.every((tc) => tc.id)) {
       console.dir(chunk.tool_calls, { depth: null });
+      const tool_calls: ToolCall[] = [];
       for (const tool_call of chunk.tool_calls) {
         if (!tool_call.id) {
           continue;
         }
-        if (graph.contentIds.has(tool_call.id)) {
+        if (graph.toolCallIds.has(tool_call.id)) {
           continue;
         }
-        const [stepKey, index] = generateStepKey({ node, step, graph, content });
-        graph.contentData.push(Object.assign(tool_call, { index }));
-        graph.contentIds.set(tool_call.id, index);
-        graph.stepKeys.set(stepKey, index);
+
+        tool_calls.push(tool_call);
+        graph.toolCallIds.add(tool_call.id);
       }
+
+      const stepKey = joinKeys(keyList);
+      graph.dispatchRunStep(stepKey, StepTypes.TOOL_CALLS, {
+        tool_calls,
+      });
     }
 
-    if ((!content || (!content?.length)) && !hasToolCallChunks) {
+    const isEmptyContent = !content || (!content?.length);
+    const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
+    if (isEmptyChunk && chunk.id && chunk.id?.startsWith('msg')) {
+      if (graph.messageIdsBySI.has(chunk.id)) {
+        return;
+      } else if (graph.prelimMessageIdsBySI.has(chunk.id)) {
+        return;
+      }
+
+      graph.prelimMessageIdsBySI.set(joinKeys(keyList), chunk.id);
       return;
+    } else if (isEmptyChunk) {
+      return;
+    }
+
+    if (keyList.some((key) => key === undefined)) {
+      throw new Error(`Invalid stepKey: ${joinKeys(keyList)}`);
     }
 
     if (hasToolCallChunks) {
       console.dir(chunk.tool_call_chunks, { depth: null });
       // TODO: get index and transmit deltas
-      // const index = generateStepKey({ node, step, graph, content })[1];
+    }
+    if (hasToolCallChunks && chunk.tool_call_chunks?.every((chunk) => chunk.id && chunk.index)) {
+      console.dir(chunk.tool_call_chunks, { depth: null });
+      // TODO: get index and transmit deltas
     }
 
-    const [stepKey, index] = generateStepKey({ node, step, graph, content });
-    if (content && typeof content === 'string') {
+    if (isEmptyContent) {
+      return;
+    }
+
+    const stepKey = joinKeys(keyList);
+
+    const message_id = getMessageId(stepKey, graph);
+    if (message_id) {
+      graph.dispatchRunStep(stepKey, StepTypes.MESSAGE_CREATION, {
+        message_creation: {
+          message_id,
+        },
+      });
+    }
+
+    if (typeof content === 'string') {
       process.stdout.write(content);
-    } else if (content && content?.length) {
+    } else if (content?.length) {
       console.dir(content, { depth: null });
     }
   }

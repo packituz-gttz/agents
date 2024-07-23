@@ -8,7 +8,8 @@ export enum GraphEvents {
   /* Custom Events */
   /** Delta */
   THREAD_MESSAGE_DELTA = 'on_thread_message_delta',
-  TOOL_CALL_DELTA = 'on_tool_call_delta',
+  TOOL_CALL_ = 'on_tool_call_delta',
+  ON_RUN_STEP = 'on_run_step',
   /* Official Events */
 
   /** Custom event, emitted by system */
@@ -83,7 +84,7 @@ export enum CommonEvents {
   LANGGRAPH = 'LangGraph',
 }
 
-export declare enum StepTypes {
+export enum StepTypes {
   TOOL_CALLS = 'tool_calls',
   MESSAGE_CREATION = 'message_creation'
 }

@@ -67,9 +67,9 @@ export type RunStep = {
   // id: string;
   // object: 'thread.run.step'; // Updated from 'run.step' # missing
   // created_at: number;
-  run_id: string;
-  assistant_id: string;
-  thread_id: string;
+  // run_id: string;
+  // assistant_id: string;
+  // thread_id: string;
   type: StepTypes;
   // status: 'in_progress' | 'completed' | 'failed' | 'cancelled'; // Add other possible status values if needed
   // cancelled_at: number | null;
@@ -77,7 +77,9 @@ export type RunStep = {
   // expires_at: number;
   // failed_at: number | null;
   // last_error: string | null;
-  step_details: StepDetails; // Updated to use StepDetails type
+  stepKey: string; // #new
+  index?: number; // #new
+  stepDetails: StepDetails; // Updated to use StepDetails type
   usage: null | {
     // Define usage structure if it's ever non-null
     // prompt_tokens: number; // #new
@@ -86,19 +88,19 @@ export type RunStep = {
   };
 };
 
-type StepDetails =
+export type StepDetails =
   | MessageCreationDetails
   | ToolCallsDetails;
 
 type MessageCreationDetails = {
-  type: StepTypes.MESSAGE_CREATION;
+  // type: StepTypes.MESSAGE_CREATION;
   message_creation: {
     message_id: string;
   };
 };
 
 type ToolCallsDetails = {
-  type: StepTypes.TOOL_CALLS;
+  // type: StepTypes.TOOL_CALLS;
   tool_calls: AgentToolCall[]; // #new
 };
 

@@ -1,14 +1,14 @@
 // src/graphs/Graph.ts
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-import { END, START, StateGraph } from '@langchain/langgraph';
+import { END, START, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
-import { AIMessage, BaseMessage, AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
+import { Providers, GraphEvents, GraphNodeKeys, StepTypes } from '@/common';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
-import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
 import { HandlerRegistry } from '@/stream';
 
@@ -22,20 +22,27 @@ export abstract class Graph<
   abstract createGraphState(): t.GraphStateChannels<T>;
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
+  abstract dispatchRunStep(stepKey: string, type: StepTypes, stepDetails: t.StepDetails): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
-  contentIds: Map<string, string> = new Map();
   stepKeys: Map<string, string> = new Map();
+  /** "SI" stands for StepIndex */
+  messageIdsBySI: Map<string, string> = new Map();
+  /** "SI" stands for StepIndex */
+  prelimMessageIdsBySI: Map<string, string> = new Map();
+  toolCallIds: Set<string> = new Set();
+  // contentDataMap: Map<string, unknown[]> = new Map();
+  config: RunnableConfig | undefined;
   contentData: unknown[] = [];
 }
 
 export class StandardGraph extends Graph<
-  t.IState,
+  t.BaseGraphState,
   GraphNode
 > {
   private finalMessage: AIMessageChunk | undefined;
-  private graphState: t.GraphStateChannels<t.IState>;
+  private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private tools: StructuredTool[];
   private provider: Providers;
   private clientOptions: Record<string, unknown>;
@@ -51,7 +58,7 @@ export class StandardGraph extends Graph<
     this.boundModel = this.initializeModel();
   }
 
-  createGraphState(): t.GraphStateChannels<t.IState> {
+  createGraphState(): t.GraphStateChannels<t.BaseGraphState> {
     return {
       messages: {
         value: (x: BaseMessage[], y: BaseMessage[]): BaseMessage[] => x.concat(y),
@@ -68,8 +75,8 @@ export class StandardGraph extends Graph<
     };
   }
 
-  initializeTools(): ToolNode<t.IState> {
-    return new ToolNode<t.IState>(this.tools);
+  initializeTools(): ToolNode<t.BaseGraphState> {
+    return new ToolNode<t.BaseGraphState>(this.tools);
   }
 
   initializeModel(): Runnable {
@@ -79,11 +86,12 @@ export class StandardGraph extends Graph<
   }
 
   createCallModel() {
-    return async (state: t.IState, config?: RunnableConfig): Promise<Partial<t.IState>> => {
+    return async (state: t.BaseGraphState, config?: RunnableConfig): Promise<Partial<t.BaseGraphState>> => {
       const { provider, instructions, additional_instructions } = (config?.configurable as t.GraphConfig) ?? {} ;
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
+      this.config = config;
       const { messages } = state;
 
       let finalInstructions = instructions;
@@ -134,8 +142,8 @@ export class StandardGraph extends Graph<
     };
   }
 
-  createWorkflow(): t.CompiledWorkflow<t.IState, Partial<t.IState>, GraphNode> {
-    const routeMessage = (state: t.IState): string => {
+  createWorkflow(): t.CompiledWorkflow<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode> {
+    const routeMessage = (state: t.BaseGraphState): string => {
       const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
       if (!lastMessage?.tool_calls?.length) {
         return END;
@@ -143,7 +151,7 @@ export class StandardGraph extends Graph<
       return TOOLS;
     };
 
-    const workflow = new StateGraph<t.IState, Partial<t.IState>, GraphNode>({
+    const workflow = new StateGraph<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode>({
       channels: this.graphState,
     })
       .addNode(AGENT, this.createCallModel())
@@ -157,6 +165,21 @@ export class StandardGraph extends Graph<
 
   getFinalMessage(): AIMessageChunk | undefined {
     return this.finalMessage;
+  }
+
+  dispatchRunStep(stepKey: string, type: StepTypes, stepDetails: t.StepDetails): void {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+    const runStep: t.RunStep = {
+      type,
+      stepKey,
+      index: this.contentData.length,
+      stepDetails,
+      usage: null,
+    };
+    this.contentData.push(runStep);
+    dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
   }
 
   // private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
