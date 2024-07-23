@@ -7,20 +7,26 @@ const llmConfigs: Record<string, t.LLMConfig> = {
     provider: Providers.OPENAI,
     model: 'gpt-4o',
     temperature: 0.7,
+    streaming: true,
+    streamUsage: true,
   },
   anthropic: {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-5-sonnet-20240620',
     streaming: true,
+    streamUsage: true,
   },
   mistralai: {
     provider: Providers.MISTRALAI,
     model: 'mistral-large-latest',
+    streaming: true,
+    streamUsage: true,
   },
   vertexai: {
     provider: Providers.VERTEXAI,
     modelName: 'gemini-1.5-flash-001',
     streaming: true,
+    streamUsage: true,
   },
   aws: {
     provider: Providers.AWS,
@@ -30,6 +36,8 @@ const llmConfigs: Record<string, t.LLMConfig> = {
       accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
       secretAccessKey: process.env.BEDROCK_AWS_SECRET_ACCESS_KEY!,
     },
+    streaming: true,
+    streamUsage: true,
   },
 };
 
