@@ -77,7 +77,7 @@ export type RunStep = {
   // expires_at: number;
   // failed_at: number | null;
   // last_error: string | null;
-  stepKey: string; // #new
+  id: string; // #new
   index?: number; // #new
   stepDetails: StepDetails; // Updated to use StepDetails type
   usage: null | {

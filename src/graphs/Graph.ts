@@ -1,4 +1,5 @@
 // src/graphs/Graph.ts
+import { nanoid } from 'nanoid';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { END, START, StateGraph  } from '@langchain/langgraph';
@@ -10,20 +11,11 @@ import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } fr
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
+import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/stream';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
 type GraphNode = GraphNodeKeys | typeof START;
-
-const resetIfNotEmpty = <T>(value: T, resetValue: T): T => {
-  if (Array.isArray(value)) {
-    return value.length > 0 ? resetValue : value;
-  }
-  if (value instanceof Set || value instanceof Map) {
-    return value.size > 0 ? resetValue : value;
-  }
-  return value !== undefined ? resetValue : value;
-};
 
 export abstract class Graph<
   T extends t.BaseGraphState = t.BaseGraphState,
@@ -34,10 +26,14 @@ export abstract class Graph<
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
+  abstract getFinalMessage(): AIMessageChunk | undefined;
+  abstract generateStepId(stepKey: string): string;
+  abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
+  abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
+  abstract checkKeyList(keyList: (string | number | undefined)[]): boolean;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
-  stepKeys: Map<string, string> = new Map();
   /** "SI" stands for StepIndex */
   messageIdsBySI: Map<string, string> = new Map();
   /** "SI" stands for StepIndex */
@@ -45,7 +41,8 @@ export abstract class Graph<
   toolCallIds: Set<string> = new Set();
   // contentDataMap: Map<string, unknown[]> = new Map();
   config: RunnableConfig | undefined;
-  contentData: unknown[] = [];
+  contentData: t.RunStep[] = [];
+  stepKeyCache: Map<string, string[]> = new Map<string, string[]>();
 }
 
 export class StandardGraph extends Graph<
@@ -69,11 +66,54 @@ export class StandardGraph extends Graph<
     this.boundModel = this.initializeModel();
   }
 
+  getStepKey(metadata: Record<string, unknown> | undefined): string {
+    if (!metadata) return '';
+
+    const keyList = this.getKeyList(metadata);
+    if (this.checkKeyList(keyList)) {
+      throw new Error('Missing metadata');
+    }
+
+    return joinKeys(keyList);
+  }
+
+  generateStepId(stepKey: string): string {
+    const stepIds = this.stepKeyCache.get(stepKey);
+    let newStepId: string | undefined;
+    if (stepIds) {
+      console.log('Step IDs found in cache');
+      newStepId = `step_${nanoid()}`;
+      stepIds.push(newStepId);
+      this.stepKeyCache.set(stepKey, stepIds);
+    } else {
+      newStepId = `step_${nanoid()}`;
+      this.stepKeyCache.set(stepKey, [newStepId]);
+    }
+
+    console.log('newStepId', newStepId);
+    return newStepId;
+  }
+
+  getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[] {
+    if (!metadata) return [];
+
+    return [
+      metadata.thread_id as string,
+      metadata.langgraph_node as string,
+      metadata.langgraph_step as number,
+      metadata.langgraph_task_idx as number,
+    ];
+  }
+
+  checkKeyList(keyList: (string | number | undefined)[]): boolean {
+    return keyList.some((key) => key === undefined);
+  }
+
   resetValues(): void {
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
-    this.stepKeys = resetIfNotEmpty(this.stepKeys, new Map());
     this.toolCallIds = resetIfNotEmpty(this.toolCallIds, new Set());
+    this.stepKeyCache = resetIfNotEmpty(this.stepKeyCache, new Map());
     this.messageIdsBySI = resetIfNotEmpty(this.messageIdsBySI, new Map());
     this.prelimMessageIdsBySI = resetIfNotEmpty(this.prelimMessageIdsBySI, new Map());
   }
@@ -187,12 +227,19 @@ export class StandardGraph extends Graph<
     return this.finalMessage;
   }
 
-  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
+  dispatchRunStep(id: string, stepDetails: t.StepDetails): void {
     if (!this.config) {
       throw new Error('No config provided');
     }
+    // Check if a run step with this stepKey already exists
+    const existingStepIndex = this.contentData.findIndex((step: t.RunStep) => step.id === id);
+    if (existingStepIndex !== -1) {
+      console.warn(`Run step with id ${id} already exists. Updating existing step.`);
+      (this.contentData[existingStepIndex] as t.RunStep).stepDetails = stepDetails;
+      return;
+    }
     const runStep: t.RunStep = {
-      stepKey,
+      id,
       type: stepDetails.type,
       index: this.contentData.length,
       stepDetails,
