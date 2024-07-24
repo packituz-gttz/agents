@@ -139,14 +139,6 @@ export class StandardGraph extends Graph<
         value: (x: BaseMessage[], y: BaseMessage[]): BaseMessage[] => x.concat(y),
         default: () => [],
       },
-      // instructions: {
-      //   value: (x: string | undefined, y: string | undefined) => y || x,
-      //   default: () => undefined,
-      // },
-      // additional_instructions: {
-      //   value: (x: string | undefined, y: string | undefined) => y || x,
-      //   default: () => undefined,
-      // },
     };
   }
 
@@ -295,76 +287,4 @@ export class StandardGraph extends Graph<
     };
     dispatchCustomEvent(GraphEvents.ON_MESSAGE_DELTA, messageDelta, this.config);
   }
-
-  // private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {
-  //   const [lastMessageX, secondLastMessageX] = x.slice(-2);
-  //   const lastMessageY = y[y.length - 1];
-
-  //   if (
-  //     lastMessageX instanceof AIMessageChunk &&
-  //     lastMessageY instanceof ToolMessage &&
-  //     Array.isArray(secondLastMessageX) &&
-  //     secondLastMessageX[0] === 'user'
-  //   ) {
-  //     const overrideMessage = getConverseOverrideMessage({
-  //       userMessage: secondLastMessageX,
-  //       lastMessageX,
-  //       lastMessageY,
-  //     });
-
-  //     const initialMessages = x.slice(0, -4);
-  //     return [...initialMessages, overrideMessage];
-  //   }
-
-  //   return x.concat(y);
-  // }
-
-  // private convertToolMessagesForAnthropic(messages: BaseMessage[]): BaseMessage[] {
-  //   const lastMessage = messages[messages.length - 1];
-  //   if (!lastMessage) {
-  //     return messages;
-  //   }
-
-  //   let toolResultIndex = -1;
-  //   const convertedMessages: BaseMessage[] = [];
-  //   for (let i = 0; i < messages.length; i++) {
-  //     const message = messages[i];
-  //     if (message instanceof ToolMessage && message.tool_call_id) {
-  //       // Append tool result to the current human message
-
-  //       const currentHumanMessage = convertedMessages[toolResultIndex];
-
-  //       const toolResult = {
-  //         type: 'tool_result',
-  //         tool_call_id: message.tool_call_id,
-  //         name: message.name,
-  //         content: message.content
-  //       };
-
-  //       if (currentHumanMessage) {
-  //         currentHumanMessage.content.push(toolResult);
-  //       } else {
-  //         convertedMessages.push({
-  //           role: 'user',
-  //           content: [toolResult]
-  //         });
-  //       }
-
-  //       toolResultIndex = i;
-  //     } else {
-  //       // For other message types (like AIMessage or SystemMessage), just add them as is
-  //       convertedMessages.push(message);
-  //     }
-  //   }
-
-  //   if (convertedMessages[toolResultIndex]) {
-  //     convertedMessages[toolResultIndex] = new ToolMessage({
-  //       tool_call_id: convertedMessages[toolResultIndex].content[0].tool_call_id,
-  //       name: convertedMessages[toolResultIndex].content[0].name,
-  //       content: convertedMessages[toolResultIndex].content
-  //     });
-  //   }
-
-  //   return convertedMessages;
-  // }
 }
