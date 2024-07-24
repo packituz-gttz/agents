@@ -2,8 +2,8 @@
 import { nanoid } from 'nanoid';
 import type { AIMessageChunk } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import type * as t from '@/types';
 import type { Graph } from '@/graphs';
+import type * as t from '@/types';
 import { StepTypes } from '@/common';
 
 export class HandlerRegistry {
@@ -97,9 +97,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       throw new Error('Graph not found');
     }
 
-    const { chunk } = (data as {
-      chunk?: AIMessageChunk;
-    }) ?? {};
+    const chunk = data.chunk as AIMessageChunk;
     const content = chunk?.content;
 
     if (!graph.config) {
@@ -111,17 +109,13 @@ export class ChatModelStreamHandler implements t.EventHandler {
       return;
     }
 
-    const hasToolCalls = chunk?.tool_calls && chunk.tool_calls.length > 0;
-    const hasToolCallChunks = chunk?.tool_call_chunks && chunk.tool_call_chunks.length > 0;
+    const hasToolCalls = chunk.tool_calls && chunk.tool_calls.length > 0;
+    const hasToolCallChunks = chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0;
 
     if (hasToolCalls && chunk.tool_calls?.every((tc) => tc.id)) {
-      console.dir(chunk.tool_calls, { depth: null });
       const tool_calls: ToolCall[] = [];
       for (const tool_call of chunk.tool_calls) {
-        if (!tool_call.id) {
-          continue;
-        }
-        if (graph.toolCallIds.has(tool_call.id)) {
+        if (!tool_call.id || graph.toolCallIds.has(tool_call.id)) {
           continue;
         }
 
@@ -136,7 +130,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       });
     }
 
-    const isEmptyContent = !content || (!content?.length);
+    const isEmptyContent = !content || !content.length;
     const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
     if (isEmptyChunk && chunk.id && chunk.id?.startsWith('msg')) {
       if (graph.messageIdsBySI.has(chunk.id)) {
@@ -161,14 +155,10 @@ export class ChatModelStreamHandler implements t.EventHandler {
         tool_calls: chunk.tool_call_chunks,
       });
     }
-    // if (hasToolCallChunks && metadata?.langgraph_step && chunk.tool_call_chunks?.every((chunk) => chunk.id && chunk.index)) {
-    //   console.dir(chunk.tool_call_chunks, { depth: null });
-    // }
 
     if (isEmptyContent) {
       return;
     }
-    /* Note: tool call chunks may have non-empty content that matches the current tool chunk generation */
 
     const message_id = getMessageId(stepKey, graph);
     if (message_id) {
@@ -181,11 +171,20 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     const stepId = graph.getStepId(stepKey);
+    /* Note: tool call chunks may have non-empty content that matches the current tool chunk generation */
     if (hasToolCallChunks && typeof content === 'string' && chunk.tool_call_chunks?.some((tc) => tc.args === content)) {
       return;
-    } else if (Array.isArray(content) && content.length && typeof content[0]?.index === 'number' && chunk.tool_call_chunks?.length && chunk.tool_call_chunks[0]?.index === content[0].index) {
+    } else if (
+      Array.isArray(content) && content.length
+      && typeof (content[0] as t.ExtendedMessageContent)?.index === 'number'
+      && chunk.tool_call_chunks?.length
+      && chunk.tool_call_chunks[0]?.index === (content[0] as t.ExtendedMessageContent).index
+    ) {
       return;
-    } else if (hasToolCallChunks && chunk.tool_call_chunks?.some((tc) => tc.args === content?.[0]?.input)) {
+    } else if (
+      hasToolCallChunks
+      && chunk.tool_call_chunks?.some((tc) => tc.args === (content[0] as t.ExtendedMessageContent)?.input)
+    ) {
       return;
     } else if (typeof content === 'string') {
       graph.dispatchMessageDelta(stepId, {
