@@ -154,7 +154,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const stepKey = graph.getStepKey(metadata);
 
-    if (hasToolCallChunks && chunk.tool_call_chunks?.[0]?.index) {
+    if (hasToolCallChunks && chunk.tool_call_chunks?.length && typeof chunk.tool_call_chunks[0]?.index === 'number') {
       const stepId = graph.getStepId(stepKey, chunk.tool_call_chunks[0].index);
       graph.dispatchRunStepDelta(stepId, {
         type: StepTypes.TOOL_CALLS,
@@ -181,7 +181,13 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     const stepId = graph.getStepId(stepKey);
-    if (typeof content === 'string') {
+    if (hasToolCallChunks && typeof content === 'string' && chunk.tool_call_chunks?.some((tc) => tc.args === content)) {
+      return;
+    } else if (Array.isArray(content) && content.length && typeof content[0]?.index === 'number' && chunk.tool_call_chunks?.length && chunk.tool_call_chunks[0]?.index === content[0].index) {
+      return;
+    } else if (hasToolCallChunks && chunk.tool_call_chunks?.some((tc) => tc.args === content?.[0]?.input)) {
+      return;
+    } else if (typeof content === 'string') {
       graph.dispatchMessageDelta(stepId, {
         content: [{
           type: 'text',

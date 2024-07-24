@@ -96,6 +96,7 @@ export interface ExtendedMessageContent {
   type?: string;
   text?: string;
   input?: string;
+  index?: number;
   id?: string;
   name?: string;
 }
