@@ -74,20 +74,20 @@ export class LLMStreamHandler implements t.EventHandler {
 }
 
 const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>): string | undefined => {
-  const messageId = graph.messageIdsBySI.get(stepKey);
+  const messageId = graph.messageIdsByStepKey.get(stepKey);
   if (messageId) {
     return;
   }
 
-  const prelimMessageId = graph.prelimMessageIdsBySI.get(stepKey);
+  const prelimMessageId = graph.prelimMessageIdsByStepKey.get(stepKey);
   if (prelimMessageId) {
-    graph.prelimMessageIdsBySI.delete(stepKey);
-    graph.messageIdsBySI.set(stepKey, prelimMessageId);
+    graph.prelimMessageIdsByStepKey.delete(stepKey);
+    graph.messageIdsByStepKey.set(stepKey, prelimMessageId);
     return prelimMessageId;
   }
 
   const message_id = `msg_${nanoid()}`;
-  graph.messageIdsBySI.set(stepKey, message_id);
+  graph.messageIdsByStepKey.set(stepKey, message_id);
   return message_id;
 };
 
@@ -133,14 +133,14 @@ export class ChatModelStreamHandler implements t.EventHandler {
     const isEmptyContent = !content || !content.length;
     const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
     if (isEmptyChunk && chunk.id && chunk.id?.startsWith('msg')) {
-      if (graph.messageIdsBySI.has(chunk.id)) {
+      if (graph.messageIdsByStepKey.has(chunk.id)) {
         return;
-      } else if (graph.prelimMessageIdsBySI.has(chunk.id)) {
+      } else if (graph.prelimMessageIdsByStepKey.has(chunk.id)) {
         return;
       }
 
       const stepKey = graph.getStepKey(metadata);
-      graph.prelimMessageIdsBySI.set(stepKey, chunk.id);
+      graph.prelimMessageIdsByStepKey.set(stepKey, chunk.id);
       return;
     } else if (isEmptyChunk) {
       return;

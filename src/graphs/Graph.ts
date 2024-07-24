@@ -37,10 +37,8 @@ export abstract class Graph<
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
-  /** "SI" stands for StepIndex */
-  messageIdsBySI: Map<string, string> = new Map();
-  /** "SI" stands for StepIndex */
-  prelimMessageIdsBySI: Map<string, string> = new Map();
+  messageIdsByStepKey: Map<string, string> = new Map();
+  prelimMessageIdsByStepKey: Map<string, string> = new Map();
   toolCallIds: Set<string> = new Set();
   config: RunnableConfig | undefined;
   contentData: t.RunStep[] = [];
@@ -129,8 +127,8 @@ export class StandardGraph extends Graph<
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
     this.toolCallIds = resetIfNotEmpty(this.toolCallIds, new Set());
-    this.messageIdsBySI = resetIfNotEmpty(this.messageIdsBySI, new Map());
-    this.prelimMessageIdsBySI = resetIfNotEmpty(this.prelimMessageIdsBySI, new Map());
+    this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
+    this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
   }
 
   createGraphState(): t.GraphStateChannels<t.BaseGraphState> {
