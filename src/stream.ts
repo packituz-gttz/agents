@@ -130,8 +130,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       }
 
       const stepKey = graph.getStepKey(metadata);
-      const stepId = graph.generateStepId(stepKey);
-      graph.dispatchRunStep(stepId, {
+      graph.dispatchRunStep(stepKey, {
         type: StepTypes.TOOL_CALLS,
         tool_calls,
       });
@@ -155,8 +154,8 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const stepKey = graph.getStepKey(metadata);
 
-    if (hasToolCallChunks && chunk.tool_call_chunks && metadata?.langgraph_step) {
-      const stepId = graph.getStepId(stepKey, metadata?.langgraph_step as number);
+    if (hasToolCallChunks && chunk.tool_call_chunks?.[0]?.index) {
+      const stepId = graph.getStepId(stepKey, chunk.tool_call_chunks[0].index);
       graph.dispatchRunStepDelta(stepId, {
         type: StepTypes.TOOL_CALLS,
         tool_calls: chunk.tool_call_chunks,
@@ -173,8 +172,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const message_id = getMessageId(stepKey, graph);
     if (message_id) {
-      const stepId = graph.generateStepId(stepKey);
-      graph.dispatchRunStep(stepId, {
+      graph.dispatchRunStep(stepKey, {
         type: StepTypes.MESSAGE_CREATION,
         message_creation: {
           message_id,
@@ -182,7 +180,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       });
     }
 
-    const stepId = graph.getStepId(stepKey, metadata?.langgraph_step as number);
+    const stepId = graph.getStepId(stepKey);
     if (typeof content === 'string') {
       graph.dispatchMessageDelta(stepId, {
         content: [{
@@ -190,7 +188,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
           text: content,
         }],
       });
-    } else if (content?.length) {
+    } else if (content?.length && content.every((c) => c.type?.startsWith('text'))) {
       graph.dispatchMessageDelta(stepId, {
         content,
       });

@@ -26,11 +26,11 @@ export abstract class Graph<
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract getFinalMessage(): AIMessageChunk | undefined;
-  abstract generateStepId(stepKey: string): string;
+  abstract generateStepId(stepKey: string): [string, number];
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
   abstract checkKeyList(keyList: (string | number | undefined)[]): boolean;
-  abstract getStepId(stepKey: string, index: number): string
+  abstract getStepId(stepKey: string, index?: number): string
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
@@ -42,7 +42,6 @@ export abstract class Graph<
   /** "SI" stands for StepIndex */
   prelimMessageIdsBySI: Map<string, string> = new Map();
   toolCallIds: Set<string> = new Set();
-  // contentDataMap: Map<string, unknown[]> = new Map();
   config: RunnableConfig | undefined;
   contentData: t.RunStep[] = [];
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
@@ -80,19 +79,25 @@ export class StandardGraph extends Graph<
     return joinKeys(keyList);
   }
 
-  getStepId(stepKey: string, index: number): string {
+  getStepId(stepKey: string, index?: number): string {
     const stepIds = this.stepKeyIds.get(stepKey);
     if (!stepIds) {
       throw new Error(`No step IDs found for stepKey ${stepKey}`);
     }
 
+    if (index === undefined) {
+      return stepIds[stepIds.length - 1];
+    }
+
     return stepIds[index];
   }
 
-  generateStepId(stepKey: string): string {
+  generateStepId(stepKey: string): [string, number] {
     const stepIds = this.stepKeyIds.get(stepKey);
     let newStepId: string | undefined;
+    let stepIndex = 0;
     if (stepIds) {
+      stepIndex = stepIds.length;
       newStepId = `step_${nanoid()}`;
       stepIds.push(newStepId);
       this.stepKeyIds.set(stepKey, stepIds);
@@ -101,7 +106,7 @@ export class StandardGraph extends Graph<
       this.stepKeyIds.set(stepKey, [newStepId]);
     }
 
-    return newStepId;
+    return [newStepId, stepIndex];
   }
 
   getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[] {
@@ -237,10 +242,11 @@ export class StandardGraph extends Graph<
     return this.finalMessage;
   }
 
-  dispatchRunStep(id: string, stepDetails: t.StepDetails): void {
+  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
     if (!this.config) {
       throw new Error('No config provided');
     }
+    const [id] = this.generateStepId(stepKey);
     // Check if a run step with this stepKey already exists
     const existingStepIndex = this.contentData.findIndex((step: t.RunStep) => step.id === id);
     if (existingStepIndex !== -1) {
@@ -269,6 +275,8 @@ export class StandardGraph extends Graph<
   dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void {
     if (!this.config) {
       throw new Error('No config provided');
+    } else if (!id) {
+      throw new Error('No step ID found');
     }
     const runStepDelta: t.RunStepDeltaEvent = {
       id,
