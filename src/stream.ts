@@ -76,7 +76,6 @@ export class LLMStreamHandler implements t.EventHandler {
 const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>): string | undefined => {
   const messageId = graph.messageIdsBySI.get(stepKey);
   if (messageId) {
-    console.log(`Message ID exists for ${stepKey}`);
     return;
   }
 
@@ -156,18 +155,21 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const stepKey = graph.getStepKey(metadata);
 
-    if (hasToolCallChunks) {
-      console.dir(chunk.tool_call_chunks, { depth: null });
-      // TODO: get index and transmit deltas
+    if (hasToolCallChunks && chunk.tool_call_chunks && metadata?.langgraph_step) {
+      const stepId = graph.getStepId(stepKey, metadata?.langgraph_step as number);
+      graph.dispatchRunStepDelta(stepId, {
+        type: StepTypes.TOOL_CALLS,
+        tool_calls: chunk.tool_call_chunks,
+      });
     }
-    if (hasToolCallChunks && chunk.tool_call_chunks?.every((chunk) => chunk.id && chunk.index)) {
-      console.dir(chunk.tool_call_chunks, { depth: null });
-      // TODO: get index and transmit deltas
-    }
+    // if (hasToolCallChunks && metadata?.langgraph_step && chunk.tool_call_chunks?.every((chunk) => chunk.id && chunk.index)) {
+    //   console.dir(chunk.tool_call_chunks, { depth: null });
+    // }
 
     if (isEmptyContent) {
       return;
     }
+    /* Note: tool call chunks may have non-empty content that matches the current tool chunk generation */
 
     const message_id = getMessageId(stepKey, graph);
     if (message_id) {
@@ -180,10 +182,18 @@ export class ChatModelStreamHandler implements t.EventHandler {
       });
     }
 
+    const stepId = graph.getStepId(stepKey, metadata?.langgraph_step as number);
     if (typeof content === 'string') {
-      process.stdout.write(content);
+      graph.dispatchMessageDelta(stepId, {
+        content: [{
+          type: 'text',
+          text: content,
+        }],
+      });
     } else if (content?.length) {
-      console.dir(content, { depth: null });
+      graph.dispatchMessageDelta(stepId, {
+        content,
+      });
     }
   }
 }

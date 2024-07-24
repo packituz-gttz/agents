@@ -25,12 +25,15 @@ export abstract class Graph<
   abstract createGraphState(): t.GraphStateChannels<T>;
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
-  abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
   abstract getFinalMessage(): AIMessageChunk | undefined;
   abstract generateStepId(stepKey: string): string;
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
   abstract checkKeyList(keyList: (string | number | undefined)[]): boolean;
+  abstract getStepId(stepKey: string, index: number): string
+  abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
+  abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
+  abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
@@ -42,7 +45,7 @@ export abstract class Graph<
   // contentDataMap: Map<string, unknown[]> = new Map();
   config: RunnableConfig | undefined;
   contentData: t.RunStep[] = [];
-  stepKeyCache: Map<string, string[]> = new Map<string, string[]>();
+  stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
 }
 
 export class StandardGraph extends Graph<
@@ -77,20 +80,27 @@ export class StandardGraph extends Graph<
     return joinKeys(keyList);
   }
 
-  generateStepId(stepKey: string): string {
-    const stepIds = this.stepKeyCache.get(stepKey);
-    let newStepId: string | undefined;
-    if (stepIds) {
-      console.log('Step IDs found in cache');
-      newStepId = `step_${nanoid()}`;
-      stepIds.push(newStepId);
-      this.stepKeyCache.set(stepKey, stepIds);
-    } else {
-      newStepId = `step_${nanoid()}`;
-      this.stepKeyCache.set(stepKey, [newStepId]);
+  getStepId(stepKey: string, index: number): string {
+    const stepIds = this.stepKeyIds.get(stepKey);
+    if (!stepIds) {
+      throw new Error(`No step IDs found for stepKey ${stepKey}`);
     }
 
-    console.log('newStepId', newStepId);
+    return stepIds[index];
+  }
+
+  generateStepId(stepKey: string): string {
+    const stepIds = this.stepKeyIds.get(stepKey);
+    let newStepId: string | undefined;
+    if (stepIds) {
+      newStepId = `step_${nanoid()}`;
+      stepIds.push(newStepId);
+      this.stepKeyIds.set(stepKey, stepIds);
+    } else {
+      newStepId = `step_${nanoid()}`;
+      this.stepKeyIds.set(stepKey, [newStepId]);
+    }
+
     return newStepId;
   }
 
@@ -112,8 +122,8 @@ export class StandardGraph extends Graph<
   resetValues(): void {
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
+    this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
     this.toolCallIds = resetIfNotEmpty(this.toolCallIds, new Set());
-    this.stepKeyCache = resetIfNotEmpty(this.stepKeyCache, new Map());
     this.messageIdsBySI = resetIfNotEmpty(this.messageIdsBySI, new Map());
     this.prelimMessageIdsBySI = resetIfNotEmpty(this.prelimMessageIdsBySI, new Map());
   }
@@ -234,7 +244,14 @@ export class StandardGraph extends Graph<
     // Check if a run step with this stepKey already exists
     const existingStepIndex = this.contentData.findIndex((step: t.RunStep) => step.id === id);
     if (existingStepIndex !== -1) {
-      console.warn(`Run step with id ${id} already exists. Updating existing step.`);
+      // eslint-disable-next-line no-console
+      console.warn(`\n
+        ==============================================================
+
+        Run step with id ${id} already exists. Updating existing step.
+
+        ==============================================================
+        \n`);
       (this.contentData[existingStepIndex] as t.RunStep).stepDetails = stepDetails;
       return;
     }
@@ -247,6 +264,28 @@ export class StandardGraph extends Graph<
     };
     this.contentData.push(runStep);
     dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
+  }
+
+  dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+    const runStepDelta: t.RunStepDeltaEvent = {
+      id,
+      delta,
+    };
+    dispatchCustomEvent(GraphEvents.ON_RUN_STEP_DELTA, runStepDelta, this.config);
+  }
+
+  dispatchMessageDelta(id: string, delta: t.MessageDelta): void {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+    const messageDelta: t.MessageDeltaEvent = {
+      id,
+      delta,
+    };
+    dispatchCustomEvent(GraphEvents.ON_MESSAGE_DELTA, messageDelta, this.config);
   }
 
   // private handleAWSMessages(x: BaseMessage[], y: BaseMessage[]): BaseMessage[] {

@@ -7,9 +7,10 @@
 export enum GraphEvents {
   /* Custom Events */
   /** Delta */
-  THREAD_MESSAGE_DELTA = 'on_thread_message_delta',
   TOOL_CALL_ = 'on_tool_call_delta',
   ON_RUN_STEP = 'on_run_step',
+  ON_RUN_STEP_DELTA = 'on_run_step_delta',
+  ON_MESSAGE_DELTA = 'on_message_delta',
   /* Official Events */
 
   /** Custom event, emitted by system */

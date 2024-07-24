@@ -19,20 +19,38 @@ const conversationHistory: BaseMessage[] = [];
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
+    // [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
-    [GraphEvents.LLM_START]: {
+    [GraphEvents.ON_RUN_STEP]: {
       handle: (_event: string, data: t.StreamEventData): void => {
-        console.log('====== LLM_START ======');
+        console.log('====== ON_RUN_STEP ======');
         console.dir(data, { depth: null });
       }
     },
-    [GraphEvents.LLM_END]: {
+    [GraphEvents.ON_RUN_STEP_DELTA]: {
       handle: (_event: string, data: t.StreamEventData): void => {
-        console.log('====== LLM_END ======');
+        console.log('====== ON_RUN_STEP_DELTA ======');
         console.dir(data, { depth: null });
       }
     },
+    [GraphEvents.ON_MESSAGE_DELTA]: {
+      handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== ON_MESSAGE_DELTA ======');
+        console.dir(data, { depth: null });
+      }
+    },
+    // [GraphEvents.LLM_START]: {
+    //   handle: (_event: string, data: t.StreamEventData): void => {
+    //     console.log('====== LLM_START ======');
+    //     console.dir(data, { depth: null });
+    //   }
+    // },
+    // [GraphEvents.LLM_END]: {
+    //   handle: (_event: string, data: t.StreamEventData): void => {
+    //     console.log('====== LLM_END ======');
+    //     console.dir(data, { depth: null });
+    //   }
+    // },
     /*
     [GraphEvents.CHAIN_START]: {
       handle: (_event: string, data: t.StreamEventData): void => {
@@ -47,32 +65,32 @@ async function testStandardStreaming(): Promise<void> {
       }
     },
     */
-    [GraphEvents.CHAT_MODEL_START]: {
-      handle: (_event: string, _data: t.StreamEventData): void => {
-        console.log('====== CHAT_MODEL_START ======');
-        console.dir(_data, { depth: null });
-        // Intentionally left empty
-      }
-    },
-    [GraphEvents.CHAT_MODEL_END]: {
-      handle: (_event: string, _data: t.StreamEventData): void => {
-        console.log('====== CHAT_MODEL_END ======');
-        console.dir(_data, { depth: null });
-        // Intentionally left empty
-      }
-    },
-    [GraphEvents.TOOL_START]: {
-      handle: (_event: string, data: t.StreamEventData): void => {
-        console.log('====== TOOL_START ======');
-        console.dir(data, { depth: null });
-      }
-    },
-    [GraphEvents.TOOL_END]: {
-      handle: (_event: string, data: t.StreamEventData): void => {
-        console.log('====== TOOL_END ======');
-        console.dir(data, { depth: null });
-      }
-    },
+    // [GraphEvents.CHAT_MODEL_START]: {
+    //   handle: (_event: string, _data: t.StreamEventData): void => {
+    //     console.log('====== CHAT_MODEL_START ======');
+    //     console.dir(_data, { depth: null });
+    //     // Intentionally left empty
+    //   }
+    // },
+    // [GraphEvents.CHAT_MODEL_END]: {
+    //   handle: (_event: string, _data: t.StreamEventData): void => {
+    //     console.log('====== CHAT_MODEL_END ======');
+    //     console.dir(_data, { depth: null });
+    //     // Intentionally left empty
+    //   }
+    // },
+    // [GraphEvents.TOOL_START]: {
+    //   handle: (_event: string, data: t.StreamEventData): void => {
+    //     console.log('====== TOOL_START ======');
+    //     console.dir(data, { depth: null });
+    //   }
+    // },
+    // [GraphEvents.TOOL_END]: {
+    //   handle: (_event: string, data: t.StreamEventData): void => {
+    //     console.log('====== TOOL_END ======');
+    //     console.dir(data, { depth: null });
+    //   }
+    // },
   };
 
   const llmConfig = getLLMConfig(provider);
