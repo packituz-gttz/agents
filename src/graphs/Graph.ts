@@ -12,7 +12,7 @@ import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
-import { HandlerRegistry } from '@/stream';
+import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
 type GraphNode = GraphNodeKeys | typeof START;

@@ -7,7 +7,7 @@ import { GraphEvents, CommonEvents } from '@/common';
 import { TaskManager } from '@/graphs/TaskManager';
 import { CollabGraph } from '@/graphs/CollabGraph';
 import { StandardGraph } from '@/graphs/Graph';
-import { HandlerRegistry } from '@/stream';
+import { HandlerRegistry } from '@/events';
 
 export class Processor<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;

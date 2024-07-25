@@ -10,7 +10,7 @@ import {
 import { ChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { JsonOutputToolsParser } from 'langchain/output_parsers';
-import { HandlerRegistry } from '@/stream';
+import { HandlerRegistry } from '@/events';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';

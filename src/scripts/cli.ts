@@ -2,13 +2,12 @@
 // src/scripts/cli.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, BaseMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
-import {
-  ChatModelStreamHandler,
-  LLMStreamHandler,
-} from '@/stream';
+import { ModelEndHandler, ToolEndHandler } from '@/events';
+import { ChatModelStreamHandler } from '@/stream';
+
 
 import { getArgs } from '@/scripts/args';
 import { Processor } from '@/processor';
@@ -19,7 +18,8 @@ const conversationHistory: BaseMessage[] = [];
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   const customHandlers = {
-    // [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
+    [GraphEvents.TOOL_END]: new ToolEndHandler(),
+    [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP]: {
       handle: (_event: string, data: t.StreamEventData): void => {
@@ -39,6 +39,7 @@ async function testStandardStreaming(): Promise<void> {
         console.dir(data, { depth: null });
       }
     },
+    // [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     // [GraphEvents.LLM_START]: {
     //   handle: (_event: string, data: t.StreamEventData): void => {
     //     console.log('====== LLM_START ======');
@@ -70,25 +71,6 @@ async function testStandardStreaming(): Promise<void> {
     //     console.log('====== CHAT_MODEL_START ======');
     //     console.dir(_data, { depth: null });
     //     // Intentionally left empty
-    //   }
-    // },
-    // [GraphEvents.CHAT_MODEL_END]: {
-    //   handle: (_event: string, _data: t.StreamEventData): void => {
-    //     console.log('====== CHAT_MODEL_END ======');
-    //     console.dir(_data, { depth: null });
-    //     // Intentionally left empty
-    //   }
-    // },
-    // [GraphEvents.TOOL_START]: {
-    //   handle: (_event: string, data: t.StreamEventData): void => {
-    //     console.log('====== TOOL_START ======');
-    //     console.dir(data, { depth: null });
-    //   }
-    // },
-    // [GraphEvents.TOOL_END]: {
-    //   handle: (_event: string, data: t.StreamEventData): void => {
-    //     console.log('====== TOOL_END ======');
-    //     console.dir(data, { depth: null });
     //   }
     // },
   };
