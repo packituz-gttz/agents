@@ -39,6 +39,12 @@ async function testStandardStreaming(): Promise<void> {
         console.dir(data, { depth: null });
       }
     },
+    [GraphEvents.TOOL_START]: {
+      handle: (_event: string, data: t.StreamEventData, metadata?: Record<string, unknown>): void => {
+        console.log('====== TOOL_START ======');
+        console.dir(data, { depth: null });
+      }
+    },
     // [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
     // [GraphEvents.LLM_START]: {
     //   handle: (_event: string, data: t.StreamEventData): void => {
