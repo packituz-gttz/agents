@@ -29,7 +29,7 @@ export class ModelEndHandler implements t.EventHandler {
     console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
       step,
-      data,
+      // data,
     }, { depth: null });
   }
 }
@@ -48,7 +48,7 @@ export class ToolEndHandler implements t.EventHandler {
     console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
       step,
-      data,
+      // data,
     }, { depth: null });
   }
 }
