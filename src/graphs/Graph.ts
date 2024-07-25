@@ -30,7 +30,8 @@ export abstract class Graph<
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
   abstract checkKeyList(keyList: (string | number | undefined)[]): boolean;
-  abstract getStepId(stepKey: string, index?: number): string
+  abstract getStepIdByKey(stepKey: string, index?: number): string
+  abstract getRunStep(stepId: string): t.RunStep | undefined;
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
@@ -43,6 +44,7 @@ export abstract class Graph<
   config: RunnableConfig | undefined;
   contentData: t.RunStep[] = [];
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
+  stepIndexMap: Map<string, number> = new Map();
 }
 
 export class StandardGraph extends Graph<
@@ -66,6 +68,16 @@ export class StandardGraph extends Graph<
     this.boundModel = this.initializeModel();
   }
 
+  /* Run Step Processing */
+
+  getRunStep(stepId: string): t.RunStep | undefined {
+    const index = this.stepIndexMap.get(stepId);
+    if (index !== undefined) {
+      return this.contentData[index];
+    }
+    return undefined;
+  }
+
   getStepKey(metadata: Record<string, unknown> | undefined): string {
     if (!metadata) return '';
 
@@ -77,7 +89,7 @@ export class StandardGraph extends Graph<
     return joinKeys(keyList);
   }
 
-  getStepId(stepKey: string, index?: number): string {
+  getStepIdByKey(stepKey: string, index?: number): string {
     const stepIds = this.stepKeyIds.get(stepKey);
     if (!stepIds) {
       throw new Error(`No step IDs found for stepKey ${stepKey}`);
@@ -122,6 +134,8 @@ export class StandardGraph extends Graph<
     return keyList.some((key) => key === undefined);
   }
 
+  /* Misc.*/
+
   resetValues(): void {
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
@@ -130,6 +144,12 @@ export class StandardGraph extends Graph<
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
   }
+
+  getFinalMessage(): AIMessageChunk | undefined {
+    return this.finalMessage;
+  }
+
+  /* Graph */
 
   createGraphState(): t.GraphStateChannels<t.BaseGraphState> {
     return {
@@ -228,9 +248,7 @@ export class StandardGraph extends Graph<
     return workflow.compile();
   }
 
-  getFinalMessage(): AIMessageChunk | undefined {
-    return this.finalMessage;
-  }
+  /* Dispatchers */
 
   dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
     if (!this.config) {
@@ -238,20 +256,22 @@ export class StandardGraph extends Graph<
     }
     const [id] = this.generateStepId(stepKey);
     // Check if a run step with this stepKey already exists
-    const existingStepIndex = this.contentData.findIndex((step: t.RunStep) => step.id === id);
-    if (existingStepIndex !== -1) {
+    if (this.stepIndexMap.has(id)) {
       // eslint-disable-next-line no-console
       console.warn(`\n
         ==============================================================
 
+
         Run step with id ${id} already exists. Updating existing step.
+
 
         ==============================================================
         \n`);
-      (this.contentData[existingStepIndex] as t.RunStep).stepDetails = stepDetails;
+      const index = this.stepIndexMap.get(id) as number;
+      this.contentData[index].stepDetails = stepDetails;
       return;
     }
-    const runStep: t.RunStep = {
+    const runStep = {
       id,
       type: stepDetails.type,
       index: this.contentData.length,
@@ -259,6 +279,7 @@ export class StandardGraph extends Graph<
       usage: null,
     };
     this.contentData.push(runStep);
+    this.stepIndexMap.set(id, runStep.index);
     dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
   }
 

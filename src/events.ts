@@ -18,32 +18,38 @@ export class HandlerRegistry {
 export class ModelEndHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph || !metadata) {
-      console.warn('Graph or metadata not found in CHAT_MODEL_END event');
+      console.warn(`Graph or metadata not found in ${event} event`);
       return;
     }
 
     const stepKey = graph.getStepKey(metadata);
-    const stepId = graph.getStepId(stepKey);
+    const stepId = graph.getStepIdByKey(stepKey);
+    const step = graph.getRunStep(stepId);
 
-    console.log('====== CHAT_MODEL_END ======');
-    console.log('Step ID:', stepId);
-    console.dir(data, { depth: null });
+    console.log(`====== ${event.toUpperCase()} ======`);
+    console.dir({
+      step,
+      data,
+    }, { depth: null });
   }
 }
 
 export class ToolEndHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph || !metadata) {
-      console.warn('Graph or metadata not found in CHAT_MODEL_END event');
+      console.warn(`Graph or metadata not found in ${event} event`);
       return;
     }
 
     const stepKey = graph.getStepKey(metadata);
-    const stepId = graph.getStepId(stepKey);
+    const stepId = graph.getStepIdByKey(stepKey);
+    const step = graph.getRunStep(stepId);
 
-    console.log('====== TOOL_END ======');
-    console.log('Step ID:', stepId);
-    console.dir(data, { depth: null });
+    console.log(`====== ${event.toUpperCase()} ======`);
+    console.dir({
+      step,
+      data,
+    }, { depth: null });
   }
 }
 

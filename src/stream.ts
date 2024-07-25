@@ -82,7 +82,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
     const stepKey = graph.getStepKey(metadata);
 
     if (hasToolCallChunks && chunk.tool_call_chunks?.length && typeof chunk.tool_call_chunks[0]?.index === 'number') {
-      const stepId = graph.getStepId(stepKey, chunk.tool_call_chunks[0].index);
+      const stepId = graph.getStepIdByKey(stepKey, chunk.tool_call_chunks[0].index);
       graph.dispatchRunStepDelta(stepId, {
         type: StepTypes.TOOL_CALLS,
         tool_calls: chunk.tool_call_chunks,
@@ -103,21 +103,32 @@ export class ChatModelStreamHandler implements t.EventHandler {
       });
     }
 
-    const stepId = graph.getStepId(stepKey);
+    const stepId = graph.getStepIdByKey(stepKey);
+    const runStep = graph.getRunStep(stepId);
+    if (!runStep) {
+      // eslint-disable-next-line no-console
+      console.warn(`\n
+==============================================================
+
+
+Run step for ${stepId} does not exist, cannot dispatch delta event.
+
+event: ${event}
+stepId: ${stepId}
+stepKey: ${stepKey}
+message_id: ${message_id}
+hasToolCalls: ${hasToolCalls}
+hasToolCallChunks: ${hasToolCallChunks}
+
+==============================================================
+\n`);
+      return;
+    }
+
     /* Note: tool call chunks may have non-empty content that matches the current tool chunk generation */
-    if (hasToolCallChunks && typeof content === 'string' && chunk.tool_call_chunks?.some((tc) => tc.args === content)) {
+    if (typeof content === 'string' && runStep.type === StepTypes.TOOL_CALLS) {
       return;
-    } else if (
-      Array.isArray(content) && content.length
-      && typeof (content[0] as t.ExtendedMessageContent)?.index === 'number'
-      && chunk.tool_call_chunks?.length
-      && chunk.tool_call_chunks[0]?.index === (content[0] as t.ExtendedMessageContent).index
-    ) {
-      return;
-    } else if (
-      hasToolCallChunks
-      && chunk.tool_call_chunks?.some((tc) => tc.args === (content[0] as t.ExtendedMessageContent)?.input)
-    ) {
+    } else if (hasToolCallChunks && chunk.tool_call_chunks?.some((tc) => tc.args === content)) {
       return;
     } else if (typeof content === 'string') {
       graph.dispatchMessageDelta(stepId, {
