@@ -41,18 +41,13 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Verify package contents
-        run: |
-          echo "Package contents:"
-          npm pack --dry-run
-
-      - name: Install production dependencies
+      - name: Pack package
         if: steps.check.outputs.skip != 'true'
-        run: npm ci --only=production
+        run: npm pack
 
       - name: Publish
         if: steps.check.outputs.skip != 'true'
-        run: npm publish --access restricted
+        run: npm publish $(ls librechat-agentus-*.tgz) --access restricted
         env:
           NODE_ENV: production
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
