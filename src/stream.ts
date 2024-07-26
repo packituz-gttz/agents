@@ -136,7 +136,7 @@ hasToolCallChunks: ${hasToolCallChunks}
           text: content,
         }],
       });
-    } else if (content?.length && content.every((c) => c.type?.startsWith('text'))) {
+    } else if (content?.every((c) => c.type?.startsWith('text'))) {
       graph.dispatchMessageDelta(stepId, {
         content,
       });
