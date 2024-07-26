@@ -32,11 +32,23 @@ export default {
   input: {
     main: './src/index.ts'
   },
-  output: {
-    dir: 'dist',
-    format: 'es',
-    sourcemap: !isProduction
-  },
+  output: [
+    {
+      dir: 'dist/esm',
+      format: 'es',
+      sourcemap: !isProduction,
+      preserveModules: true,
+      preserveModulesRoot: 'src'
+    },
+    {
+      dir: 'dist/cjs',
+      format: 'cjs',
+      sourcemap: !isProduction,
+      preserveModules: true,
+      preserveModulesRoot: 'src',
+      exports: 'named'
+    }
+  ],
   plugins: [
     cleandir('dist'),
     {
@@ -61,12 +73,17 @@ export default {
       tsconfig: './tsconfig.json',
       sourceMap: !isProduction,
       inlineSources: !isProduction,
+      outDir: null,
+      declaration: false,
+      exclude: [
+        'src/proto/**/*',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        'node_modules/**'
+      ]
     }),
-    isProduction && terser({
-      // ... terser options
-    }),
+    isProduction && terser(),
     isProduction && obfuscator({
-      // ... obfuscator options
       exclude: [
         'node_modules/**',
         '**/*.spec.ts',

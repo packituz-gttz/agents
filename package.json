@@ -1,11 +1,20 @@
 {
   "name": "@librechat/agentus",
-  "version": "1.0.0",
-  "main": "index.ts",
+  "version": "1.0.1",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "NODE_ENV=production rollup -c",
+    "build": "NODE_ENV=production rollup -c && tsc -p tsconfig.build.json",
     "build:dev": "rollup -c",
-    "start": "node dist/main.js",
+    "start": "node dist/esm/main.js",
     "clean": "node ./config/clean.js",
     "bun:cli": "bun -r dotenv/config ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
