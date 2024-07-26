@@ -2,9 +2,12 @@
 export * from './stream';
 export * from './messages';
 export * from './processor';
+
+/* Graphs */
+export * from './graphs';
+
 /* Misc. */
 export * from './common';
-export * from './graphs';
 
 /* Types */
 export type * from './types';

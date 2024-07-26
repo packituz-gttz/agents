@@ -1,5 +1,5 @@
 // src/graphs/CollabGraph.ts
-import { BaseMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessageChunk, BaseMessage, HumanMessage } from '@langchain/core/messages';
 import { END, StateGraphArgs, START, StateGraph, MemorySaver } from '@langchain/langgraph';
 import { AgentExecutor, createOpenAIToolsAgent } from 'langchain/agents';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
@@ -8,7 +8,7 @@ import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { JsonOutputToolsParser } from 'langchain/output_parsers';
 import { Providers } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
-import { Graph } from './Graph';
+import { Graph } from '../graphs/Graph';
 import type * as t from '@/types';
 import { supervisorPrompt } from '@/prompts/collab';
 
@@ -31,12 +31,45 @@ interface SupervisorConfig {
 }
 
 export class CollabGraph extends Graph<CollabAgentStateChannels, string> {
+  resetValues(): void {
+    throw new Error('Method not implemented.');
+  }
+  getFinalMessage(): AIMessageChunk | undefined {
+    throw new Error('Method not implemented.');
+  }
+  generateStepId(stepKey: string): [string, number] {
+    throw new Error('Method not implemented.');
+  }
+  getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[] {
+    throw new Error('Method not implemented.');
+  }
+  getStepKey(metadata: Record<string, unknown> | undefined): string {
+    throw new Error('Method not implemented.');
+  }
+  checkKeyList(keyList: (string | number | undefined)[]): boolean {
+    throw new Error('Method not implemented.');
+  }
+  getStepIdByKey(stepKey: string, index?: number): string {
+    throw new Error('Method not implemented.');
+  }
+  getRunStep(stepId: string): t.RunStep | undefined {
+    throw new Error('Method not implemented.');
+  }
+  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
+    throw new Error('Method not implemented.');
+  }
+  dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void {
+    throw new Error('Method not implemented.');
+  }
+  dispatchMessageDelta(id: string, delta: t.MessageDelta): void {
+    throw new Error('Method not implemented.');
+  }
   private graph: t.CompiledWorkflow<CollabAgentStateChannels, Partial<CollabAgentStateChannels>, string> | null = null;
-  private members: Member[];
+  private members: t.Member[];
   private supervisorConfig: SupervisorConfig;
   private supervisorChain: Runnable | null = null;
 
-  constructor(members: Member[], supervisorConfig: SupervisorConfig) {
+  constructor(members: t.Member[], supervisorConfig: SupervisorConfig) {
     super();
     this.members = members;
     this.supervisorConfig = supervisorConfig;

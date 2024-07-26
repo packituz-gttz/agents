@@ -4,15 +4,13 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
 import type * as t from '@/types';
 import { GraphEvents, CommonEvents } from '@/common';
-import { TaskManager } from '@/graphs/TaskManager';
-import { CollabGraph } from '@/graphs/CollabGraph';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 
 export class Processor<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
-  private collab!: CollabGraph;
-  private taskManager!: TaskManager;
+  // private collab!: CollabGraph;
+  // private taskManager!: TaskManager;
   private handlerRegistry: HandlerRegistry;
   private Graph: StandardGraph | undefined;
   provider: Providers | undefined;
@@ -29,24 +27,12 @@ export class Processor<T extends t.BaseGraphState> {
 
     this.handlerRegistry = handlerRegistry;
 
-    if (config.graphConfig.type === 'standard') {
+    if (config.graphConfig.type === 'standard' || !config.graphConfig.type) {
       this.provider = config.graphConfig.llmConfig.provider;
       this.graphRunnable = this.createStandardGraph(config.graphConfig) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
       if (this.Graph) {
         this.Graph.handlerRegistry = handlerRegistry;
       }
-    } else if (config.graphConfig.type === 'collaborative') {
-      this.provider = config.graphConfig.supervisorConfig.llmConfig.provider;
-      this.collab = new CollabGraph(
-        config.graphConfig.members,
-        config.graphConfig.supervisorConfig
-      );
-    } else if (config.graphConfig.type === 'taskmanager') {
-      this.provider = config.graphConfig.supervisorConfig.llmConfig.provider;
-      this.taskManager = new TaskManager(
-        config.graphConfig.members,
-        config.graphConfig.supervisorConfig
-      );
     }
   }
 
@@ -60,17 +46,7 @@ export class Processor<T extends t.BaseGraphState> {
   }
 
   static async create<T extends t.BaseGraphState>(config: t.ProcessorConfig): Promise<Processor<T>> {
-    const processor = new Processor<T>(config);
-    if (config.graphConfig.type === 'collaborative') {
-      await processor.collab.initialize();
-      const graphState = processor.collab.createGraphState();
-      processor.graphRunnable = processor.collab.createWorkflow(graphState) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
-    } else if (config.graphConfig.type === 'taskmanager') {
-      await processor.taskManager.initialize();
-      const graphState = processor.taskManager.createGraphState();
-      processor.graphRunnable = processor.taskManager.createWorkflow(graphState) as unknown as t.CompiledWorkflow<T, Partial<T>, string>;
-    }
-    return processor;
+    return new Processor<T>(config);
   }
 
   async processStream(

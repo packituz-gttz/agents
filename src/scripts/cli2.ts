@@ -2,13 +2,11 @@
 // src/scripts/cli2.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, BaseMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
-import {
-  ChatModelStreamHandler,
-  LLMStreamHandler,
-} from '@/stream';
+import { ChatModelStreamHandler } from '@/stream';
+import { TestLLMStreamHandler } from '@/events';
 
 import { getArgs } from '@/scripts/args';
 import { Processor } from '@/processor';
@@ -21,7 +19,7 @@ async function executePersonalizedQuerySuite(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   
   const customHandlers = {
-    [GraphEvents.LLM_STREAM]: new LLMStreamHandler(),
+    [GraphEvents.LLM_STREAM]: new TestLLMStreamHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.LLM_START]: {
       handle: (_event: string, data: t.StreamEventData): void => {

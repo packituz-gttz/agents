@@ -18,7 +18,7 @@ import {
 } from '@/prompts/taskmanager';
 import { getChatModelClass } from '@/llm/providers';
 import { Providers } from '@/common';
-import { Graph } from './Graph';
+import { Graph } from '../graphs/Graph';
 
 export interface TaskManagerStateChannels {
   messages: BaseMessage[];

@@ -14,24 +14,23 @@ const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const prodOnlyDirs = [
-  'src/proto/',
+const excludedDirsInProd = [
   'src/scripts/',
-  'src/utils/',
+  'src/proto/',
   'routes/',
   'config/'
 ];
 
 function filterProdFiles(id) {
   if (!isProduction) {
-    return !prodOnlyDirs.some(dir => id.includes(dir));
+    return !excludedDirsInProd.some(dir => id.includes(dir));
   }
   return true;
 }
 
 export default {
   input: {
-    main: 'src/index.ts'
+    main: './src/scripts/cli.ts'
   },
   output: {
     dir: 'dist',
@@ -61,13 +60,23 @@ export default {
     typescript({
       tsconfig: './tsconfig.json',
       sourceMap: !isProduction,
-      inlineSources: !isProduction
+      inlineSources: !isProduction,
     }),
     isProduction && terser({
       // ... terser options
     }),
     isProduction && obfuscator({
       // ... obfuscator options
+      exclude: [
+        'node_modules/**',
+        '**/*.spec.ts',
+        'tsconfig-paths-bootstrap.mjs',
+        'src/proto/**',
+        'src/scripts/**',
+        'dist/**',
+        'config/**',
+        'routes/**'
+      ]
     })
   ].filter(Boolean),
   external: [
