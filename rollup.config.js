@@ -71,8 +71,11 @@ export default {
     commonjs(),
     typescript({
       tsconfig: './tsconfig.json',
-      sourceMap: !isProduction,
-      inlineSources: !isProduction,
+      // sourceMap: !isProduction,
+      // inlineSources: !isProduction,
+      /* enable source maps for testing with other production options */
+      sourceMap: true,
+      inlineSources: true,
       outDir: null,
       declaration: false,
       exclude: [
