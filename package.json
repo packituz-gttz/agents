@@ -1,15 +1,29 @@
 {
   "name": "@librechat/agentus",
   "version": "1.0.5",
-  "main": "./dist/cjs/main.js",
-  "module": "./dist/esm/main.js",
+  "main": "./dist/cjs/main.cjs",
+  "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/main.js",
-      "require": "./dist/cjs/main.js",
+      "import": "./dist/esm/main.mjs",
+      "require": "./dist/cjs/main.cjs",
       "types": "./dist/types/index.d.ts"
     }
+  },
+  "type": "module",
+  "description": "",
+  "author": "Danny Avila",
+  "license": "GPL-3.0-or-later",
+  "licenses": [
+    {
+      "type": "GPL-3.0-or-later",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.en.html"
+    }
+  ],
+  "packageManager": "npm@10.5.2",
+  "engines": {
+    "node": ">=14.0.0"
   },
   "files": [
     "dist",
@@ -40,20 +54,6 @@
     "re": "bun run clean && bun install && rm -rf ./dist && turbo build",
     "lint": "eslint . --ext .js,.ts --fix",
     "format": "prettier --write ."
-  },
-  "author": "Danny Avila",
-  "license": "GPL-3.0-or-later",
-  "licenses": [
-    {
-      "type": "GPL-3.0-or-later",
-      "url": "https://www.gnu.org/licenses/gpl-3.0.en.html"
-    }
-  ],
-  "description": "",
-  "type": "module",
-  "packageManager": "npm@10.5.2",
-  "engines": {
-    "node": ">=14.0.0"
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",

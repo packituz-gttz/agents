@@ -36,6 +36,7 @@ export default {
     {
       dir: 'dist/esm',
       format: 'es',
+      entryFileNames: '[name].mjs',
       sourcemap: !isProduction,
       preserveModules: true,
       preserveModulesRoot: 'src'
@@ -43,6 +44,7 @@ export default {
     {
       dir: 'dist/cjs',
       format: 'cjs',
+      entryFileNames: '[name].cjs',
       sourcemap: !isProduction,
       preserveModules: true,
       preserveModulesRoot: 'src',
