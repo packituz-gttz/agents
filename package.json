@@ -1,13 +1,13 @@
 {
   "name": "@librechat/agentus",
-  "version": "1.0.4",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
+  "version": "1.0.5",
+  "main": "./dist/cjs/main.js",
+  "module": "./dist/esm/main.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/main.js",
+      "require": "./dist/cjs/main.js",
       "types": "./dist/types/index.d.ts"
     }
   },
