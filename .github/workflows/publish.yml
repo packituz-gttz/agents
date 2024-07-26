@@ -31,7 +31,26 @@ jobs:
       - name: Set up npm authentication
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
+      - name: Check version change
+        id: check
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED_VERSION=$(npm view @librechat/agentus version || echo "0.0.0")
+          if [ "$PACKAGE_VERSION" = "$PUBLISHED_VERSION" ]; then
+            echo "No version change, skipping publish"
+            echo "::set-output name=skip::true"
+          else
+            echo "Version changed, proceeding with publish"
+            echo "::set-output name=skip::false"
+          fi
+
+      - name: Verify package contents
+        run: |
+          echo "Package contents:"
+          npm pack --dry-run
+
       - name: Publish
+        if: steps.check.outputs.skip != 'true'
         run: npm publish --access restricted
         env:
           NODE_ENV: production
