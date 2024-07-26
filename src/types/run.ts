@@ -1,11 +1,11 @@
-// src/types/processor.ts
+// src/types/run.ts
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
 
 export type StandardGraphConfig = {
-  type: 'standard';
+  type?: 'standard';
   tools?: StructuredTool[];
   llmConfig: l.LLMConfig;
 };
@@ -37,7 +37,7 @@ export type TaskManagerGraphConfig = {
   supervisorConfig: { systemPrompt?: string; llmConfig: l.LLMConfig };
 };
 
-export type ProcessorConfig = {
+export type RunConfig = {
   graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
 };

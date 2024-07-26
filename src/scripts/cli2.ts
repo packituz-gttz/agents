@@ -9,7 +9,7 @@ import { ChatModelStreamHandler } from '@/stream';
 import { TestLLMStreamHandler } from '@/events';
 
 import { getArgs } from '@/scripts/args';
-import { Processor } from '@/processor';
+import { Run } from '@/run';
 import { GraphEvents } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
@@ -61,7 +61,7 @@ async function executePersonalizedQuerySuite(): Promise<void> {
 
   const llmConfig = getLLMConfig(provider);
 
-  const processor = await Processor.create<t.IState>({
+  const run = await Run.create<t.IState>({
     graphConfig: {
       type: 'standard',
       llmConfig,
@@ -103,11 +103,11 @@ async function executePersonalizedQuerySuite(): Promise<void> {
 
   conversationHistory.push(new HumanMessage(userPrompt));
 
-  const processorInput = {
+  const runInput = {
     messages: conversationHistory,
   };
 
-  const aiResponse = await processor.processStream(processorInput, sessionConfig);
+  const aiResponse = await run.processStream(runInput, sessionConfig);
   if (aiResponse) {
     conversationHistory.push(aiResponse);
     console.log("AI Assistant's Response:");

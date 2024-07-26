@@ -10,7 +10,7 @@ import { ChatModelStreamHandler } from '@/stream';
 
 
 import { getArgs } from '@/scripts/args';
-import { Processor } from '@/processor';
+import { Run } from '@/run';
 import { GraphEvents } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
@@ -83,7 +83,7 @@ async function testStandardStreaming(): Promise<void> {
 
   const llmConfig = getLLMConfig(provider);
 
-  const processor = await Processor.create<t.IState>({
+  const run = await Run.create<t.IState>({
     graphConfig: {
       type: 'standard',
       llmConfig,
@@ -109,7 +109,7 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const finalMessage = await processor.processStream(inputs, config);
+  const finalMessage = await run.processStream(inputs, config);
   if (finalMessage) {
     conversationHistory.push(finalMessage);
   }
@@ -127,7 +127,7 @@ async function testStandardStreaming(): Promise<void> {
   inputs = {
     messages: conversationHistory,
   };
-  const finalMessage2 = await processor.processStream(inputs, config);
+  const finalMessage2 = await run.processStream(inputs, config);
   if (finalMessage2) {
     conversationHistory.push(finalMessage2);
     console.dir(conversationHistory, { depth: null });

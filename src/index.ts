@@ -1,7 +1,7 @@
 /* Main Operations */
+export * from './run';
 export * from './stream';
 export * from './messages';
-export * from './processor';
 
 /* Graphs */
 export * from './graphs';

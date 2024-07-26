@@ -1,5 +1,5 @@
 // src/types/index.ts
 export * from './graph';
 export * from './llm';
-export * from './processor';
+export * from './run';
 export * from './stream';

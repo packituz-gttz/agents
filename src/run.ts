@@ -1,4 +1,4 @@
-// src/processor.ts
+// src/run.ts
 import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
@@ -7,7 +7,7 @@ import { GraphEvents, CommonEvents } from '@/common';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 
-export class Processor<T extends t.BaseGraphState> {
+export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
   // private collab!: CollabGraph;
   // private taskManager!: TaskManager;
@@ -16,7 +16,7 @@ export class Processor<T extends t.BaseGraphState> {
   provider: Providers | undefined;
   run_id: string | undefined;
 
-  private constructor(config: t.ProcessorConfig) {
+  private constructor(config: t.RunConfig) {
     const handlerRegistry = new HandlerRegistry();
 
     if (config.customHandlers) {
@@ -45,8 +45,8 @@ export class Processor<T extends t.BaseGraphState> {
     return standardGraph.createWorkflow();
   }
 
-  static async create<T extends t.BaseGraphState>(config: t.ProcessorConfig): Promise<Processor<T>> {
-    return new Processor<T>(config);
+  static async create<T extends t.BaseGraphState>(config: t.RunConfig): Promise<Run<T>> {
+    return new Run<T>(config);
   }
 
   async processStream(
@@ -54,10 +54,10 @@ export class Processor<T extends t.BaseGraphState> {
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
   ): Promise<BaseMessage | undefined> {
     if (!this.graphRunnable) {
-      throw new Error('Processor not initialized. Make sure to use Processor.create() to instantiate the Processor.');
+      throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
     }
     if (!this.Graph) {
-      throw new Error('Graph not initialized. Make sure to use Processor.create() to instantiate the Processor.');
+      throw new Error('Graph not initialized. Make sure to use Run.create() to instantiate the Run.');
     }
 
     this.Graph.resetValues();
