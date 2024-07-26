@@ -5,9 +5,10 @@ import alias from '@rollup/plugin-alias';
 import terser from '@rollup/plugin-terser';
 import commonjs from '@rollup/plugin-commonjs';
 import { cleandir } from 'rollup-plugin-cleandir';
-import resolve from '@rollup/plugin-node-resolve';
 import obfuscator from 'rollup-plugin-obfuscator';
 import typescript from '@rollup/plugin-typescript';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import json from '@rollup/plugin-json';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,11 +67,15 @@ export default {
         { find: '@', replacement: path.resolve(__dirname, 'src') }
       ]
     }),
-    resolve({
+    nodeResolve({
       preferBuiltins: true,
-      extensions: ['.js', '.ts']
+      extensions: ['.mjs', '.js', '.json', '.node', '.ts']
     }),
-    commonjs(),
+    commonjs({
+      esmExternals: true,
+      requireReturnsDefault: 'auto',
+    }),
+    json(),
     typescript({
       tsconfig: './tsconfig.json',
       // sourceMap: !isProduction,
