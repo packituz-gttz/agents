@@ -66,14 +66,14 @@ export type StepDetails =
   | MessageCreationDetails
   | ToolCallsDetails;
 
-type MessageCreationDetails = {
+export type MessageCreationDetails = {
   type: StepTypes.MESSAGE_CREATION;
   message_creation: {
     message_id: string;
   };
 };
 
-type ToolCallsDetails = {
+export type ToolCallsDetails = {
   type: StepTypes.TOOL_CALLS;
   tool_calls: AgentToolCall[]; // #new
 };

@@ -48,12 +48,11 @@ export class ChatModelStreamHandler implements t.EventHandler {
     if (hasToolCalls && chunk.tool_calls?.every((tc) => tc.id)) {
       const tool_calls: ToolCall[] = [];
       for (const tool_call of chunk.tool_calls) {
-        if (!tool_call.id || graph.toolCallIds.has(tool_call.id)) {
+        if (!tool_call.id || graph.toolCallStepIds.has(tool_call.id)) {
           continue;
         }
 
         tool_calls.push(tool_call);
-        graph.toolCallIds.add(tool_call.id);
       }
 
       const stepKey = graph.getStepKey(metadata);

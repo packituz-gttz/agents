@@ -8,8 +8,8 @@ import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
+import { Providers, GraphEvents, GraphNodeKeys, StepTypes } from '@/common';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
-import { Providers, GraphEvents, GraphNodeKeys } from '@/common';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/events';
@@ -40,11 +40,11 @@ export abstract class Graph<
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
   messageIdsByStepKey: Map<string, string> = new Map();
   prelimMessageIdsByStepKey: Map<string, string> = new Map();
-  toolCallIds: Set<string> = new Set();
   config: RunnableConfig | undefined;
   contentData: t.RunStep[] = [];
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
-  stepIndexMap: Map<string, number> = new Map();
+  contentIndexMap: Map<string, number> = new Map();
+  toolCallStepIds: Map<string, string> = new Map();
 }
 
 export class StandardGraph extends Graph<
@@ -68,10 +68,23 @@ export class StandardGraph extends Graph<
     this.boundModel = this.initializeModel();
   }
 
+  /* Init */
+
+  resetValues(): void {
+    this.config = resetIfNotEmpty(this.config, undefined);
+    this.contentData = resetIfNotEmpty(this.contentData, []);
+    this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
+    this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
+    this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
+    // this.finalMessage = resetIfNotEmpty(this.finalMessage, undefined);
+    this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
+    this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
+  }
+
   /* Run Step Processing */
 
   getRunStep(stepId: string): t.RunStep | undefined {
-    const index = this.stepIndexMap.get(stepId);
+    const index = this.contentIndexMap.get(stepId);
     if (index !== undefined) {
       return this.contentData[index];
     }
@@ -135,15 +148,6 @@ export class StandardGraph extends Graph<
   }
 
   /* Misc.*/
-
-  resetValues(): void {
-    this.config = resetIfNotEmpty(this.config, undefined);
-    this.contentData = resetIfNotEmpty(this.contentData, []);
-    this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
-    this.toolCallIds = resetIfNotEmpty(this.toolCallIds, new Set());
-    this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
-    this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
-  }
 
   getFinalMessage(): AIMessageChunk | undefined {
     return this.finalMessage;
@@ -254,32 +258,28 @@ export class StandardGraph extends Graph<
     if (!this.config) {
       throw new Error('No config provided');
     }
-    const [id] = this.generateStepId(stepKey);
-    // Check if a run step with this stepKey already exists
-    if (this.stepIndexMap.has(id)) {
-      // eslint-disable-next-line no-console
-      console.warn(`\n
-        ==============================================================
 
-
-        Run step with id ${id} already exists. Updating existing step.
-
-
-        ==============================================================
-        \n`);
-      const index = this.stepIndexMap.get(id) as number;
-      this.contentData[index].stepDetails = stepDetails;
-      return;
+    const [stepId, stepIndex] = this.generateStepId(stepKey);
+    if (stepDetails.type === StepTypes.TOOL_CALLS && stepDetails.tool_calls) {
+      for (const tool_call of stepDetails.tool_calls) {
+        if (!tool_call.id || this.toolCallStepIds.has(tool_call.id)) {
+          continue;
+        }
+        this.toolCallStepIds.set(tool_call.id, stepId);
+      }
     }
+
     const runStep = {
-      id,
+      stepIndex,
+      id: stepId,
       type: stepDetails.type,
       index: this.contentData.length,
       stepDetails,
       usage: null,
     };
+
     this.contentData.push(runStep);
-    this.stepIndexMap.set(id, runStep.index);
+    this.contentIndexMap.set(stepId, runStep.index);
     dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
   }
 

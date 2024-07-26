@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 // src/events.ts
+import type { AIMessage } from '@langchain/core/messages';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 
@@ -22,14 +23,15 @@ export class ModelEndHandler implements t.EventHandler {
       return;
     }
 
-    const stepKey = graph.getStepKey(metadata);
-    const stepId = graph.getStepIdByKey(stepKey);
-    const step = graph.getRunStep(stepId);
+    const usage = (data?.output as AIMessage)?.usage_metadata;
+
+    // const stepKey = graph.getStepKey(metadata);
+    // const stepId = graph.getStepIdByKey(stepKey);
+    // const step = graph.getRunStep(stepId);
 
     console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
-      step,
-      // data,
+      usage,
     }, { depth: null });
   }
 }
@@ -41,14 +43,15 @@ export class ToolEndHandler implements t.EventHandler {
       return;
     }
 
-    const stepKey = graph.getStepKey(metadata);
-    const stepId = graph.getStepIdByKey(stepKey);
-    const step = graph.getRunStep(stepId);
+    const { output } = data;
+    if (!output) {
+      console.warn(`No output found in ${event} event:`);
+      console.dir(data, { depth: null });
+      return;
+    }
 
-    console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
-      step,
-      // data,
+      output,
     }, { depth: null });
   }
 }

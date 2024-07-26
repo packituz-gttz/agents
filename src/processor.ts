@@ -86,6 +86,7 @@ export class Processor<T extends t.BaseGraphState> {
 
     this.Graph.resetValues();
     const stream = this.graphRunnable.streamEvents(inputs, config);
+
     for await (const event of stream) {
       const { data, name, metadata, ...info } = event;
 
@@ -97,11 +98,14 @@ export class Processor<T extends t.BaseGraphState> {
         this.run_id = info.run_id;
       }
 
+      // console.log(`Event: ${event.event} | Executing Event: ${eventName}`);
+
       const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {
         handler.handle(eventName, data, metadata, this.Graph);
       }
     }
+
     return this.Graph.getFinalMessage();
   }
 }
