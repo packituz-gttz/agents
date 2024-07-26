@@ -171,6 +171,9 @@ export class StandardGraph extends Graph<
   initializeModel(): Runnable {
     const ChatModelClass = getChatModelClass(this.provider);
     const model = new ChatModelClass(this.clientOptions);
+    if (!this.tools) {
+      return model;
+    }
     return model.bindTools(this.tools);
   }
 
