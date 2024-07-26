@@ -134,6 +134,13 @@ async function testStandardStreaming(): Promise<void> {
   }
 }
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.log('Conversation history:');
+  console.dir(conversationHistory, { depth: null });
+  process.exit(1);
+});
+
 testStandardStreaming().catch((err) => {
   console.error(err);
   console.log('Conversation history:');
