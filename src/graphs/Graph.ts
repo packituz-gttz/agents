@@ -73,7 +73,6 @@ export class StandardGraph extends Graph<
   /* Init */
 
   resetValues(): void {
-    this.runId = resetIfNotEmpty(this.runId, undefined);
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
