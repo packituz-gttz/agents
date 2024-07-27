@@ -61,13 +61,14 @@ export class Run<T extends t.BaseGraphState> {
 
     this.Graph.resetValues();
     const provider = this.Graph.provider;
+    const hasTools = this.Graph.tools.length > 0;
     const stream = this.graphRunnable.streamEvents(inputs, config);
 
     for await (const event of stream) {
       const { data, name, metadata, ...info } = event;
 
       let eventName: t.EventName = info.event;
-      if (provider === Providers.ANTHROPIC && eventName === GraphEvents.CHAT_MODEL_STREAM) {
+      if (hasTools && provider === Providers.ANTHROPIC && eventName === GraphEvents.CHAT_MODEL_STREAM) {
         /* Skipping CHAT_MODEL_STREAM event for Anthropic due to double-call edge case */
         continue;
       }

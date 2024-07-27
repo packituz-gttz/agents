@@ -53,11 +53,11 @@ export class StandardGraph extends Graph<
 > {
   private finalMessage: AIMessageChunk | undefined;
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
-  private tools: StructuredTool[];
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
   handlerRegistry: HandlerRegistry | undefined;
   runId: string | undefined;
+  tools: StructuredTool[];
   provider: Providers;
 
   constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[], runId?: string) {
