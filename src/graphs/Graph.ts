@@ -58,19 +58,22 @@ export class StandardGraph extends Graph<
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
   handlerRegistry: HandlerRegistry | undefined;
+  runId: string | undefined;
 
-  constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[]) {
+  constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[], runId?: string) {
     super();
     this.provider = provider;
     this.clientOptions = clientOptions;
     this.tools = tools;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
+    this.runId = runId;
   }
 
   /* Init */
 
   resetValues(): void {
+    this.runId = resetIfNotEmpty(this.runId, undefined);
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
@@ -272,7 +275,7 @@ export class StandardGraph extends Graph<
       }
     }
 
-    const runStep = {
+    const runStep: t.RunStep = {
       stepIndex,
       id: stepId,
       type: stepDetails.type,
@@ -280,6 +283,10 @@ export class StandardGraph extends Graph<
       stepDetails,
       usage: null,
     };
+
+    if (this.runId) {
+      runStep.runId = this.runId;
+    }
 
     this.contentData.push(runStep);
     this.contentIndexMap.set(stepId, runStep.index);

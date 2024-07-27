@@ -37,8 +37,10 @@ export type RunStep = {
   // failed_at: number | null;
   // last_error: string | null;
   id: string; // #new
-  index?: number; // #new
-  stepDetails: StepDetails; // Updated to use StepDetails type
+  runId?: string; // #new
+  index: number; // #new
+  stepIndex?: number; // #new
+  stepDetails: StepDetails;
   usage: null | {
     // Define usage structure if it's ever non-null
     // prompt_tokens: number; // #new

@@ -3,9 +3,9 @@ import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Providers } from '@/common';
 import type * as t from '@/types';
-import { GraphEvents, CommonEvents } from '@/common';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
+import { GraphEvents } from '@/common';
 
 export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -37,10 +37,10 @@ export class Run<T extends t.BaseGraphState> {
   }
 
   private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
-    const { llmConfig, tools = [] } = config;
+    const { runId, llmConfig, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
-    const standardGraph = new StandardGraph(provider, clientOptions, tools);
+    const standardGraph = new StandardGraph(provider, clientOptions, tools, runId);
     this.Graph = standardGraph;
     return standardGraph.createWorkflow();
   }
@@ -69,9 +69,6 @@ export class Run<T extends t.BaseGraphState> {
       let eventName: t.EventName = info.event;
       if (eventName && eventName === GraphEvents.ON_CUSTOM_EVENT) {
         eventName = name;
-      }
-      if (name === CommonEvents.LANGGRAPH && !this.run_id && info.run_id) {
-        this.run_id = info.run_id;
       }
 
       // console.log(`Event: ${event.event} | Executing Event: ${eventName}`);

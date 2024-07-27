@@ -5,6 +5,7 @@ import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
 
 export type StandardGraphConfig = {
+  runId?: string;
   type?: 'standard';
   tools?: StructuredTool[];
   llmConfig: l.LLMConfig;
@@ -40,4 +41,5 @@ export type TaskManagerGraphConfig = {
 export type RunConfig = {
   graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
+  runId?: string;
 };
