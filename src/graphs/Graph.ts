@@ -8,14 +8,23 @@ import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
-import { Providers, GraphEvents, GraphNodeKeys, StepTypes } from '@/common';
+import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
-type GraphNode = GraphNodeKeys | typeof START;
+export type GraphNode = GraphNodeKeys | typeof START;
+export type ClientCallback<T extends unknown[]> = (graph: StandardGraph, ...args: T) => void;
+export type ClientCallbacks = {
+  [Callback.TOOL_ERROR]?: ClientCallback<[Error, string]>;
+}
+export type SystemCallbacks = {
+  [K in keyof ClientCallbacks]: ClientCallbacks[K] extends ClientCallback<infer Args>
+    ? (...args: Args) => void
+    : never;
+};
 
 export abstract class Graph<
   T extends t.BaseGraphState = t.BaseGraphState,

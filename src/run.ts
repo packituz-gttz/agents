@@ -1,8 +1,10 @@
 // src/run.ts
 import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
+import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type * as t from '@/types';
-import { GraphEvents, Providers } from '@/common';
+import { GraphEvents, Providers, Callback } from '@/common';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 
@@ -51,6 +53,7 @@ export class Run<T extends t.BaseGraphState> {
   async processStream(
     inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
+    clientCallbacks?: ClientCallbacks,
   ): Promise<BaseMessage | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
@@ -62,6 +65,11 @@ export class Run<T extends t.BaseGraphState> {
     this.Graph.resetValues();
     const provider = this.Graph.provider;
     const hasTools = this.Graph.tools.length > 0;
+    if (clientCallbacks) {
+      /* TODO: conflicts with callback manager */
+      const callbacks = config.callbacks as (BaseCallbackHandler | CallbackHandlerMethods)[] || [];
+      config.callbacks = callbacks.concat(this.getCallbacks(clientCallbacks));
+    }
     const stream = this.graphRunnable.streamEvents(inputs, config);
 
     for await (const event of stream) {
@@ -86,5 +94,23 @@ export class Run<T extends t.BaseGraphState> {
     }
 
     return this.Graph.getFinalMessage();
+  }
+
+  private createSystemCallback<K extends keyof ClientCallbacks>(
+    clientCallbacks: ClientCallbacks,
+    key: K
+  ): SystemCallbacks[K] {
+    return ((...args: unknown[]) => {
+      const clientCallback = clientCallbacks[key];
+      if (clientCallback && this.Graph) {
+        (clientCallback as (...args: unknown[]) => void)(this.Graph, ...args);
+      }
+    }) as SystemCallbacks[K];
+  }
+
+  getCallbacks(clientCallbacks: ClientCallbacks): SystemCallbacks {
+    return {
+      [Callback.TOOL_ERROR]: this.createSystemCallback(clientCallbacks, Callback.TOOL_ERROR),
+    };
   }
 }

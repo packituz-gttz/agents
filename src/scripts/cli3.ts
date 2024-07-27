@@ -14,7 +14,7 @@ import { ChatModelStreamHandler } from '@/stream';
 
 import { getArgs } from '@/scripts/args';
 import { Run } from '@/run';
-import { GraphEvents } from '@/common';
+import { GraphEvents, Callback } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
 const conversationHistory: BaseMessage[] = [];
@@ -119,11 +119,6 @@ async function testStandardStreaming(): Promise<void> {
       instructions: 'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`
     },
-    callbacks: [{
-      handleToolError: (error: Error, toolId: string) => {
-        console.error(`Tool ${toolId} failed with error: ${error.message}`);
-      },
-    }],
     streamMode: 'values',
     version: 'v2' as const,
   };
@@ -134,7 +129,11 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const finalMessage = await run.processStream(inputs, config);
+  const finalMessage = await run.processStream(inputs, config, {
+    [Callback.TOOL_ERROR]: (graph, error, toolId) => {
+      console.error(`Tool ${toolId} failed with error: ${error.message}`);
+    },
+  });
   if (finalMessage) {
     conversationHistory.push(finalMessage);
   }

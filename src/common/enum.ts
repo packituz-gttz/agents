@@ -6,11 +6,14 @@
  */
 export enum GraphEvents {
   /* Custom Events */
-  /** Delta */
-  TOOL_CALL_ = 'on_tool_call_delta',
+
+  /** [Custom] Delta event for run steps (message creation and tool calls) */
   ON_RUN_STEP = 'on_run_step',
+  /** [Custom] Delta event for run steps (tool calls) */
   ON_RUN_STEP_DELTA = 'on_run_step_delta',
+  /** [Custom] Delta events for messages */
   ON_MESSAGE_DELTA = 'on_message_delta',
+
   /* Official Events */
 
   /** Custom event, emitted by system */
@@ -88,4 +91,28 @@ export enum CommonEvents {
 export enum StepTypes {
   TOOL_CALLS = 'tool_calls',
   MESSAGE_CREATION = 'message_creation'
+}
+
+export enum Callback {
+  /* Only using TOOL_ERROR for now */
+  TOOL_ERROR = 'handleToolError',
+  /*
+  LLM_START = 'handleLLMStart',
+  LLM_NEW_TOKEN = 'handleLLMNewToken',
+  LLM_ERROR = 'handleLLMError',
+  LLM_END = 'handleLLMEnd',
+  CHAT_MODEL_START = 'handleChatModelStart',
+  CHAIN_START = 'handleChainStart',
+  CHAIN_ERROR = 'handleChainError',
+  CHAIN_END = 'handleChainEnd',
+  TOOL_START = 'handleToolStart',
+  TOOL_END = 'handleToolEnd',
+  TEXT = 'handleText',
+  AGENT_ACTION = 'handleAgentAction',
+  AGENT_END = 'handleAgentEnd',
+  RETRIEVER_START = 'handleRetrieverStart',
+  RETRIEVER_END = 'handleRetrieverEnd',
+  RETRIEVER_ERROR = 'handleRetrieverError',
+  CUSTOM_EVENT = 'handleCustomEvent'
+  */
 }
