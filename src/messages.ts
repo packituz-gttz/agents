@@ -97,17 +97,17 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
               });
             }
           } catch (e) {
-            if (extendedItem.input.trim()) {
+            if (extendedItem.input) {
               acc.push({ type: 'text', text: extendedItem.input });
             }
           }
         }
-      } else if (typeof item === 'string' && (item as string).trim()) {
+      } else if (typeof item === 'string') {
         acc.push({ type: 'text', text: item });
       }
       return acc;
     }, []);
-  } else if (typeof message.content === 'string' && message.content.trim()) {
+  } else if (typeof message.content === 'string') {
     formattedContent = message.content;
   } else {
     formattedContent = [];
