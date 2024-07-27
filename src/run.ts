@@ -1,11 +1,10 @@
 // src/run.ts
 import { BaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
-import type { Providers } from '@/common';
 import type * as t from '@/types';
+import { GraphEvents, Providers } from '@/common';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
-import { GraphEvents } from '@/common';
 
 export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -61,12 +60,18 @@ export class Run<T extends t.BaseGraphState> {
     }
 
     this.Graph.resetValues();
+    const provider = this.Graph.provider;
     const stream = this.graphRunnable.streamEvents(inputs, config);
 
     for await (const event of stream) {
       const { data, name, metadata, ...info } = event;
 
       let eventName: t.EventName = info.event;
+      if (provider === Providers.ANTHROPIC && eventName === GraphEvents.CHAT_MODEL_STREAM) {
+        /* Skipping CHAT_MODEL_STREAM event for Anthropic due to double-call edge case */
+        continue;
+      }
+
       if (eventName && eventName === GraphEvents.ON_CUSTOM_EVENT) {
         eventName = name;
       }

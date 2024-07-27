@@ -54,11 +54,11 @@ export class StandardGraph extends Graph<
   private finalMessage: AIMessageChunk | undefined;
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private tools: StructuredTool[];
-  private provider: Providers;
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
   handlerRegistry: HandlerRegistry | undefined;
   runId: string | undefined;
+  provider: Providers;
 
   constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[], runId?: string) {
     super();
@@ -214,7 +214,7 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
-      if (provider === Providers.ANTHROPIC) {
+      if (this.tools?.length && provider === Providers.ANTHROPIC) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {
