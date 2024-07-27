@@ -38,7 +38,8 @@ export default {
       dir: 'dist/esm',
       format: 'es',
       entryFileNames: '[name].mjs',
-      sourcemap: !isProduction,
+      // sourcemap: !isProduction,
+      sourcemap: true,
       preserveModules: true,
       preserveModulesRoot: 'src'
     },
@@ -46,7 +47,8 @@ export default {
       dir: 'dist/cjs',
       format: 'cjs',
       entryFileNames: '[name].cjs',
-      sourcemap: !isProduction,
+      // sourcemap: !isProduction,
+      sourcemap: true,
       preserveModules: true,
       preserveModulesRoot: 'src',
       exports: 'named'
@@ -78,9 +80,9 @@ export default {
     json(),
     typescript({
       tsconfig: './tsconfig.json',
+      /* enable source maps for testing with other production options */
       // sourceMap: !isProduction,
       // inlineSources: !isProduction,
-      /* enable source maps for testing with other production options */
       sourceMap: true,
       inlineSources: true,
       outDir: null,
@@ -92,19 +94,20 @@ export default {
         'node_modules/**'
       ]
     }),
-    isProduction && terser(),
-    isProduction && obfuscator({
-      exclude: [
-        'node_modules/**',
-        '**/*.spec.ts',
-        'tsconfig-paths-bootstrap.mjs',
-        'src/proto/**',
-        'src/scripts/**',
-        'dist/**',
-        'config/**',
-        'routes/**'
-      ]
-    })
+    /* Disable terser/obfuscator for now */
+    // isProduction && terser(),
+    // isProduction && obfuscator({
+    //   exclude: [
+    //     'node_modules/**',
+    //     '**/*.spec.ts',
+    //     'tsconfig-paths-bootstrap.mjs',
+    //     'src/proto/**',
+    //     'src/scripts/**',
+    //     'dist/**',
+    //     'config/**',
+    //     'routes/**'
+    //   ]
+    // })
   ].filter(Boolean),
   external: [
     /node_modules/
