@@ -65,6 +65,10 @@ export type StreamEventData = {
      * Runnable config for invoking other runnables within handlers.
      */
     config?: RunnableConfig;
+    /**
+     * Custom result from the runnable that generated the event.
+     */
+    result?: unknown;
 };
 /**
  * A streaming event.
@@ -119,18 +123,4 @@ export type StreamEvent = {
 export type GraphConfig = {
     provider: string;
     thread_id?: string;
-};
-
-export type ProcessedToolCall = {
-  name: string;
-  args: string | Record<string, unknown>;
-  id: string;
-  type: 'tool_call';
-  output: string;
-};
-
-export type ProcessedContent = {
-  type: 'text' | 'tool_call';
-  text?: string;
-  tool_call?: ProcessedToolCall;
 };

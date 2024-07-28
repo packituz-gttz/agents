@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // src/events.ts
-import type { AIMessage, ToolMessage } from '@langchain/core/messages';
+import type { AIMessage } from '@langchain/core/messages';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 
@@ -45,28 +45,12 @@ export class ToolEndHandler implements t.EventHandler {
       return;
     }
 
-    const { input, output } = data as { input: string, output: ToolMessage};
-    if (!output) {
+    if (!data?.output) {
       console.warn('No output found in tool_end event');
       return;
     }
 
-    // todo: dispatch run step completed event
-    const result = {
-      args: input,
-      name: output.name ?? '',
-      id: output.tool_call_id,
-      type: 'tool_call' as const,
-      output: typeof output.content === 'string'
-        ? output.content
-        : JSON.stringify(output.content),
-    };
-    graph.toolCallResults.set(output.tool_call_id, result);
-
-    console.dir({
-      output,
-      result,
-    }, { depth: null });
+    graph.handleToolCallCompleted({ input: data.input, output: data.output } as t.ToolEndData);
   }
 }
 

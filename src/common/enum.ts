@@ -11,6 +11,8 @@ export enum GraphEvents {
   ON_RUN_STEP = 'on_run_step',
   /** [Custom] Delta event for run steps (tool calls) */
   ON_RUN_STEP_DELTA = 'on_run_step_delta',
+  /** [Custom] Completed event for run steps (tool calls) */
+  ON_RUN_STEP_COMPLETED = 'on_run_step_completed',
   /** [Custom] Delta events for messages */
   ON_MESSAGE_DELTA = 'on_message_delta',
 
@@ -76,6 +78,8 @@ export enum Providers {
 export enum GraphNodeKeys {
   TOOLS = 'tools',
   AGENT = 'agent',
+  PRE_TOOLS = 'pre_tools',
+  POST_TOOLS = 'post_tools',
 }
 
 export enum GraphNodeActions {
@@ -94,8 +98,9 @@ export enum StepTypes {
 }
 
 export enum Callback {
-  /* Only using TOOL_ERROR for now */
   TOOL_ERROR = 'handleToolError',
+  TOOL_START = 'handleToolStart',
+  TOOL_END = 'handleToolEnd',
   /*
   LLM_START = 'handleLLMStart',
   LLM_NEW_TOKEN = 'handleLLMNewToken',
@@ -105,8 +110,6 @@ export enum Callback {
   CHAIN_START = 'handleChainStart',
   CHAIN_ERROR = 'handleChainError',
   CHAIN_END = 'handleChainEnd',
-  TOOL_START = 'handleToolStart',
-  TOOL_END = 'handleToolEnd',
   TEXT = 'handleText',
   AGENT_ACTION = 'handleAgentAction',
   AGENT_END = 'handleAgentEnd',

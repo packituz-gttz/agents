@@ -11,7 +11,7 @@ import { ChatModelStreamHandler } from '@/stream';
 
 import { getArgs } from '@/scripts/args';
 import { Run } from '@/run';
-import { GraphEvents } from '@/common';
+import { GraphEvents, Callback } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
 const conversationHistory: BaseMessage[] = [];
@@ -21,6 +21,12 @@ async function testStandardStreaming(): Promise<void> {
     [GraphEvents.TOOL_END]: new ToolEndHandler(),
     [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
+    [GraphEvents.ON_RUN_STEP_COMPLETED]: {
+      handle: (_event: string, data: t.StreamEventData): void => {
+        console.log('====== ON_RUN_STEP_COMPLETED ======');
+        console.dir(data, { depth: null });
+      }
+    },
     [GraphEvents.ON_RUN_STEP]: {
       handle: (_event: string, data: t.StreamEventData): void => {
         console.log('====== ON_RUN_STEP ======');
@@ -109,7 +115,16 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const contentParts = await run.processStream(inputs, config);
+  const contentParts = await run.processStream(inputs, config,
+  //   {
+  //   [Callback.TOOL_START]: (graph, ...args) => {
+  //       console.log('TOOL_START callback');
+  //   },
+  //   [Callback.TOOL_END]: (graph, ...args) => {
+  //       console.log('TOOL_END callback');
+  //   },
+  // }
+);
   const finalMessages = run.getRunMessages();
   if (finalMessages) {
     conversationHistory.push(...finalMessages);

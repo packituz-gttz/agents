@@ -125,6 +125,8 @@ export class Run<T extends t.BaseGraphState> {
   getCallbacks(clientCallbacks: ClientCallbacks): SystemCallbacks {
     return {
       [Callback.TOOL_ERROR]: this.createSystemCallback(clientCallbacks, Callback.TOOL_ERROR),
+      [Callback.TOOL_START]: this.createSystemCallback(clientCallbacks, Callback.TOOL_START),
+      [Callback.TOOL_END]: this.createSystemCallback(clientCallbacks, Callback.TOOL_END),
     };
   }
 }

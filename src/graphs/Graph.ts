@@ -19,6 +19,8 @@ export type GraphNode = GraphNodeKeys | typeof START;
 export type ClientCallback<T extends unknown[]> = (graph: StandardGraph, ...args: T) => void;
 export type ClientCallbacks = {
   [Callback.TOOL_ERROR]?: ClientCallback<[Error, string]>;
+  [Callback.TOOL_START]?: ClientCallback<unknown[]>;
+  [Callback.TOOL_END]?: ClientCallback<unknown[]>;
 }
 export type SystemCallbacks = {
   [K in keyof ClientCallbacks]: ClientCallbacks[K] extends ClientCallback<infer Args>
@@ -45,6 +47,7 @@ export abstract class Graph<
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
+  abstract handleToolCallCompleted(data: t.ToolEndData): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
@@ -56,6 +59,7 @@ export abstract class Graph<
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
   toolCallResults: Map<string, t.ProcessedToolCall> = new Map();
+  toolCallInputs: Map<string, string | Record<string, unknown>> = new Map();
 }
 
 export class StandardGraph extends Graph<
@@ -114,6 +118,7 @@ export class StandardGraph extends Graph<
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
+    this.toolCallInputs = resetIfNotEmpty(this.toolCallInputs, new Map());
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
     this.toolCallResults = resetIfNotEmpty(this.toolCallResults, new Map());
     this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
@@ -318,12 +323,14 @@ export class StandardGraph extends Graph<
       }
 
       this.finalMessage = await this.boundModel.invoke(finalMessages, config);
+      this.config = config;
       return { messages: [this.finalMessage as AIMessageChunk] };
     };
   }
 
   createWorkflow(): t.CompiledWorkflow<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode> {
-    const routeMessage = (state: t.BaseGraphState): string => {
+    const routeMessage = (state: t.BaseGraphState, config?: RunnableConfig): string => {
+      this.config = config;
       const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
       if (!lastMessage?.tool_calls?.length) {
         return END;
@@ -376,6 +383,51 @@ export class StandardGraph extends Graph<
     this.contentData.push(runStep);
     this.contentIndexMap.set(stepId, runStep.index);
     dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
+  }
+
+  handleToolCallCompleted(data: t.ToolEndData, metadata?:  Record<string, unknown>): void {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+
+    const { input, output } = data;
+    const { tool_call_id } = output;
+    const stepId = this.toolCallStepIds.get(tool_call_id);
+    if (!stepId) {
+      throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
+    }
+    const runStep = this.getRunStep(stepId);
+    if (!runStep) {
+      throw new Error(`No run step found for stepId ${stepId}`);
+    }
+
+    if (!data?.output) {
+      // console.warn('No output found in tool_end event');
+      // console.dir(data, { depth: null });
+      return;
+    }
+
+    const tool_call = {
+      args: input, // string | Record<string, unknown>
+      name: output.name ?? '',
+      id: output.tool_call_id,
+      type: 'tool_call' as const,
+      output: typeof output.content === 'string'
+        ? output.content
+        : JSON.stringify(output.content),
+    };
+    this.toolCallResults.set(output.tool_call_id, tool_call);
+    this.handlerRegistry?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(
+      GraphEvents.ON_RUN_STEP_COMPLETED,
+      { result: {
+        id: stepId,
+        index: runStep.index,
+        tool_call
+      } as t.ToolCompleteEvent,
+      },
+      metadata,
+      this,
+    );
   }
 
   dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void {

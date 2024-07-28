@@ -1,6 +1,6 @@
 // src/types/stream.ts
+import type { MessageContentComplex, ToolMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
-import type { MessageContentComplex } from '@langchain/core/messages';
 import { StepTypes } from '@/common/enum';
 
 /** Event names are of the format: on_[runnable_type]_(start|stream|end).
@@ -68,11 +68,41 @@ export type StepDetails =
   | MessageCreationDetails
   | ToolCallsDetails;
 
+export type StepCompleted = ToolCallCompleted;
+
 export type MessageCreationDetails = {
   type: StepTypes.MESSAGE_CREATION;
   message_creation: {
     message_id: string;
   };
+};
+
+export type ToolEndData = { input: string | Record<string, unknown>, output: ToolMessage };
+
+export type ProcessedToolCall = {
+  name: string;
+  args: string | Record<string, unknown>;
+  id: string;
+  type: 'tool_call';
+  output: string;
+};
+
+export type ProcessedContent = {
+  type: ContentType;
+  text?: string;
+  tool_call?: ProcessedToolCall;
+};
+
+export type ToolCallCompleted = {
+  type: 'tool_call';
+  tool_call: ProcessedToolCall;
+};
+
+export type ToolCompleteEvent = ToolCallCompleted & {
+  /** The Step Id of the Tool Call */
+  id: string;
+  /** The content index of the tool call */
+  index: number;
 };
 
 export type ToolCallsDetails = {
@@ -129,4 +159,4 @@ export interface MessageDelta {
   content?: MessageContentComplex[];
 }
 
-export type ContentType = 'text' | 'image_url' | string;
+export type ContentType = 'text' | 'image_url' | 'tool_call' | string;
