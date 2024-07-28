@@ -88,6 +88,8 @@ async function testStandardStreaming(): Promise<void> {
       type: 'standard',
       llmConfig,
       tools: [new TavilySearchResults()],
+      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
+      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
     customHandlers,
   });
@@ -96,8 +98,6 @@ async function testStandardStreaming(): Promise<void> {
     configurable: {
       provider,
       thread_id: 'conversation-num-1',
-      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
-      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`
     },
     streamMode: 'values',
     version: 'v2' as const,
@@ -109,9 +109,9 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const finalMessage = await run.processStream(inputs, config);
-  if (finalMessage) {
-    conversationHistory.push(finalMessage);
+  const finalMessages = await run.processStream(inputs, config);
+  if (finalMessages) {
+    conversationHistory.push(...finalMessages);
   }
 
   console.log(' Test 2: Weather query');
@@ -127,9 +127,9 @@ async function testStandardStreaming(): Promise<void> {
   inputs = {
     messages: conversationHistory,
   };
-  const finalMessage2 = await run.processStream(inputs, config);
-  if (finalMessage2) {
-    conversationHistory.push(finalMessage2);
+  const finalMessages2 = await run.processStream(inputs, config);
+  if (finalMessages2) {
+    conversationHistory.push(...finalMessages2);
     console.dir(conversationHistory, { depth: null });
   }
 }

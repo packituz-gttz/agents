@@ -135,7 +135,7 @@ async function testStandardStreaming(): Promise<void> {
     },
   });
   if (finalMessage) {
-    conversationHistory.push(finalMessage);
+    conversationHistory.push(...finalMessage);
   }
 
   console.log(' Test 2: Weather query');
@@ -153,7 +153,7 @@ async function testStandardStreaming(): Promise<void> {
   };
   const finalMessage2 = await run.processStream(inputs, config);
   if (finalMessage2) {
-    conversationHistory.push(finalMessage2);
+    conversationHistory.push(...finalMessage2);
     console.dir(conversationHistory, { depth: null });
   }
 }

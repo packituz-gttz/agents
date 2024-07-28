@@ -109,7 +109,7 @@ async function executePersonalizedQuerySuite(): Promise<void> {
 
   const aiResponse = await run.processStream(runInput, sessionConfig);
   if (aiResponse) {
-    conversationHistory.push(aiResponse);
+    conversationHistory.push(...aiResponse);
     console.log("AI Assistant's Response:");
     console.dir(conversationHistory, { depth: null });
   }
