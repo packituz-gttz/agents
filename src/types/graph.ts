@@ -120,3 +120,17 @@ export type GraphConfig = {
     provider: string;
     thread_id?: string;
 };
+
+export type ProcessedToolCall = {
+  name: string;
+  args: string | Record<string, unknown>;
+  id: string;
+  type: 'tool_call';
+  output: string;
+};
+
+export type ProcessedContent = {
+  type: 'text' | 'tool_call';
+  text?: string;
+  tool_call?: ProcessedToolCall;
+};

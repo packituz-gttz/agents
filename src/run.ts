@@ -57,11 +57,18 @@ export class Run<T extends t.BaseGraphState> {
     return new Run<T>(config);
   }
 
+  getRunMessages(): BaseMessage[] | undefined {
+    if (!this.Graph) {
+      throw new Error('Graph not initialized. Make sure to use Run.create() to instantiate the Run.');
+    }
+    return this.Graph.getRunMessages();
+  }
+
   async processStream(
     inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
     clientCallbacks?: ClientCallbacks,
-  ): Promise<BaseMessage[] | undefined> {
+  ): Promise<t.ProcessedContent[] | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
     }
@@ -100,7 +107,7 @@ export class Run<T extends t.BaseGraphState> {
       }
     }
 
-    return this.Graph.getRunMessages();
+    return this.Graph.getContentParts();
   }
 
   private createSystemCallback<K extends keyof ClientCallbacks>(

@@ -109,7 +109,8 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const finalMessages = await run.processStream(inputs, config);
+  const contentParts = await run.processStream(inputs, config);
+  const finalMessages = run.getRunMessages();
   if (finalMessages) {
     conversationHistory.push(...finalMessages);
   }
@@ -127,7 +128,8 @@ async function testStandardStreaming(): Promise<void> {
   inputs = {
     messages: conversationHistory,
   };
-  const finalMessages2 = await run.processStream(inputs, config);
+  const contentParts2 = await run.processStream(inputs, config);
+  const finalMessages2 = run.getRunMessages();
   if (finalMessages2) {
     conversationHistory.push(...finalMessages2);
     console.dir(conversationHistory, { depth: null });

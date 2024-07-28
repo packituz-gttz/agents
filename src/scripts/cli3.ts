@@ -129,13 +129,14 @@ async function testStandardStreaming(): Promise<void> {
   let inputs = {
     messages: conversationHistory,
   };
-  const finalMessage = await run.processStream(inputs, config, {
+  const contentParts = await run.processStream(inputs, config, {
     [Callback.TOOL_ERROR]: (graph, error, toolId) => {
       console.error(`Tool ${toolId} failed with error: ${error.message}`);
     },
   });
-  if (finalMessage) {
-    conversationHistory.push(...finalMessage);
+  const finalMessages = run.getRunMessages();
+  if (finalMessages) {
+    conversationHistory.push(...finalMessages);
   }
 
   console.log(' Test 2: Weather query');
@@ -151,9 +152,10 @@ async function testStandardStreaming(): Promise<void> {
   inputs = {
     messages: conversationHistory,
   };
-  const finalMessage2 = await run.processStream(inputs, config);
-  if (finalMessage2) {
-    conversationHistory.push(...finalMessage2);
+  const contentParts2 = await run.processStream(inputs, config);
+  const finalMessages2 = run.getRunMessages();
+  if (finalMessages2) {
+    conversationHistory.push(...finalMessages2);
     console.dir(conversationHistory, { depth: null });
   }
 }

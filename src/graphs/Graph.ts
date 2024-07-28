@@ -35,6 +35,7 @@ export abstract class Graph<
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract getRunMessages(): BaseMessage[] | undefined;
+  abstract getContentParts(): t.ProcessedContent[] | undefined;
   abstract generateStepId(stepKey: string): [string, number];
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
@@ -54,6 +55,7 @@ export abstract class Graph<
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
+  toolCallResults: Map<string, t.ProcessedToolCall> = new Map();
 }
 
 export class StandardGraph extends Graph<
@@ -113,6 +115,7 @@ export class StandardGraph extends Graph<
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
+    this.toolCallResults = resetIfNotEmpty(this.toolCallResults, new Map());
     this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
     // this.finalMessage = resetIfNotEmpty(this.finalMessage, undefined);
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
@@ -188,7 +191,50 @@ export class StandardGraph extends Graph<
   /* Misc.*/
 
   getRunMessages(): BaseMessage[] | undefined {
+    // return this.processMessages(this.messages.slice(this.startIndex));
+    // const processedMessages = this.processMessages(this.messages.slice(this.startIndex));
     return this.messages.slice(this.startIndex);
+  }
+
+  getContentParts(): t.ProcessedContent[] | undefined {
+    return this.processMessages(this.messages.slice(this.startIndex));
+  }
+
+  processMessages(messages: BaseMessage[]): t.ProcessedContent[] {
+    const processedMessages: t.ProcessedContent[] = [];
+
+    for (const message of messages) {
+      const messageType = message?._getType();
+      if (messageType === 'tool' && (message as ToolMessage).tool_call_id) {
+        const tool_call = this.toolCallResults.get((message as ToolMessage).tool_call_id);
+        processedMessages.push({
+          type: 'tool_call',
+          tool_call,
+        });
+      }
+
+      if (messageType !== 'ai') {
+        continue;
+      }
+
+      if (typeof message.content === 'string' && message.content) {
+        processedMessages.push({
+          type: 'text',
+          text: message.content
+        });
+      } else if (Array.isArray(message.content)) {
+        for (const item of message.content) {
+          if (item.type === 'text') {
+            processedMessages.push({
+              type: 'text',
+              text: item.text
+            });
+          }
+        }
+      }
+    }
+
+    return processedMessages;
   }
 
   /* Graph */
@@ -202,12 +248,10 @@ export class StandardGraph extends Graph<
               x.push(this.systemMessage);
             }
 
-            this.startIndex = x.length + 1;
+            this.startIndex = x.length + y.length;
           }
           const current = x.concat(y);
-          if (this.messages.length < current.length) {
-            this.messages = current;
-          }
+          this.messages = current;
           return current;
         },
         default: () => [],

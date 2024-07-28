@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // src/events.ts
-import type { AIMessage } from '@langchain/core/messages';
+import type { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 
@@ -23,6 +23,8 @@ export class ModelEndHandler implements t.EventHandler {
       return;
     }
 
+    // const messageType = (data?.output as BaseMessage | undefined)?._getType();
+    // console.log('messageType', messageType);
     const usage = (data?.output as AIMessage)?.usage_metadata;
 
     // const stepKey = graph.getStepKey(metadata);
@@ -43,15 +45,27 @@ export class ToolEndHandler implements t.EventHandler {
       return;
     }
 
-    const { output } = data;
+    const { input, output } = data as { input: string, output: ToolMessage};
     if (!output) {
-      console.warn(`No output found in ${event} event:`);
-      console.dir(data, { depth: null });
+      console.warn('No output found in tool_end event');
       return;
     }
 
+    // todo: dispatch run step completed event
+    const result = {
+      args: input,
+      name: output.name ?? '',
+      id: output.tool_call_id,
+      type: 'tool_call' as const,
+      output: typeof output.content === 'string'
+        ? output.content
+        : JSON.stringify(output.content),
+    };
+    graph.toolCallResults.set(output.tool_call_id, result);
+
     console.dir({
       output,
+      result,
     }, { depth: null });
   }
 }
