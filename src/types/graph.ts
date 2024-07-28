@@ -119,6 +119,4 @@ export type StreamEvent = {
 export type GraphConfig = {
     provider: string;
     thread_id?: string;
-    instructions?: string;
-    additional_instructions?: string;
 };

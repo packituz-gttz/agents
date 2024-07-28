@@ -68,7 +68,7 @@ export enum Providers {
   OPENAI = 'openai',
   BEDROCK = 'bedrock',
   VERTEXAI = 'vertexai',
-  AWS = 'amazon_bedrock',
+  AWS = 'aws',
   ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
 }

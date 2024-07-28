@@ -38,10 +38,17 @@ export class Run<T extends t.BaseGraphState> {
   }
 
   private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
-    const { runId, llmConfig, tools = [] } = config;
+    const { runId, llmConfig, instructions, additional_instructions, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
-    const standardGraph = new StandardGraph(provider, clientOptions, tools, runId);
+    const standardGraph = new StandardGraph({
+      runId,
+      tools,
+      provider,
+      instructions,
+      clientOptions,
+      additional_instructions,
+    });
     this.Graph = standardGraph;
     return standardGraph.createWorkflow();
   }
@@ -54,7 +61,7 @@ export class Run<T extends t.BaseGraphState> {
     inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
     clientCallbacks?: ClientCallbacks,
-  ): Promise<BaseMessage | undefined> {
+  ): Promise<BaseMessage[] | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
     }
@@ -93,7 +100,7 @@ export class Run<T extends t.BaseGraphState> {
       }
     }
 
-    return this.Graph.getFinalMessage();
+    return this.Graph.getRunMessages();
   }
 
   private createSystemCallback<K extends keyof ClientCallbacks>(

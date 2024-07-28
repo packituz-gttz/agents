@@ -34,7 +34,7 @@ export abstract class Graph<
   abstract createGraphState(): t.GraphStateChannels<T>;
   abstract initializeTools(): ToolNode<T>;
   abstract initializeModel(): Runnable;
-  abstract getFinalMessage(): AIMessageChunk | undefined;
+  abstract getRunMessages(): BaseMessage[] | undefined;
   abstract generateStepId(stepKey: string): [string, number];
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
@@ -65,23 +65,50 @@ export class StandardGraph extends Graph<
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
   handlerRegistry: HandlerRegistry | undefined;
+  systemMessage: SystemMessage | undefined;
+  messages: BaseMessage[] = [];
   runId: string | undefined;
   tools: StructuredTool[];
+  startIndex: number = 0;
   provider: Providers;
 
-  constructor(provider: Providers, clientOptions: Record<string, unknown>, tools: StructuredTool[], runId?: string) {
+  constructor({
+    runId,
+    tools,
+    provider,
+    clientOptions,
+    instructions,
+    additional_instructions,
+  } : {
+    runId?: string;
+    provider: Providers;
+    tools: StructuredTool[];
+    clientOptions: Record<string, unknown>;
+    instructions?: string;
+    additional_instructions?: string;
+  }) {
     super();
+    this.runId = runId;
+    this.tools = tools;
     this.provider = provider;
     this.clientOptions = clientOptions;
-    this.tools = tools;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
-    this.runId = runId;
+
+    let finalInstructions = instructions;
+    if (additional_instructions) {
+      finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
+    }
+
+    if (finalInstructions) {
+      this.systemMessage = new SystemMessage(finalInstructions);
+    }
   }
 
   /* Init */
 
   resetValues(): void {
+    this.messages = [];
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
@@ -160,8 +187,8 @@ export class StandardGraph extends Graph<
 
   /* Misc.*/
 
-  getFinalMessage(): AIMessageChunk | undefined {
-    return this.finalMessage;
+  getRunMessages(): BaseMessage[] | undefined {
+    return this.messages.slice(this.startIndex);
   }
 
   /* Graph */
@@ -169,7 +196,20 @@ export class StandardGraph extends Graph<
   createGraphState(): t.GraphStateChannels<t.BaseGraphState> {
     return {
       messages: {
-        value: (x: BaseMessage[], y: BaseMessage[]): BaseMessage[] => x.concat(y),
+        value: (x: BaseMessage[], y: BaseMessage[]): BaseMessage[] => {
+          if (!x.length) {
+            if (this.systemMessage) {
+              x.push(this.systemMessage);
+            }
+
+            this.startIndex = x.length + 1;
+          }
+          const current = x.concat(y);
+          if (this.messages.length < current.length) {
+            this.messages = current;
+          }
+          return current;
+        },
         default: () => [],
       },
     };
@@ -190,32 +230,25 @@ export class StandardGraph extends Graph<
 
   createCallModel() {
     return async (state: t.BaseGraphState, config?: RunnableConfig): Promise<Partial<t.BaseGraphState>> => {
-      const { provider, instructions, additional_instructions } = (config?.configurable as t.GraphConfig) ?? {} ;
+      const { provider } = (config?.configurable as t.GraphConfig) ?? {} ;
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
       this.config = config;
       const { messages } = state;
 
-      let finalInstructions = instructions;
-      if (additional_instructions) {
-        finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
-      }
-
-      if (finalInstructions && messages[0]?.content !== finalInstructions) {
-        messages.unshift(new SystemMessage(finalInstructions));
-      }
-
       const finalMessages = messages;
       const lastMessageX = finalMessages[finalMessages.length - 2];
       const lastMessageY = finalMessages[finalMessages.length - 1];
 
-      if (provider === Providers.ANTHROPIC
+      if (
+        provider === Providers.ANTHROPIC
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
       ) {
         finalMessages[finalMessages.length - 2] = formatAnthropicMessage(lastMessageX as AIMessageChunk);
-      } else if (provider === Providers.AWS
+      } else if (
+        provider === Providers.AWS
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
         && typeof lastMessageX.content === 'string'
@@ -223,7 +256,7 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
-      if (this.tools?.length && provider === Providers.ANTHROPIC) {
+      if (this.tools?.length && (provider === Providers.ANTHROPIC || provider === Providers.AWS)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {

@@ -1,22 +1,31 @@
 // src/types/run.ts
+import type * as z from 'zod';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
+import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ZodObjectAny = z.ZodObject<any, any, any, any>;
 
 export type StandardGraphConfig = {
   runId?: string;
   type?: 'standard';
-  tools?: StructuredTool[];
+  provider?: e.Providers;
+  instructions?: string;
   llmConfig: l.LLMConfig;
+  tools?: StructuredTool[];
+  additional_instructions?: string;
+  clientOptions?: Record<string, unknown>;
 };
 
 export interface AgentStateChannels {
   messages: BaseMessage[];
   next: string;
+  [key: string]: unknown;
   instructions?: string;
   additional_instructions?: string;
-  [key: string]: unknown;
 }
 
 export interface Member {
