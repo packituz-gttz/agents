@@ -78,7 +78,7 @@ export class Run<T extends t.BaseGraphState> {
 
     this.Graph.resetValues();
     const provider = this.Graph.provider;
-    const hasTools = this.Graph.tools.length > 0;
+    const hasTools = this.Graph.tools ? this.Graph.tools.length > 0 : false;
     if (clientCallbacks) {
       /* TODO: conflicts with callback manager */
       const callbacks = config.callbacks as (BaseCallbackHandler | CallbackHandlerMethods)[] || [];
