@@ -408,13 +408,13 @@ export class StandardGraph extends Graph<
     }
 
     const tool_call = {
-      args: input, // string | Record<string, unknown>
+      args: typeof input === 'string' ? input : JSON.stringify(input),
       name: output.name ?? '',
       id: output.tool_call_id,
-      type: 'tool_call' as const,
       output: typeof output.content === 'string'
         ? output.content
         : JSON.stringify(output.content),
+      progress: 1,
     };
     this.toolCallResults.set(output.tool_call_id, tool_call);
     this.handlerRegistry?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(
@@ -422,6 +422,7 @@ export class StandardGraph extends Graph<
       { result: {
         id: stepId,
         index: runStep.index,
+        type: 'tool_call',
         tool_call
       } as t.ToolCompleteEvent,
       },

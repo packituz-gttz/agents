@@ -83,8 +83,8 @@ export type ProcessedToolCall = {
   name: string;
   args: string | Record<string, unknown>;
   id: string;
-  type: 'tool_call';
   output: string;
+  progress: number;
 };
 
 export type ProcessedContent = {
@@ -103,6 +103,7 @@ export type ToolCompleteEvent = ToolCallCompleted & {
   id: string;
   /** The content index of the tool call */
   index: number;
+  type: 'tool_call';
 };
 
 export type ToolCallsDetails = {
