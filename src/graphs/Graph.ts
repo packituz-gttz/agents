@@ -407,8 +407,9 @@ export class StandardGraph extends Graph<
       return;
     }
 
+    const args = typeof input === 'string' ? input : input.input;
     const tool_call = {
-      args: typeof input === 'string' ? input : JSON.stringify(input),
+      args: typeof args === 'string' ? args : JSON.stringify(args),
       name: output.name ?? '',
       id: output.tool_call_id,
       output: typeof output.content === 'string'
