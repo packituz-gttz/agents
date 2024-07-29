@@ -2,13 +2,14 @@
 import { nanoid } from 'nanoid';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-import { END, START, StateGraph  } from '@langchain/langgraph';
+import { START, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
-import { AIMessage, AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
+import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
@@ -34,7 +35,7 @@ export abstract class Graph<
 > {
   abstract resetValues(): void;
   abstract createGraphState(): t.GraphStateChannels<T>;
-  abstract initializeTools(): ToolNode<T>;
+  abstract initializeTools(): CustomToolNode<T> | ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract getRunMessages(): BaseMessage[] | undefined;
   abstract getContentParts(): t.ProcessedContent[] | undefined;
@@ -74,13 +75,15 @@ export class StandardGraph extends Graph<
   systemMessage: SystemMessage | undefined;
   messages: BaseMessage[] = [];
   runId: string | undefined;
-  tools: StructuredTool[];
+  tools?: t.GenericTool[];
+  toolMap?: t.ToolMap;
   startIndex: number = 0;
   provider: Providers;
 
   constructor({
     runId,
     tools,
+    toolMap,
     provider,
     clientOptions,
     instructions,
@@ -88,7 +91,8 @@ export class StandardGraph extends Graph<
   } : {
     runId?: string;
     provider: Providers;
-    tools: StructuredTool[];
+    tools?: t.GenericTool[];
+    toolMap?: t.ToolMap;
     clientOptions: Record<string, unknown>;
     instructions?: string;
     additional_instructions?: string;
@@ -96,6 +100,7 @@ export class StandardGraph extends Graph<
     super();
     this.runId = runId;
     this.tools = tools;
+    this.toolMap = toolMap;
     this.provider = provider;
     this.clientOptions = clientOptions;
     this.graphState = this.createGraphState();
@@ -122,7 +127,6 @@ export class StandardGraph extends Graph<
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
     this.toolCallResults = resetIfNotEmpty(this.toolCallResults, new Map());
     this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
-    // this.finalMessage = resetIfNotEmpty(this.finalMessage, undefined);
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
   }
@@ -196,8 +200,6 @@ export class StandardGraph extends Graph<
   /* Misc.*/
 
   getRunMessages(): BaseMessage[] | undefined {
-    // return this.processMessages(this.messages.slice(this.startIndex));
-    // const processedMessages = this.processMessages(this.messages.slice(this.startIndex));
     return this.messages.slice(this.startIndex);
   }
 
@@ -264,8 +266,12 @@ export class StandardGraph extends Graph<
     };
   }
 
-  initializeTools(): ToolNode<t.BaseGraphState> {
-    return new ToolNode<t.BaseGraphState>(this.tools);
+  initializeTools(): CustomToolNode<t.BaseGraphState> | ToolNode<t.BaseGraphState> {
+    // return new ToolNode<t.BaseGraphState>(this.tools);
+    return new CustomToolNode<t.BaseGraphState>({
+      tools: this.tools || [],
+      toolMap: this.toolMap,
+    });
   }
 
   initializeModel(): Runnable {
@@ -274,7 +280,7 @@ export class StandardGraph extends Graph<
     if (!this.tools) {
       return model;
     }
-    return model.bindTools(this.tools);
+    return model.bindTools(this.tools as StructuredTool[]);
   }
 
   createCallModel() {
@@ -331,11 +337,12 @@ export class StandardGraph extends Graph<
   createWorkflow(): t.CompiledWorkflow<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode> {
     const routeMessage = (state: t.BaseGraphState, config?: RunnableConfig): string => {
       this.config = config;
-      const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
-      if (!lastMessage?.tool_calls?.length) {
-        return END;
-      }
-      return TOOLS;
+      // const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
+      // if (!lastMessage?.tool_calls?.length) {
+      //   return END;
+      // }
+      // return TOOLS;
+      return toolsCondition(state);
     };
 
     const workflow = new StateGraph<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode>({
