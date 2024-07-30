@@ -1,5 +1,5 @@
 // src/types/stream.ts
-import type { MessageContentComplex, ToolMessage } from '@langchain/core/messages';
+import type { MessageContentImageUrl, MessageContentText, ToolMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import { StepTypes } from '@/common/enum';
 
@@ -161,3 +161,14 @@ export interface MessageDelta {
 }
 
 export type ContentType = 'text' | 'image_url' | 'tool_call' | string;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MessageContentComplex = (MessageContentText | MessageContentImageUrl | (Record<string, any> & {
+  type?: 'text' | 'image_url' | string;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}) | (Record<string, any> & {
+  type?: never;
+})) & {
+  tool_call_ids?: string[];
+};
+// #new

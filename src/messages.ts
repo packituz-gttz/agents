@@ -1,5 +1,5 @@
 // src/messages.ts
-import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage } from '@langchain/core/messages';
+import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type * as t from '@/types';
 
@@ -136,4 +136,67 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
       ...message.additional_kwargs,
     }
   });
+}
+
+export function processMessages(messages: BaseMessage[]): t.MessageContentComplex[] {
+  const processedContent: t.MessageContentComplex[] = [];
+
+  const addContentPart = (message: BaseMessage): void => {
+    const content = message?.content;
+    if (content === undefined) {
+      return;
+    }
+    if (typeof content === 'string') {
+      processedContent.push({
+        type: 'text',
+        text: content
+      });
+    } else if (Array.isArray(content)) {
+      processedContent.push(...content);
+    }
+  };
+
+  let currentAIMessageIndex = -1;
+  const toolCallMap = new Map<string, ToolCall>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+    const messageType = message?._getType();
+
+    if (messageType === 'ai' && (message as AIMessage).tool_calls?.length) {
+      const tool_calls = (message as AIMessage).tool_calls || [];
+      for (const tool_call of tool_calls) {
+        if (!tool_call.id) {
+          continue;
+        }
+        toolCallMap.set(tool_call.id, tool_call);
+      }
+
+      addContentPart(message);
+      currentAIMessageIndex = processedContent.length - 1;
+      continue;
+    } else if (messageType === 'tool' && (message as ToolMessage).tool_call_id) {
+      const id = (message as ToolMessage).tool_call_id;
+      const output = (message as ToolMessage).content;
+      const tool_call = toolCallMap.get(id);
+      processedContent.push({
+        type: 'tool_call',
+        tool_call: {
+          ...tool_call,
+          output,
+        },
+      });
+      const contentPart = processedContent[currentAIMessageIndex];
+      const tool_call_ids = contentPart.tool_call_ids || [];
+      tool_call_ids.push(id);
+      contentPart.tool_call_ids = tool_call_ids;
+      continue;
+    } else if (messageType !== 'ai') {
+      continue;
+    }
+
+    addContentPart(message);
+  }
+
+  return processedContent;
 }

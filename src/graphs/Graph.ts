@@ -5,13 +5,13 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { START, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
-import { AIMessageChunk, ToolMessage, SystemMessage, MessageContentComplex } from '@langchain/core/messages';
-import type { StructuredTool } from '@langchain/core/tools';
+import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
+import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
-import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
+import { modifyDeltaProperties, formatAnthropicMessage, processMessages } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/events';
@@ -39,7 +39,7 @@ export abstract class Graph<
   abstract initializeTools(): CustomToolNode<T> | ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract getRunMessages(): BaseMessage[] | undefined;
-  abstract getContentParts(): MessageContentComplex[] | undefined;
+  abstract getContentParts(): t.MessageContentComplex[] | undefined;
   abstract generateStepId(stepKey: string): [string, number];
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
@@ -60,15 +60,12 @@ export abstract class Graph<
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
-  toolCallResults: Map<string, t.ProcessedToolCall> = new Map();
-  toolCallInputs: Map<string, string | Record<string, unknown>> = new Map();
 }
 
 export class StandardGraph extends Graph<
   t.BaseGraphState,
   GraphNode
 > {
-  private finalMessage: AIMessageChunk | undefined;
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
@@ -124,9 +121,7 @@ export class StandardGraph extends Graph<
     this.config = resetIfNotEmpty(this.config, undefined);
     this.contentData = resetIfNotEmpty(this.contentData, []);
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
-    this.toolCallInputs = resetIfNotEmpty(this.toolCallInputs, new Map());
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
-    this.toolCallResults = resetIfNotEmpty(this.toolCallResults, new Map());
     this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
@@ -204,40 +199,8 @@ export class StandardGraph extends Graph<
     return this.messages.slice(this.startIndex);
   }
 
-  getContentParts(): MessageContentComplex[] | undefined {
-    return this.processMessages(this.messages.slice(this.startIndex));
-  }
-
-  processMessages(messages: BaseMessage[]): MessageContentComplex[] {
-    const processedContent: MessageContentComplex[] = [];
-
-    for (const message of messages) {
-      const messageType = message?._getType();
-      if (messageType === 'tool' && (message as ToolMessage).tool_call_id) {
-        const tool_call = this.toolCallResults.get((message as ToolMessage).tool_call_id);
-        processedContent.push({
-          type: 'tool_call',
-          tool_call,
-        });
-      }
-
-      if (messageType !== 'ai') {
-        continue;
-      }
-
-      if (typeof message.content === 'string' && message.content) {
-        processedContent.push({
-          type: 'text',
-          text: message.content
-        });
-      } else if (Array.isArray(message.content)) {
-        for (const item of message.content) {
-          processedContent.push(item as MessageContentComplex[]);
-        }
-      }
-    }
-
-    return processedContent;
+  getContentParts(): t.MessageContentComplex[] | undefined {
+    return processMessages(this.messages.slice(this.startIndex));
   }
 
   /* Graph */
@@ -320,13 +283,11 @@ export class StandardGraph extends Graph<
         }
 
         finalChunk = modifyDeltaProperties(finalChunk);
-        this.finalMessage = finalChunk;
-        return { messages: [this.finalMessage as AIMessageChunk] };
+        return { messages: [finalChunk as AIMessageChunk] };
       }
 
-      this.finalMessage = await this.boundModel.invoke(finalMessages, config);
-      this.config = config;
-      return { messages: [this.finalMessage as AIMessageChunk] };
+      const finalMessage = await this.boundModel.invoke(finalMessages, config);
+      return { messages: [finalMessage as AIMessageChunk] };
     };
   }
 
@@ -420,7 +381,7 @@ export class StandardGraph extends Graph<
         : JSON.stringify(output.content),
       progress: 1,
     };
-    this.toolCallResults.set(output.tool_call_id, tool_call);
+
     this.handlerRegistry?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(
       GraphEvents.ON_RUN_STEP_COMPLETED,
       { result: {
