@@ -4,6 +4,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
+import type * as t from '@/types/tools';
 import type * as l from '@/types/llm';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,7 +16,8 @@ export type StandardGraphConfig = {
   provider?: e.Providers;
   instructions?: string;
   llmConfig: l.LLMConfig;
-  tools?: StructuredTool[];
+  tools?: t.GenericTool[];
+  toolMap?: t.ToolMap;
   additional_instructions?: string;
   clientOptions?: Record<string, unknown>;
 };

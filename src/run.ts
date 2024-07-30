@@ -1,7 +1,7 @@
 // src/run.ts
-import { BaseMessage } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
 import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
+import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
@@ -68,7 +68,7 @@ export class Run<T extends t.BaseGraphState> {
     inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
     clientCallbacks?: ClientCallbacks,
-  ): Promise<t.ProcessedContent[] | undefined> {
+  ): Promise<MessageContentComplex[] | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
     }

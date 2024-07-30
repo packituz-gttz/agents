@@ -5,9 +5,10 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { START, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
+import { AIMessageChunk, ToolMessage, SystemMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
+import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
-import { AIMessageChunk, BaseMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import { modifyDeltaProperties, formatAnthropicMessage } from '@/messages';
@@ -38,7 +39,7 @@ export abstract class Graph<
   abstract initializeTools(): CustomToolNode<T> | ToolNode<T>;
   abstract initializeModel(): Runnable;
   abstract getRunMessages(): BaseMessage[] | undefined;
-  abstract getContentParts(): t.ProcessedContent[] | undefined;
+  abstract getContentParts(): MessageContentComplex[] | undefined;
   abstract generateStepId(stepKey: string): [string, number];
   abstract getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[];
   abstract getStepKey(metadata: Record<string, unknown> | undefined): string;
@@ -203,18 +204,18 @@ export class StandardGraph extends Graph<
     return this.messages.slice(this.startIndex);
   }
 
-  getContentParts(): t.ProcessedContent[] | undefined {
+  getContentParts(): MessageContentComplex[] | undefined {
     return this.processMessages(this.messages.slice(this.startIndex));
   }
 
-  processMessages(messages: BaseMessage[]): t.ProcessedContent[] {
-    const processedMessages: t.ProcessedContent[] = [];
+  processMessages(messages: BaseMessage[]): MessageContentComplex[] {
+    const processedContent: MessageContentComplex[] = [];
 
     for (const message of messages) {
       const messageType = message?._getType();
       if (messageType === 'tool' && (message as ToolMessage).tool_call_id) {
         const tool_call = this.toolCallResults.get((message as ToolMessage).tool_call_id);
-        processedMessages.push({
+        processedContent.push({
           type: 'tool_call',
           tool_call,
         });
@@ -225,23 +226,18 @@ export class StandardGraph extends Graph<
       }
 
       if (typeof message.content === 'string' && message.content) {
-        processedMessages.push({
+        processedContent.push({
           type: 'text',
           text: message.content
         });
       } else if (Array.isArray(message.content)) {
         for (const item of message.content) {
-          if (item.type === 'text') {
-            processedMessages.push({
-              type: 'text',
-              text: item.text
-            });
-          }
+          processedContent.push(item as MessageContentComplex[]);
         }
       }
     }
 
-    return processedMessages;
+    return processedContent;
   }
 
   /* Graph */
