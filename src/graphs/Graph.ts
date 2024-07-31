@@ -9,9 +9,9 @@ import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/mess
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
-import { modifyDeltaProperties, formatAnthropicMessage, convertMessagesToContent } from '@/messages';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
+import { modifyDeltaProperties, convertMessagesToContent } from '@/messages';
 import { getChatModelClass } from '@/llm/providers';
 import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/events';
@@ -256,12 +256,6 @@ export class StandardGraph extends Graph<
       const lastMessageY = finalMessages[finalMessages.length - 1];
 
       if (
-        provider === Providers.ANTHROPIC
-        && lastMessageX instanceof AIMessageChunk
-        && lastMessageY instanceof ToolMessage
-      ) {
-        finalMessages[finalMessages.length - 2] = formatAnthropicMessage(lastMessageX as AIMessageChunk);
-      } else if (
         provider === Providers.AWS
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
