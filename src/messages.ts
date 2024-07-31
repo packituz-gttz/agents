@@ -181,6 +181,16 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
       const id = (message as ToolMessage).tool_call_id;
       const output = (message as ToolMessage).content;
       const tool_call = toolCallMap.get(id);
+
+      let args = tool_call?.args;
+      if (args && typeof args === 'object' && Object.keys(args).length === 1 && 'input' in args) {
+        args = typeof args.input === 'string' ? args.input : JSON.stringify(args.input);
+      } else if (args && typeof args === 'object') {
+        args = JSON.stringify(args);
+      } else if ((args && typeof args !== 'string') || typeof args === 'undefined') {
+        args = '';
+      }
+
       processedContent.push({
         type: 'tool_call',
         tool_call: Object.assign({}, tool_call, { output }),
