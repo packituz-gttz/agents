@@ -158,7 +158,7 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
   };
 
   let currentAIMessageIndex = -1;
-  const toolCallMap = new Map<string, ToolCall>();
+  const toolCallMap = new Map<string, t.CustomToolCall>();
 
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
@@ -170,6 +170,7 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
         if (!tool_call.id) {
           continue;
         }
+
         toolCallMap.set(tool_call.id, tool_call);
       }
 
@@ -182,10 +183,7 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
       const tool_call = toolCallMap.get(id);
       processedContent.push({
         type: 'tool_call',
-        tool_call: {
-          ...tool_call,
-          output,
-        },
+        tool_call: Object.assign({}, tool_call, { output }),
       });
       const contentPart = processedContent[currentAIMessageIndex];
       const tool_call_ids = contentPart.tool_call_ids || [];
