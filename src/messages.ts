@@ -138,7 +138,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
   });
 }
 
-export function processMessages(messages: BaseMessage[]): t.MessageContentComplex[] {
+export function convertMessagesToContent(messages: BaseMessage[]): t.MessageContentComplex[] {
   const processedContent: t.MessageContentComplex[] = [];
 
   const addContentPart = (message: BaseMessage): void => {
@@ -152,7 +152,8 @@ export function processMessages(messages: BaseMessage[]): t.MessageContentComple
         text: content
       });
     } else if (Array.isArray(content)) {
-      processedContent.push(...content);
+      const filteredContent = content.filter(item => item && item.type !== 'tool_use');
+      processedContent.push(...filteredContent);
     }
   };
 

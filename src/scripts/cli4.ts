@@ -111,10 +111,7 @@ async function testStandardStreaming(): Promise<void> {
 
   console.log(' Test 1: Initial greeting');
 
-  // conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
-  conversationHistory.push(new HumanMessage(`search for good sunrise hikes near ${location}
-then search weather in ${location} for today which is ${currentDate}
-then search weather for the same location but the next day`));
+  conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
   let inputs = {
     messages: conversationHistory,
   };
@@ -135,12 +132,11 @@ then search weather for the same location but the next day`));
 
   console.log(' Test 2: Weather query');
 
-  // const userMessage = `
-  // Make a search for the weather in ${location} today, which is ${currentDate}.
-  // Make sure to always refer to me by name.
-  // After giving me a thorough summary, tell me a joke about the weather forecast we went over.
-  // `;
-  const userMessage = `Thanks!`;
+  const userMessage = `
+  Make a search for the weather in ${location} today, which is ${currentDate}.
+  Make sure to always refer to me by name.
+  After giving me a thorough summary, tell me a joke about the weather forecast we went over.
+  `;
 
   conversationHistory.push(new HumanMessage(userMessage));
 
