@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agentus",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",

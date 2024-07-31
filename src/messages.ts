@@ -31,25 +31,25 @@ User: ${userMessage[1]}
   return new HumanMessage(content);
 }
 
+const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
+  return content.map(item => {
+    if (item && typeof item === 'object' && 'type' in item && item.type) {
+      let newType = item.type;
+      if (newType.endsWith('_delta')) {
+        newType = newType.replace('_delta', '');
+      }
+      const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
+      if (!allowedTypes.includes(newType)) {
+        newType = 'text';
+      }
+      return { ...item, type: newType };
+    }
+    return item;
+  });
+};
+
 export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | undefined {
   if (!obj || typeof obj !== 'object') return obj;
-
-  const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
-    return content.map(item => {
-      if (item && typeof item === 'object' && 'type' in item && item.type) {
-        let newType = item.type;
-        if (newType.endsWith('_delta')) {
-          newType = newType.replace('_delta', '');
-        }
-        const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
-        if (!allowedTypes.includes(newType)) {
-          newType = 'text';
-        }
-        return { ...item, type: newType };
-      }
-      return item;
-    });
-  };
 
   if (Array.isArray(obj.content)) {
     obj.content = modifyContent(obj.content);
@@ -183,17 +183,17 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
       const tool_call = toolCallMap.get(id);
 
       let args = tool_call?.args;
-      if (args && typeof args === 'object' && Object.keys(args).length === 1 && 'input' in args) {
+      if (tool_call?.args && typeof args === 'object' && Object.keys(args).length === 1 && 'input' in args) {
         args = typeof args.input === 'string' ? args.input : JSON.stringify(args.input);
-      } else if (args && typeof args === 'object') {
+      } else if (tool_call?.args && typeof args === 'object') {
         args = JSON.stringify(args);
-      } else if ((args && typeof args !== 'string') || typeof args === 'undefined') {
+      } else if ((tool_call?.args && typeof args !== 'string') || typeof args === 'undefined') {
         args = '';
       }
 
       processedContent.push({
         type: 'tool_call',
-        tool_call: Object.assign({}, tool_call, { output }),
+        tool_call: Object.assign({}, tool_call, { output, args }),
       });
       const contentPart = processedContent[currentAIMessageIndex];
       const tool_call_ids = contentPart.tool_call_ids || [];
