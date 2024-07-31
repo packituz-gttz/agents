@@ -11,7 +11,7 @@ import { ChatModelStreamHandler } from '@/stream';
 
 import { getArgs } from '@/scripts/args';
 import { Run } from '@/run';
-import { GraphEvents, Callback } from '@/common';
+import { GraphEvents, Callback, Providers } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 
 const conversationHistory: BaseMessage[] = [];
@@ -87,16 +87,19 @@ async function testStandardStreaming(): Promise<void> {
     // },
   };
 
-  const llmConfig = getLLMConfig(provider);
+  // const llmConfig = getLLMConfig(provider);
+  let llmConfig = getLLMConfig(Providers.OPENAI);
 
-  const run = await Run.create<t.IState>({
-    graphConfig: {
-      type: 'standard',
-      llmConfig,
-      tools: [new TavilySearchResults()],
-      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
-      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
-    },
+  const graphConfig: t.StandardGraphConfig  = {
+    type: 'standard',
+    llmConfig,
+    tools: [new TavilySearchResults()],
+    instructions: 'You are a friendly AI assistant. Always address the user by their name.',
+    additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
+  };
+
+  let run = await Run.create<t.IState>({
+    graphConfig,
     customHandlers,
   });
 
@@ -109,9 +112,11 @@ async function testStandardStreaming(): Promise<void> {
     version: 'v2' as const,
   };
 
-  console.log(' Test 1: Initial greeting');
+  console.log(' Test 1: OpenAI Tool Usage');
 
-  conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
+  // conversationHistory.push(new HumanMessage(`Hi I'm ${userName}.`));
+  conversationHistory.push(new HumanMessage(`search for good sunrise hikes near ${location}
+then search weather in ${location} for today which is ${currentDate}`));
   let inputs = {
     messages: conversationHistory,
   };
@@ -130,24 +135,35 @@ async function testStandardStreaming(): Promise<void> {
     conversationHistory.push(...finalMessages);
   }
 
-  console.log(' Test 2: Weather query');
+  console.log(' Test 2: Anthropic Follow-up Response');
 
-  const userMessage = `
-  Make a search for the weather in ${location} today, which is ${currentDate}.
-  Make sure to always refer to me by name.
-  After giving me a thorough summary, tell me a joke about the weather forecast we went over.
-  `;
+  // const userMessage = `
+  // Make a search for the weather in ${location} today, which is ${currentDate}.
+  // Make sure to always refer to me by name.
+  // After giving me a thorough summary, tell me a joke about the weather forecast we went over.
+  // `;
+  const userMessage = `Thanks!`;
 
   conversationHistory.push(new HumanMessage(userMessage));
 
   inputs = {
     messages: conversationHistory,
   };
+
+  llmConfig = getLLMConfig(Providers.ANTHROPIC);
+  graphConfig.llmConfig = llmConfig;
+  config.configurable.provider = Providers.ANTHROPIC;
+
+  run = await Run.create<t.IState>({
+    graphConfig,
+    customHandlers,
+  });
+
   const contentParts2 = await run.processStream(inputs, config);
   const finalMessages2 = run.getRunMessages();
   if (finalMessages2) {
     conversationHistory.push(...finalMessages2);
-    console.dir(conversationHistory, { depth: null });
+    // console.dir(conversationHistory, { depth: null });
   }
 }
 
