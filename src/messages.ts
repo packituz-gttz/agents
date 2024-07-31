@@ -182,18 +182,9 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
       const output = (message as ToolMessage).content;
       const tool_call = toolCallMap.get(id);
 
-      let args = tool_call?.args;
-      if (tool_call?.args && typeof args === 'object' && Object.keys(args).length === 1 && 'input' in args) {
-        args = typeof args.input === 'string' ? args.input : JSON.stringify(args.input);
-      } else if (tool_call?.args && typeof args === 'object') {
-        args = JSON.stringify(args);
-      } else if ((tool_call?.args && typeof args !== 'string') || typeof args === 'undefined') {
-        args = '';
-      }
-
       processedContent.push({
         type: 'tool_call',
-        tool_call: Object.assign({}, tool_call, { output, args }),
+        tool_call: Object.assign({}, tool_call, { output }),
       });
       const contentPart = processedContent[currentAIMessageIndex];
       const tool_call_ids = contentPart.tool_call_ids || [];
