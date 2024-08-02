@@ -20,8 +20,8 @@ export async function getArgs(): Promise<{ userName: string; location: string; p
       alias: 'p',
       type: 'string',
       description: 'LLM provider',
-      choices: ['openai', 'anthropic', 'mistralai', 'vertexai', 'aws'],
-      default: 'openai'
+      choices: ['openAI', 'anthropic', 'mistralai', 'vertexai', 'aws'],
+      default: 'openAI'
     })
     .help()
     .alias('help', 'h')
