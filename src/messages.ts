@@ -31,7 +31,7 @@ User: ${userMessage[1]}
   return new HumanMessage(content);
 }
 
-const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
+const modifyContent = (content: t.ExtendedMessageContent[], messageType: string): t.ExtendedMessageContent[] => {
   return content.map(item => {
     if (item && typeof item === 'object' && 'type' in item && item.type) {
       let newType = item.type;
@@ -42,6 +42,12 @@ const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageCo
       if (!allowedTypes.includes(newType)) {
         newType = 'text';
       }
+
+      /* Handle the edge case for empty object 'tool_use' input in AI messages */
+      if (messageType === 'ai' && newType === 'tool_use' && 'input' in item && item.input === '') {
+        return { ...item, type: newType, input: '{}' };
+      }
+
       return { ...item, type: newType };
     }
     return item;
@@ -51,11 +57,13 @@ const modifyContent = (content: t.ExtendedMessageContent[]): t.ExtendedMessageCo
 export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | undefined {
   if (!obj || typeof obj !== 'object') return obj;
 
+  const messageType = obj._getType ? obj._getType() : '';
+
   if (Array.isArray(obj.content)) {
-    obj.content = modifyContent(obj.content);
+    obj.content = modifyContent(obj.content, messageType);
   }
   if (obj.lc_kwargs && Array.isArray(obj.lc_kwargs.content)) {
-    obj.lc_kwargs.content = modifyContent(obj.lc_kwargs.content);
+    obj.lc_kwargs.content = modifyContent(obj.lc_kwargs.content, messageType);
   }
   return obj;
 }
