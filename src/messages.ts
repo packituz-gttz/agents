@@ -31,7 +31,7 @@ User: ${userMessage[1]}
   return new HumanMessage(content);
 }
 
-const modifyContent = (content: t.ExtendedMessageContent[], messageType: string): t.ExtendedMessageContent[] => {
+const modifyContent = (messageType: string, content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
   return content.map(item => {
     if (item && typeof item === 'object' && 'type' in item && item.type) {
       let newType = item.type;
@@ -60,10 +60,10 @@ export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | un
   const messageType = obj._getType ? obj._getType() : '';
 
   if (Array.isArray(obj.content)) {
-    obj.content = modifyContent(obj.content, messageType);
+    obj.content = modifyContent(messageType, obj.content);
   }
   if (obj.lc_kwargs && Array.isArray(obj.lc_kwargs.content)) {
-    obj.lc_kwargs.content = modifyContent(obj.lc_kwargs.content, messageType);
+    obj.lc_kwargs.content = modifyContent(messageType, obj.lc_kwargs.content);
   }
   return obj;
 }
