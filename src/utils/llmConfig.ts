@@ -3,32 +3,32 @@ import { Providers } from '@/common';
 import type * as t from '@/types';
 
 const llmConfigs: Record<string, t.LLMConfig> = {
-  openai: {
+  [Providers.OPENAI]: {
     provider: Providers.OPENAI,
     model: 'gpt-4o',
     temperature: 0.7,
     streaming: true,
     streamUsage: true,
   },
-  anthropic: {
+  [Providers.ANTHROPIC]: {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-5-sonnet-20240620',
     streaming: true,
     streamUsage: true,
   },
-  mistralai: {
+  [Providers.MISTRALAI]: {
     provider: Providers.MISTRALAI,
     model: 'mistral-large-latest',
     streaming: true,
     streamUsage: true,
   },
-  vertexai: {
+  [Providers.VERTEXAI]: {
     provider: Providers.VERTEXAI,
     modelName: 'gemini-1.5-flash-001',
     streaming: true,
     streamUsage: true,
   },
-  aws: {
+  [Providers.AWS]: {
     provider: Providers.AWS,
     model: 'anthropic.claude-3-sonnet-20240229-v1:0',
     region: process.env.BEDROCK_AWS_REGION,
