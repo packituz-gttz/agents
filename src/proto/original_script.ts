@@ -81,7 +81,7 @@ async function testStreaming() {
   // };
 
   // const llmConfig: t.LLMConfig = {
-  //   provider: Providers.AWS,
+  //   provider: Providers.BEDROCK,
   //   model: 'anthropic.claude-3-sonnet-20240229-v1:0',
   //   region: process.env.BEDROCK_AWS_REGION,
   //   credentials: {

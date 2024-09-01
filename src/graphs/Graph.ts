@@ -256,7 +256,7 @@ export class StandardGraph extends Graph<
       const lastMessageY = finalMessages[finalMessages.length - 1];
 
       if (
-        provider === Providers.AWS
+        provider === Providers.BEDROCK
         && lastMessageX instanceof AIMessageChunk
         && lastMessageY instanceof ToolMessage
         && typeof lastMessageX.content === 'string'
@@ -264,7 +264,7 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
-      if (this.tools?.length && (provider === Providers.ANTHROPIC || provider === Providers.AWS)) {
+      if (this.tools?.length && (provider === Providers.ANTHROPIC || provider === Providers.BEDROCK)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {

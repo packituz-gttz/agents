@@ -103,7 +103,7 @@ async function testPhilosophicalCafe() {
             systemPrompt: 'You are Luna, a free-spirited artist with a penchant for existential questions. You often challenge conventional wisdom and believe in the power of individual expression. Speak casually and use artistic metaphors. Always either think or speak each turn, sometimes both.',
             tools: [ThinkTool, SpeakTool],
             llmConfig: {
-                provider: Providers.AWS,
+                provider: Providers.BEDROCK,
                 model: 'anthropic.claude-3-sonnet-20240229-v1:0',
                 region: process.env.BEDROCK_AWS_REGION,
                 credentials: {
@@ -117,7 +117,7 @@ async function testPhilosophicalCafe() {
             systemPrompt: 'You are Zephyr, a tech-savvy futurist who believes in the potential of technology to solve human problems. You\'re optimistic but also concerned about ethical implications. Use tech jargon and futuristic concepts in your speech. Always either think or speak each turn, sometimes both.',
             tools: [ThinkTool, SpeakTool],
             llmConfig: {
-                provider: Providers.AWS,
+                provider: Providers.BEDROCK,
                 model: 'anthropic.claude-3-sonnet-20240229-v1:0',
                 region: process.env.BEDROCK_AWS_REGION,
                 credentials: {
@@ -131,7 +131,7 @@ async function testPhilosophicalCafe() {
             systemPrompt: 'You are Sage, a retired professor with a dry sense of humor. You\'re skeptical of grand theories and prefer practical wisdom. Your speech is peppered with historical references and gentle sarcasm. Always either think or speak each turn, sometimes both.',
             tools: [ThinkTool, SpeakTool],
             llmConfig: {
-                provider: Providers.AWS,
+                provider: Providers.BEDROCK,
                 model: 'anthropic.claude-3-sonnet-20240229-v1:0',
                 region: process.env.BEDROCK_AWS_REGION,
                 credentials: {
@@ -145,7 +145,7 @@ async function testPhilosophicalCafe() {
             systemPrompt: 'You are Nova, an enthusiastic environmental activist with a background in quantum physics. You see interconnections everywhere and often draw parallels between natural systems and human behavior. Your speech is energetic and filled with scientific analogies. Always either think or speak each turn, sometimes both.',
             tools: [ThinkTool, SpeakTool],
             llmConfig: {
-                provider: Providers.AWS,
+                provider: Providers.BEDROCK,
                 model: 'anthropic.claude-3-sonnet-20240229-v1:0',
                 region: process.env.BEDROCK_AWS_REGION,
                 credentials: {
@@ -173,7 +173,7 @@ Remember, you're crafting a scene, not moderating a debate. Let the characters' 
     const supervisorConfig = {
         systemPrompt: supervisorPrompt,
         llmConfig: {
-            provider: Providers.AWS,
+            provider: Providers.BEDROCK,
             model: 'anthropic.claude-3-sonnet-20240229-v1:0',
             region: process.env.BEDROCK_AWS_REGION,
             credentials: {

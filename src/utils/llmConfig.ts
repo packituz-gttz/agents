@@ -28,8 +28,8 @@ const llmConfigs: Record<string, t.LLMConfig> = {
     streaming: true,
     streamUsage: true,
   },
-  [Providers.AWS]: {
-    provider: Providers.AWS,
+  [Providers.BEDROCK]: {
+    provider: Providers.BEDROCK,
     model: 'anthropic.claude-3-sonnet-20240229-v1:0',
     region: process.env.BEDROCK_AWS_REGION,
     credentials: {

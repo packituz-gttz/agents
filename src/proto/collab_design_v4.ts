@@ -44,9 +44,9 @@ interface SupervisorConfig {
 const llmProviders: Record<Providers, any> = {
     [Providers.OPENAI]: ChatOpenAI,
     [Providers.VERTEXAI]: ChatVertexAI,
-    [Providers.BEDROCK]: BedrockChat,
+    [Providers.BEDROCK_LEGACY]: BedrockChat,
     [Providers.MISTRALAI]: ChatMistralAI,
-    [Providers.AWS]: ChatBedrockConverse,
+    [Providers.BEDROCK]: ChatBedrockConverse,
     [Providers.ANTHROPIC]: ChatAnthropic,
 };
 

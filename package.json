@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
@@ -38,7 +38,7 @@
     "start": "node dist/esm/main.js",
     "clean": "node ./config/clean.js",
     "script": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts",
-    "bun:cli": "bun -r dotenv/config ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
+    "bun:cli": "bun -r dotenv/config ./src/scripts/cli.ts --provider 'bedrock' --name 'Jo' --location 'New York, NY'",
     "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "script2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_test.ts",

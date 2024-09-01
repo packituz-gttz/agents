@@ -68,9 +68,9 @@ export enum GraphEvents {
 
 export enum Providers {
   OPENAI = 'openAI',
-  BEDROCK = 'bedrock',
+  BEDROCK_LEGACY = 'bedrock_legacy',
   VERTEXAI = 'vertexai',
-  AWS = 'aws',
+  BEDROCK = 'bedrock',
   ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
 }

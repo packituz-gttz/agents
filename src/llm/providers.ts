@@ -11,9 +11,9 @@ import { Providers } from '@/common';
 export const llmProviders: Record<Providers, t.ChatModelConstructor> = {
   [Providers.OPENAI]: ChatOpenAI,
   [Providers.VERTEXAI]: ChatVertexAI,
-  [Providers.BEDROCK]: BedrockChat as unknown as t.ChatModelConstructor,
+  [Providers.BEDROCK_LEGACY]: BedrockChat as unknown as t.ChatModelConstructor,
   [Providers.MISTRALAI]: ChatMistralAI,
-  [Providers.AWS]: ChatBedrockConverse as unknown as t.ChatModelConstructor,
+  [Providers.BEDROCK]: ChatBedrockConverse as unknown as t.ChatModelConstructor,
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
