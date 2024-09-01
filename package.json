@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
@@ -61,10 +61,10 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/credential-provider-node": "^3.613.0",
     "@aws-sdk/types": "^3.609.0",
-    "@langchain/anthropic": "^0.2.14",
-    "@langchain/aws": "^0.0.6",
+    "@langchain/anthropic": "^0.2.15",
+    "@langchain/aws": "^0.0.10",
     "@langchain/community": "^0.2.20",
-    "@langchain/core": "^0.2.18",
+    "@langchain/core": "^0.2.31",
     "@langchain/google-vertexai": "^0.0.20",
     "@langchain/langgraph": "^0.0.31",
     "@langchain/mistralai": "^0.0.26",
@@ -74,7 +74,7 @@
     "@smithy/util-utf8": "^2.0.0",
     "dotenv": "^16.4.5",
     "langchain": "^0.2.10",
-    "nanoid": "^3.3.4"
+    "nanoid": "^3.3.7"
   },
   "resolutions": {
     "@langchain/core": "0.2.18",
