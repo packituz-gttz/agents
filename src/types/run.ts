@@ -52,5 +52,6 @@ export type TaskManagerGraphConfig = {
 export type RunConfig = {
   graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
+  returnContent?: boolean;
   runId?: string;
 };

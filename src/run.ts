@@ -16,6 +16,7 @@ export class Run<T extends t.BaseGraphState> {
   private Graph: StandardGraph | undefined;
   provider: Providers | undefined;
   run_id: string | undefined;
+  returnContent: boolean = false;
 
   private constructor(config: t.RunConfig) {
     const handlerRegistry = new HandlerRegistry();
@@ -35,6 +36,8 @@ export class Run<T extends t.BaseGraphState> {
         this.Graph.handlerRegistry = handlerRegistry;
       }
     }
+
+    this.returnContent = config.returnContent ?? false;
   }
 
   private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
@@ -108,7 +111,9 @@ export class Run<T extends t.BaseGraphState> {
       }
     }
 
-    return this.Graph.getContentParts();
+    if (this.returnContent) {
+      return this.Graph.getContentParts();
+    }
   }
 
   private createSystemCallback<K extends keyof ClientCallbacks>(
