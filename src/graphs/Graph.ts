@@ -85,7 +85,7 @@ export class StandardGraph extends Graph<
     provider,
     clientOptions,
     instructions,
-    additional_instructions,
+    additional_instructions = '',
   } : {
     runId?: string;
     provider: Providers;
@@ -104,7 +104,7 @@ export class StandardGraph extends Graph<
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
 
-    let finalInstructions = instructions;
+    let finalInstructions = instructions ?? '';
     if (additional_instructions) {
       finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
     }
@@ -244,7 +244,7 @@ export class StandardGraph extends Graph<
 
   createCallModel() {
     return async (state: t.BaseGraphState, config?: RunnableConfig): Promise<Partial<t.BaseGraphState>> => {
-      const { provider } = (config?.configurable as t.GraphConfig) ?? {} ;
+      const { provider } = (config?.configurable as t.GraphConfig | undefined) ?? {} ;
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }

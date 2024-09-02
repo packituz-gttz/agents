@@ -124,3 +124,11 @@ export type GraphConfig = {
     provider: string;
     thread_id?: string;
 };
+
+export type PartMetadata = {
+  progress?: number;
+  asset_pointer?: string;
+  status?: string;
+  action?: boolean;
+  output?: string;
+};

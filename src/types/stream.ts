@@ -112,8 +112,8 @@ export type ToolCallsDetails = {
 };
 
 export type ToolCallDelta = {
-  type: StepTypes.TOOL_CALLS;
-  tool_calls: ToolCallChunk[]; // #new
+  type: StepTypes;
+  tool_calls?: ToolCallChunk[]; // #new
 };
 
 export type AgentToolCall = {

@@ -2,6 +2,7 @@
 import type { RunnableToolLike } from '@langchain/core/runnables';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { ToolCall } from '@langchain/core/messages/tool';
+import { ContentTypes } from '@/common';
 
 /** Replacement type for `import type { ToolCall } from '@langchain/core/messages/tool'` in order to have stringified args typed */
 export type CustomToolCall = {
@@ -10,6 +11,7 @@ export type CustomToolCall = {
   args: string | Record<string, any>;
   id?: string;
   type?: 'tool_call';
+  output?: string;
 }
 
 export type GenericTool = StructuredToolInterface | RunnableToolLike;
@@ -29,3 +31,17 @@ export type ToolNodeOptions = {
 };
 
 export type ToolNodeConstructorParams = ToolRefs & ToolNodeOptions;
+
+export type ToolEndEvent = {
+  /** The Step Id of the Tool Call */
+  id: string;
+  /** The Completed Tool Call */
+  tool_call: ToolCall;
+  /** The content index of the tool call */
+  index: number;
+};
+
+export type ToolCallContent = {
+  type: ContentTypes.TOOL_CALL;
+  tool_call: ToolCall;
+};
