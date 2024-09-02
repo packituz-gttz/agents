@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
@@ -39,7 +39,7 @@
     "clean": "node ./config/clean.js",
     "script": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts",
     "bun:cli": "bun -r dotenv/config ./src/scripts/cli.ts --provider 'bedrock' --name 'Jo' --location 'New York, NY'",
-    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
+    "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "content": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/content.ts --provider 'bedrock' --name 'Jo' --location 'New York, NY'",
     "abort": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/abort.ts --provider 'bedrock' --name 'Jo' --location 'New York, NY'",
     "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
@@ -79,7 +79,6 @@
     "nanoid": "^3.3.7"
   },
   "resolutions": {
-    "@langchain/core": "0.2.18",
     "@smithy/eventstream-codec": "^2.2.0",
     "@smithy/protocol-http": "^3.0.6",
     "@smithy/signature-v4": "^2.0.10",

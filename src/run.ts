@@ -90,7 +90,8 @@ export class Run<T extends t.BaseGraphState> {
       const { data, name, metadata, ...info } = event;
 
       let eventName: t.EventName = info.event;
-      if (hasTools && provider === Providers.ANTHROPIC && eventName === GraphEvents.CHAT_MODEL_STREAM) {
+      const isDoubleCallProvider = provider === Providers.ANTHROPIC || provider === Providers.BEDROCK;
+      if (hasTools && isDoubleCallProvider && eventName === GraphEvents.CHAT_MODEL_STREAM) {
         /* Skipping CHAT_MODEL_STREAM event for Anthropic due to double-call edge case */
         continue;
       }
