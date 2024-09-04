@@ -7,6 +7,7 @@ import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
+import { sleep } from '@/utils';
 
 export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -17,9 +18,11 @@ export class Run<T extends t.BaseGraphState> {
   provider: Providers | undefined;
   run_id: string | undefined;
   returnContent: boolean = false;
+  streamRate: number | undefined;
 
   private constructor(config: t.RunConfig) {
     const handlerRegistry = new HandlerRegistry();
+    this.streamRate = config.streamRate;
 
     if (config.customHandlers) {
       for (const [eventType, handler] of Object.entries(config.customHandlers)) {
@@ -108,6 +111,9 @@ export class Run<T extends t.BaseGraphState> {
       const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {
         handler.handle(eventName, data, metadata, this.Graph);
+      }
+      if (this.streamRate != null) {
+        await sleep(this.streamRate);
       }
     }
 

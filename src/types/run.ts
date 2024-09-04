@@ -19,6 +19,7 @@ export type StandardGraphConfig = {
   tools?: t.GenericTool[];
   toolMap?: t.ToolMap;
   additional_instructions?: string;
+  streamBuffer?: number;
   clientOptions?: Record<string, unknown>;
 };
 
@@ -53,5 +54,7 @@ export type RunConfig = {
   graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
   returnContent?: boolean;
+  /** The rate at which to process stream events */
+  streamRate?: number;
   runId?: string;
 };

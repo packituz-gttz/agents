@@ -12,8 +12,8 @@ import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import { modifyDeltaProperties, convertMessagesToContent } from '@/messages';
+import { resetIfNotEmpty, joinKeys, sleep } from '@/utils';
 import { getChatModelClass } from '@/llm/providers';
-import { resetIfNotEmpty, joinKeys } from '@/utils';
 import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
@@ -69,6 +69,10 @@ export class StandardGraph extends Graph<
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private clientOptions: Record<string, unknown>;
   private boundModel: Runnable;
+  /** The amount of time that should pass before another consecutive API call */
+  streamBuffer: number | undefined;
+  /** The last recorded timestamp that a stream API call was invoked */
+  lastStreamCall: number | undefined;
   handlerRegistry: HandlerRegistry | undefined;
   systemMessage: SystemMessage | undefined;
   messages: BaseMessage[] = [];
@@ -86,6 +90,7 @@ export class StandardGraph extends Graph<
     clientOptions,
     instructions,
     additional_instructions = '',
+    streamBuffer,
   } : {
     runId?: string;
     provider: Providers;
@@ -94,6 +99,7 @@ export class StandardGraph extends Graph<
     clientOptions: Record<string, unknown>;
     instructions?: string;
     additional_instructions?: string;
+    streamBuffer?: number;
   }) {
     super();
     this.runId = runId;
@@ -101,6 +107,7 @@ export class StandardGraph extends Graph<
     this.toolMap = toolMap;
     this.provider = provider;
     this.clientOptions = clientOptions;
+    this.streamBuffer = streamBuffer;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
 
@@ -264,6 +271,16 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
+      if (this.lastStreamCall != null && this.streamBuffer != null) {
+        const timeSinceLastCall = Date.now() - this.lastStreamCall;
+        if (timeSinceLastCall < this.streamBuffer) {
+          const timeToWait = Math.ceil((this.streamBuffer - timeSinceLastCall) / 1000) * 1000;
+          await sleep(timeToWait);
+        }
+      }
+
+      this.lastStreamCall = Date.now();
+
       if (this.tools?.length && (provider === Providers.ANTHROPIC || provider === Providers.BEDROCK)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
@@ -363,7 +380,7 @@ export class StandardGraph extends Graph<
       throw new Error(`No run step found for stepId ${stepId}`);
     }
 
-    if (!data?.output) {
+    if (!data.output) {
       // console.warn('No output found in tool_end event');
       // console.dir(data, { depth: null });
       return;

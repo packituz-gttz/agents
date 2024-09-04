@@ -7,6 +7,16 @@ import {
 } from '@langchain/core/runnables';
 import { AsyncLocalStorageProviderSingleton } from '@langchain/core/singletons';
 
+/**
+ * Delays the execution for a specified number of milliseconds.
+ *
+ * @param {number} ms - The number of milliseconds to delay.
+ * @return {Promise<void>} A promise that resolves after the specified delay.
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface RunnableCallableArgs extends Partial<any> {
   name?: string;
