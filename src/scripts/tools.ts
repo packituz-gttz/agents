@@ -85,6 +85,7 @@ async function testStandardStreaming(): Promise<void> {
 
   const userMessage = `
   Make a search for the weather in ${location} today, which is ${currentDate}.
+  Before making the search, please let me know what you're about to do, then immediately start searching without hesitation.
   Make sure to always refer to me by name, which is ${userName}.
   After giving me a thorough summary, tell me a joke about the weather forecast we went over.
   `;
