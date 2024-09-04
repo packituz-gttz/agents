@@ -221,7 +221,7 @@ export function createContentAggregator(): ContentAggregatorResult {
       contentParts[index] = { type: partType };
     }
 
-    if (contentPart.type !== contentParts[index]?.type) {
+    if (!partType.startsWith(contentParts[index]?.type ?? '')) {
       console.warn('Content type mismatch');
       return;
     }
