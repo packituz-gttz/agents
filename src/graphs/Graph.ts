@@ -46,7 +46,7 @@ export abstract class Graph<
   abstract checkKeyList(keyList: (string | number | undefined)[]): boolean;
   abstract getStepIdByKey(stepKey: string, index?: number): string
   abstract getRunStep(stepId: string): t.RunStep | undefined;
-  abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void;
+  abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): string;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
   abstract handleToolCallCompleted(data: t.ToolEndData): void;
@@ -310,7 +310,10 @@ export class StandardGraph extends Graph<
 
   /* Dispatchers */
 
-  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): void {
+  /**
+   * Dispatches a run step to the client, returns the step ID
+   */
+  dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): string {
     if (!this.config) {
       throw new Error('No config provided');
     }
@@ -341,6 +344,7 @@ export class StandardGraph extends Graph<
     this.contentData.push(runStep);
     this.contentIndexMap.set(stepId, runStep.index);
     dispatchCustomEvent(GraphEvents.ON_RUN_STEP, runStep, this.config);
+    return stepId;
   }
 
   handleToolCallCompleted(data: t.ToolEndData, metadata?:  Record<string, unknown>): void {

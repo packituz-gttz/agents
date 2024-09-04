@@ -56,15 +56,51 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     if (hasToolCalls && chunk.tool_calls?.every((tc) => tc.id)) {
       const tool_calls: ToolCall[] = [];
+      const tool_call_ids: string[] = [];
       for (const tool_call of chunk.tool_calls) {
-        if (!tool_call.id || graph.toolCallStepIds.has(tool_call.id)) {
+        const toolCallId = tool_call.id ?? '';
+        if (!toolCallId || graph.toolCallStepIds.has(toolCallId)) {
           continue;
         }
 
         tool_calls.push(tool_call);
+        tool_call_ids.push(toolCallId);
       }
 
       const stepKey = graph.getStepKey(metadata);
+
+      let prevStepId = '';
+      let prevRunStep: t.RunStep | undefined;
+      try {
+        prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
+        prevRunStep = graph.getRunStep(prevStepId);
+      } catch (e) {
+        // no previous step
+      }
+
+      const dispatchToolCallIds = (lastMessageStepId: string): void => {
+        graph.dispatchMessageDelta(lastMessageStepId, {
+          content: [{
+            type: 'text',
+            text: '',
+            tool_call_ids,
+          }],
+        });
+      };
+      /* If the previous step exists and is a message creation */
+      if (prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION) {
+        dispatchToolCallIds(prevStepId);
+        /* If the previous step doesn't exist or is not a message creation */
+      } else if (!prevRunStep || prevRunStep.type !== StepTypes.MESSAGE_CREATION) {
+        const messageId = getMessageId(stepKey, graph) ?? '';
+        const stepId = graph.dispatchRunStep(stepKey, {
+          type: StepTypes.MESSAGE_CREATION,
+          message_creation: {
+            message_id: messageId,
+          },
+        });
+        dispatchToolCallIds(stepId);
+      }
       graph.dispatchRunStep(stepKey, {
         type: StepTypes.TOOL_CALLS,
         tool_calls,
@@ -90,7 +126,9 @@ export class ChatModelStreamHandler implements t.EventHandler {
     const stepKey = graph.getStepKey(metadata);
 
     if (hasToolCallChunks && chunk.tool_call_chunks?.length && typeof chunk.tool_call_chunks[0]?.index === 'number') {
-      const stepId = graph.getStepIdByKey(stepKey, chunk.tool_call_chunks[0].index);
+      const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
+      const prevRunStep = graph.getRunStep(prevStepId);
+      const stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
       graph.dispatchRunStepDelta(stepId, {
         type: StepTypes.TOOL_CALLS,
         tool_calls: chunk.tool_call_chunks,
@@ -183,11 +221,17 @@ export function createContentAggregator(): ContentAggregatorResult {
       contentParts[index] = { type: partType };
     }
 
+    if (contentPart.type !== contentParts[index]?.type) {
+      console.warn('Content type mismatch');
+      return;
+    }
+
     if (
       partType.startsWith(ContentTypes.TEXT) &&
       ContentTypes.TEXT in contentPart &&
       typeof contentPart.text === 'string'
     ) {
+      // TODO: update this!!
       const currentContent = contentParts[index] as { type: ContentTypes.TEXT; text: string };
       contentParts[index] = {
         type: ContentTypes.TEXT,
