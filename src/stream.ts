@@ -232,11 +232,16 @@ export function createContentAggregator(): ContentAggregatorResult {
       typeof contentPart.text === 'string'
     ) {
       // TODO: update this!!
-      const currentContent = contentParts[index] as { type: ContentTypes.TEXT; text: string };
-      contentParts[index] = {
+      const currentContent = contentParts[index] as t.MessageDeltaUpdate;
+      const update: t.MessageDeltaUpdate = {
         type: ContentTypes.TEXT,
         text: (currentContent.text || '') + contentPart.text,
       };
+
+      if (contentPart.tool_call_ids) {
+        update.tool_call_ids = contentPart.tool_call_ids;
+      }
+      contentParts[index] = update;
     } else if (partType === ContentTypes.IMAGE_URL && 'image_url' in contentPart) {
       const currentContent = contentParts[index] as { type: 'image_url'; image_url: string };
       contentParts[index] = {

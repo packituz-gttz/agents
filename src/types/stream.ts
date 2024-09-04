@@ -1,7 +1,7 @@
 // src/types/stream.ts
 import type { MessageContentImageUrl, MessageContentText, ToolMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
-import { StepTypes } from '@/common/enum';
+import { StepTypes, ContentTypes } from '@/common/enum';
 
 /** Event names are of the format: on_[runnable_type]_(start|stream|end).
 
@@ -158,7 +158,13 @@ export interface MessageDelta {
    * The content of the message in array of text and/or images.
    */
   content?: MessageContentComplex[];
+  /**
+   * The tool call ids associated with the message.
+   */
+  tool_call_ids?: string[];
 }
+
+export type MessageDeltaUpdate = { type: ContentTypes.TEXT; text: string; tool_call_ids?: string[] };
 
 export type ContentType = 'text' | 'image_url' | 'tool_call' | string;
 
