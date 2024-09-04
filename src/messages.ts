@@ -9,7 +9,7 @@ export function getConverseOverrideMessage({
   lastMessageY
 }: {
   userMessage: string[];
-  lastMessageX: AIMessageChunk;
+  lastMessageX: AIMessageChunk | null;
   lastMessageY: ToolMessage;
 }): HumanMessage {
   const content = `
@@ -19,7 +19,7 @@ User: ${userMessage[1]}
 # YOU HAVE ALREADY RESPONDED TO THE LATEST USER MESSAGE:
 
 # Observations:
-- ${lastMessageX.content}
+- ${lastMessageX?.content}
 
 # Tool Calls:
 - ${lastMessageX?.tool_calls?.join('\n- ')}
@@ -149,8 +149,8 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
 export function convertMessagesToContent(messages: BaseMessage[]): t.MessageContentComplex[] {
   const processedContent: t.MessageContentComplex[] = [];
 
-  const addContentPart = (message: BaseMessage): void => {
-    const content = message?.content;
+  const addContentPart = (message: BaseMessage | null): void => {
+    const content = message?.lc_kwargs.content != null ? message.lc_kwargs.content : message?.content;
     if (content === undefined) {
       return;
     }
@@ -169,7 +169,7 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
   const toolCallMap = new Map<string, t.CustomToolCall>();
 
   for (let i = 0; i < messages.length; i++) {
-    const message = messages[i];
+    const message = messages[i] as BaseMessage | null;
     const messageType = message?._getType();
 
     if (messageType === 'ai' && (message as AIMessage).tool_calls?.length) {
