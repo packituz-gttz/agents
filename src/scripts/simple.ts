@@ -5,8 +5,8 @@ import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
+import { ToolEndHandler, createMetadataAggregator } from '@/events';
 import { getLLMConfig } from '@/utils/llmConfig';
-import { ToolEndHandler } from '@/events';
 import { getArgs } from '@/scripts/args';
 import { GraphEvents } from '@/common';
 import { Run } from '@/run';
@@ -97,18 +97,18 @@ async function testStandardStreaming(): Promise<void> {
   // console.dir(finalContentParts, { depth: null });
   console.log('\n\n====================\n\n');
   console.dir(contentParts, { depth: null });
+  const { handleLLMEnd, collected } = createMetadataAggregator();
   const titleResult = await run.generateTitle({
     inputText: userMessage,
     contentParts,
     chainOptions: {
       callbacks: [{
-        handleLLMEnd: (...args) => {
-          console.log('handleLLMEnd', args);
-        },
+        handleLLMEnd,
       }],
     },
   });
   console.log('Generated Title:', titleResult);
+  console.log('Collected metadata:', collected);
 }
 
 process.on('unhandledRejection', (reason, promise) => {

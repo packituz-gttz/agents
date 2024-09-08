@@ -1,7 +1,20 @@
 // src/types/stream.ts
-import type { MessageContentImageUrl, MessageContentText, ToolMessage } from '@langchain/core/messages';
+import type { MessageContentImageUrl, MessageContentText, ToolMessage, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
+import type { LLMResult, Generation } from '@langchain/core/outputs';
 import { StepTypes, ContentTypes } from '@/common/enum';
+
+export type HandleLLMEnd = (output: LLMResult, runId: string, parentRunId?: string, tags?: string[]) => void;
+
+export type MetadataAggregatorResult = {
+  handleLLMEnd: HandleLLMEnd;
+  collected: Record<string, unknown>[];
+};
+
+export type StreamGeneration = Generation & {
+  text?: string;
+  message?: BaseMessage
+};
 
 /** Event names are of the format: on_[runnable_type]_(start|stream|end).
 
