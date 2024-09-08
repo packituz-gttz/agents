@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 // src/scripts/cli.ts
 import { config } from 'dotenv';
 config();
@@ -6,15 +5,14 @@ import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
-import { ToolEndHandler } from '@/events';
-
-
-import { getArgs } from '@/scripts/args';
-import { Run } from '@/run';
-import { GraphEvents, Callback } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
+import { ToolEndHandler } from '@/events';
+import { getArgs } from '@/scripts/args';
+import { GraphEvents } from '@/common';
+import { Run } from '@/run';
 
 const conversationHistory: BaseMessage[] = [];
+
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   const { contentParts, aggregateContent } = createContentAggregator();
@@ -98,7 +96,19 @@ async function testStandardStreaming(): Promise<void> {
   }
   // console.dir(finalContentParts, { depth: null });
   console.log('\n\n====================\n\n');
-  // console.dir(contentParts, { depth: null });
+  console.dir(contentParts, { depth: null });
+  const titleResult = await run.generateTitle({
+    inputText: userMessage,
+    contentParts,
+    chainOptions: {
+      callbacks: [{
+        handleLLMEnd: (...args) => {
+          console.log('handleLLMEnd', args);
+        },
+      }],
+    },
+  });
+  console.log('Generated Title:', titleResult);
 }
 
 process.on('unhandledRejection', (reason, promise) => {

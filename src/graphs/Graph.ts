@@ -68,7 +68,7 @@ export class StandardGraph extends Graph<
 > {
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private clientOptions: Record<string, unknown>;
-  private boundModel: Runnable;
+  boundModel: Runnable;
   /** The rate at which to process LLM stream events */
   streamRate: number | undefined;
   /** The amount of time that should pass before another consecutive API call */
@@ -252,6 +252,21 @@ export class StandardGraph extends Graph<
       return model;
     }
     return model.bindTools(this.tools as StructuredTool[]);
+  }
+
+  getNewModel({
+    clientOptions = {},
+    omitOriginalOptions,
+  } : {
+    clientOptions?: t.ClientOptions;
+    omitOriginalOptions?: string[]
+  }): t.ChatModelInstance {
+    const ChatModelClass = getChatModelClass(this.provider);
+    const _options = omitOriginalOptions ? Object.fromEntries(
+      Object.entries(this.clientOptions).filter(([key]) => !omitOriginalOptions.includes(key)),
+    ) : this.clientOptions;
+    const options = Object.assign(_options, clientOptions);
+    return new ChatModelClass(options);
   }
 
   createCallModel() {

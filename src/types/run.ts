@@ -2,6 +2,7 @@
 import type * as z from 'zod';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
+import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
 import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
 import type * as t from '@/types/tools';
@@ -57,3 +58,5 @@ export type RunConfig = {
   returnContent?: boolean;
   runId?: string;
 };
+
+export type ProvidedCallbacks = (BaseCallbackHandler | CallbackHandlerMethods)[] | undefined;

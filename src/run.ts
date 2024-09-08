@@ -1,10 +1,12 @@
 // src/run.ts
-import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
+import { PromptTemplate } from '@langchain/core/prompts';
+
 import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
+import { createTitleRunnable } from '@/utils/title';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 
@@ -13,7 +15,7 @@ export class Run<T extends t.BaseGraphState> {
   // private collab!: CollabGraph;
   // private taskManager!: TaskManager;
   private handlerRegistry: HandlerRegistry;
-  private Graph: StandardGraph | undefined;
+  Graph: StandardGraph | undefined;
   provider: Providers | undefined;
   run_id: string | undefined;
   returnContent: boolean = false;
@@ -86,7 +88,7 @@ export class Run<T extends t.BaseGraphState> {
     const hasTools = this.Graph.tools ? this.Graph.tools.length > 0 : false;
     if (clientCallbacks) {
       /* TODO: conflicts with callback manager */
-      const callbacks = config.callbacks as (BaseCallbackHandler | CallbackHandlerMethods)[] || [];
+      const callbacks = config.callbacks as t.ProvidedCallbacks ?? [];
       config.callbacks = callbacks.concat(this.getCallbacks(clientCallbacks));
     }
     const stream = this.graphRunnable.streamEvents(inputs, config);
@@ -136,5 +138,37 @@ export class Run<T extends t.BaseGraphState> {
       [Callback.TOOL_START]: this.createSystemCallback(clientCallbacks, Callback.TOOL_START),
       [Callback.TOOL_END]: this.createSystemCallback(clientCallbacks, Callback.TOOL_END),
     };
+  }
+
+  async generateTitle({
+    inputText,
+    contentParts,
+    titlePrompt,
+    clientOptions,
+    chainOptions,
+    skipLanguage,
+  } : {
+    inputText: string;
+    contentParts: (t.MessageContentComplex | undefined)[];
+    titlePrompt?: string;
+    skipLanguage?: boolean;
+    clientOptions?: t.ClientOptions;
+    chainOptions?: Partial<RunnableConfig> | undefined;
+  }): Promise<{ language: string; title: string }> {
+    const convoTemplate = PromptTemplate.fromTemplate('User: {input}\nAI: {output}');
+    const response = contentParts.map((part) => {
+      if (part?.type === 'text') return part.text;
+      return '';
+    }).join('\n');
+    const convo = (await convoTemplate.invoke({ input: inputText, output: response })).value;
+    const model = this.Graph?.getNewModel({
+      clientOptions,
+      omitOriginalOptions: ['streaming'],
+    });
+    if (!model) {
+      return { language: '', title: '' };
+    }
+    const chain = await createTitleRunnable(model, titlePrompt);
+    return await chain.invoke({ convo, inputText, skipLanguage }, chainOptions) as { language: string; title: string };
   }
 }
