@@ -109,7 +109,7 @@ export class LLMStreamHandler implements t.EventHandler {
   }
 }
 
-export const createMetadataAggregator = (_collected?: Record<string, unknown>[]):  t.MetadataAggregatorResult => {
+export const createMetadataAggregator = (_collected?: Record<string, unknown>[]): t.MetadataAggregatorResult => {
   const collected = _collected || [];
 
   const handleLLMEnd: t.HandleLLMEnd = (output) => {
