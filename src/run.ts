@@ -43,7 +43,7 @@ export class Run<T extends t.BaseGraphState> {
   }
 
   private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
-    const { runId, llmConfig, instructions, additional_instructions, streamRate, streamBuffer, tools = [] } = config;
+    const { runId, llmConfig, instructions, additional_instructions, streamBuffer, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
     const standardGraph = new StandardGraph({
@@ -54,7 +54,6 @@ export class Run<T extends t.BaseGraphState> {
       clientOptions,
       additional_instructions,
       streamBuffer,
-      streamRate,
     });
     this.Graph = standardGraph;
     return standardGraph.createWorkflow();

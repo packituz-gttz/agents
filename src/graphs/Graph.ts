@@ -60,6 +60,8 @@ export abstract class Graph<
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
+  /** The amount of time that should pass before another consecutive API call */
+  streamBuffer: number | undefined;
 }
 
 export class StandardGraph extends Graph<
@@ -69,10 +71,6 @@ export class StandardGraph extends Graph<
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   private clientOptions: Record<string, unknown>;
   boundModel: Runnable;
-  /** The rate at which to process LLM stream events */
-  streamRate: number | undefined;
-  /** The amount of time that should pass before another consecutive API call */
-  streamBuffer: number | undefined;
   /** The last recorded timestamp that a stream API call was invoked */
   lastStreamCall: number | undefined;
   handlerRegistry: HandlerRegistry | undefined;
@@ -93,7 +91,6 @@ export class StandardGraph extends Graph<
     instructions,
     additional_instructions = '',
     streamBuffer,
-    streamRate,
   } : {
     runId?: string;
     provider: Providers;
@@ -103,7 +100,6 @@ export class StandardGraph extends Graph<
     instructions?: string;
     additional_instructions?: string;
     streamBuffer?: number;
-    streamRate?: number;
   }) {
     super();
     this.runId = runId;
@@ -112,7 +108,6 @@ export class StandardGraph extends Graph<
     this.provider = provider;
     this.clientOptions = clientOptions;
     this.streamBuffer = streamBuffer;
-    this.streamRate = streamRate;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
 
@@ -310,9 +305,6 @@ export class StandardGraph extends Graph<
             finalChunk = chunk;
           } else {
             finalChunk = concat(finalChunk, chunk);
-          }
-          if (this.streamRate != null) {
-            await sleep(this.streamRate);
           }
         }
 

@@ -21,7 +21,6 @@ export type StandardGraphConfig = {
   toolMap?: t.ToolMap;
   additional_instructions?: string;
   streamBuffer?: number;
-  streamRate?: number;
   clientOptions?: Record<string, unknown>;
 };
 

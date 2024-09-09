@@ -68,7 +68,6 @@ async function testStandardStreaming(): Promise<void> {
       instructions: 'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
       streamBuffer: 3000,
-      streamRate: 30,
     },
     returnContent: true,
     customHandlers,
