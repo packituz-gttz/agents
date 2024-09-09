@@ -5,7 +5,7 @@ import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
-import { ToolEndHandler, createMetadataAggregator } from '@/events';
+import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
 import { GraphEvents } from '@/common';
@@ -18,7 +18,7 @@ async function testStandardStreaming(): Promise<void> {
   const { contentParts, aggregateContent } = createContentAggregator();
   const customHandlers = {
     [GraphEvents.TOOL_END]: new ToolEndHandler(),
-    // [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
+    [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP_COMPLETED]: {
       handle: (event: GraphEvents.ON_RUN_STEP_COMPLETED, data: t.StreamEventData): void => {

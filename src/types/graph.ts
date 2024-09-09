@@ -19,7 +19,7 @@ export type IState = BaseGraphState;
 // }
 
 export interface EventHandler {
-  handle(event: string, data: StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void;
+  handle(event: string, data: StreamEventData | ModelEndData, metadata?: Record<string, unknown>, graph?: Graph): void;
 }
 
 export type GraphStateChannels<T extends BaseGraphState> = StateGraphArgs<T>['channels'];
@@ -70,6 +70,7 @@ export type StreamEventData = {
      */
     result?: unknown;
 };
+
 /**
  * A streaming event.
  *
@@ -132,3 +133,5 @@ export type PartMetadata = {
   action?: boolean;
   output?: string;
 };
+
+export type ModelEndData = StreamEventData & { output: AIMessageChunk | undefined } | undefined;
