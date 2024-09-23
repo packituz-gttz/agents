@@ -51,7 +51,7 @@ const CodeExecutionToolSchema = z.object({
 function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
   return new DynamicStructuredTool({
     name: 'execute_code',
-    description: 'Executes code in various programming languages and returns the output.',
+    description: 'Executes code in various programming languages, returning stdout/stderr output.',
     schema: CodeExecutionToolSchema,
     func: async ({ lang, code }): Promise<string> => {
       const postData = {
@@ -81,7 +81,7 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
         if (result.files && result.files.length > 0) {
           formattedOutput += 'Generated files:\n';
           result.files.forEach((file: FileRef) => {
-            formattedOutput += `${file.id}: ${file.name}\n`;
+            formattedOutput += `${file.name}`;
           });
         }
         return formattedOutput.trim();
