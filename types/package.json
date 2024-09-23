@@ -1,12 +1,12 @@
 {
   "name": "@librechat/agents-types",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Type definitions for @librechat/agents",
   "types": "index.d.ts",
   "scripts": {
     "build": "tsc"
   },
   "peerDependencies": {
-    "@librechat/agents": "^1.5.2"
+    "@librechat/agents": "^1.5.3"
   }
 }
