@@ -11,6 +11,7 @@ export type CodeExecutionToolParams = undefined | {
   session_id?: string;
   user_id?: string;
   apiKey?: string;
+  LIBRECHAT_CODE_API_KEY?: string;
 }
 
 export type FileRef = {
@@ -51,7 +52,7 @@ const CodeExecutionToolSchema = z.object({
 });
 
 function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
-  const apiKey = params.apiKey ?? getEnvironmentVariable('LIBRECHAT_CODE_API_KEY') ?? '';
+  const apiKey = params.LIBRECHAT_CODE_API_KEY ?? params.apiKey ?? getEnvironmentVariable('LIBRECHAT_CODE_API_KEY') ?? '';
   if (!apiKey) {
     throw new Error('No API key provided for code execution tool.');
   }
