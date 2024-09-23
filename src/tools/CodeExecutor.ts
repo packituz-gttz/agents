@@ -90,9 +90,16 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
         if (result.stderr) formattedOutput += `stderr:\n${result.stderr}\n`;
         if (result.files && result.files.length > 0) {
           formattedOutput += 'Generated files:\n';
-          result.files.forEach((file: FileRef) => {
-            formattedOutput += `${file.name}`;
-          });
+
+          const fileCount = result.files.length;
+          for (let i = 0; i < fileCount; i++) {
+            formattedOutput += result.files[i].name;
+
+            if (i < fileCount - 1) {
+              formattedOutput += fileCount <= 3 ? ', ' : ',\n';
+            }
+          }
+
           return [formattedOutput.trim(), result.files];
         }
 
