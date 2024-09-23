@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
-import { DynamicStructuredTool } from '@langchain/core/tools';
+import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 
 config();
 
@@ -49,14 +49,12 @@ const CodeExecutionToolSchema = z.object({
 });
 
 function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
-  return new DynamicStructuredTool({
-    name: 'execute_code',
-    description: 'Executes code in various programming languages, returning stdout/stderr output.',
-    schema: CodeExecutionToolSchema,
-    func: async ({ lang, code }): Promise<string> => {
+  return tool<typeof CodeExecutionToolSchema>(
+    async ({ lang, code, ...rest }) => {
       const postData = {
         lang,
         code,
+        ...rest,
         ...params,
       };
 
@@ -83,13 +81,25 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
           result.files.forEach((file: FileRef) => {
             formattedOutput += `${file.name}`;
           });
+          return [formattedOutput.trim(), result.files];
         }
-        return formattedOutput.trim();
+
+        return [formattedOutput.trim(), undefined];
       } catch (error) {
-        throw new Error(`Failed to execute code: ${(error as Error).message}`);
+        return `Calling tool with arguments:\n\n${JSON.stringify({
+          lang,
+          code,
+          ...rest,
+        })}\n\nraised the following error:\n\n${(error as Error | undefined)?.message}`;
       }
     },
-  });
+    {
+      name: 'execute_code',
+      description: 'Executes code in various programming languages, returning stdout/stderr output.',
+      schema: CodeExecutionToolSchema,
+      responseFormat: 'content_and_artifact',
+    }
+  );
 }
 
 export { createCodeExecutionTool };
