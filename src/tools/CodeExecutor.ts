@@ -103,7 +103,7 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
     },
     {
       name: 'execute_code',
-      description: 'Executes code in various programming languages, returning stdout/stderr output.',
+      description: 'Executes code in various programming languages, returning stdout/stderr output. The code used as input is automatically displayed to the user in a formatted block, so don\'t repeat it in your response unless specifically asked to do so.',
       schema: CodeExecutionToolSchema,
       responseFormat: 'content_and_artifact',
     }
