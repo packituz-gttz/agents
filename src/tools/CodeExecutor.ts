@@ -82,7 +82,11 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
 
         const result: ExecuteResult = await response.json();
         let formattedOutput = '';
-        if (result.stdout) formattedOutput += `stdout:\n${result.stdout}\n`;
+        if (result.stdout) {
+          formattedOutput += `stdout:\n${result.stdout}\n`;
+        } else {
+          formattedOutput += 'stdout: Empty. To output values, write explicitly to stdout.\n';
+        }
         if (result.stderr) formattedOutput += `stderr:\n${result.stderr}\n`;
         if (result.files && result.files.length > 0) {
           formattedOutput += 'Generated files:\n';
@@ -103,7 +107,11 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
     },
     {
       name: 'execute_code',
-      description: 'Executes code in various programming languages, returning stdout/stderr output. The code used as input is automatically displayed to the user in a formatted block, so don\'t repeat it in your response unless specifically asked to do so.',
+      description: `Executes code in various programming languages, returning stdout/stderr output.
+
+# Usage
+- Input code is automatically displayed to the user, so don't repeat it in your response unless asked.
+- All desired output must be explicitly written to stdout.`,
       schema: CodeExecutionToolSchema,
       responseFormat: 'content_and_artifact',
     }
