@@ -1,14 +1,16 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
+import { getEnvironmentVariable } from '@langchain/core/utils/env';
 
 config();
 
 const EXEC_ENDPOINT = 'https://api.librechat.ai/exec';
 
-export type CodeExecutionToolParams = {
+export type CodeExecutionToolParams = undefined | {
   session_id?: string;
   user_id?: string;
+  apiKey?: string;
 }
 
 export type FileRef = {
@@ -49,6 +51,10 @@ const CodeExecutionToolSchema = z.object({
 });
 
 function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
+  const apiKey = params.apiKey ?? getEnvironmentVariable('LIBRECHAT_CODE_API_KEY') ?? '';
+  if (!apiKey) {
+    throw new Error('No API key provided for code execution tool.');
+  }
   return tool<typeof CodeExecutionToolSchema>(
     async ({ lang, code, ...rest }) => {
       const postData = {
@@ -64,6 +70,7 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
           headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'LibreChat/1.0',
+            'X-API-Key': apiKey,
           },
           body: JSON.stringify(postData),
         });
