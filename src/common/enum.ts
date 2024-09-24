@@ -136,3 +136,8 @@ export enum Callback {
   CUSTOM_EVENT = 'handleCustomEvent'
   */
 }
+
+export enum EnvVar {
+  CODE_API_KEY = 'LIBRECHAT_CODE_API_KEY',
+  CODE_BASEURL = 'LIBRECHAT_CODE_BASEURL'
+}
