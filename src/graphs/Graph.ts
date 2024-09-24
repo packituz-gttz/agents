@@ -49,7 +49,7 @@ export abstract class Graph<
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): string;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
-  abstract handleToolCallCompleted(data: t.ToolEndData): void;
+  abstract handleToolCallCompleted(data: t.ToolEndData, metadata?: Record<string, unknown>): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
@@ -266,7 +266,7 @@ export class StandardGraph extends Graph<
 
   createCallModel() {
     return async (state: t.BaseGraphState, config?: RunnableConfig): Promise<Partial<t.BaseGraphState>> => {
-      const { provider } = (config?.configurable as t.GraphConfig | undefined) ?? {} ;
+      const { provider = '' } = (config?.configurable as t.GraphConfig | undefined) ?? {} ;
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
@@ -296,7 +296,7 @@ export class StandardGraph extends Graph<
 
       this.lastStreamCall = Date.now();
 
-      if (this.tools?.length && (provider === Providers.ANTHROPIC || provider === Providers.BEDROCK)) {
+      if ((this.tools?.length ?? 0) > 0 && (provider === Providers.ANTHROPIC || provider === Providers.BEDROCK)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {
@@ -353,10 +353,11 @@ export class StandardGraph extends Graph<
     const [stepId, stepIndex] = this.generateStepId(stepKey);
     if (stepDetails.type === StepTypes.TOOL_CALLS && stepDetails.tool_calls) {
       for (const tool_call of stepDetails.tool_calls) {
-        if (!tool_call.id || this.toolCallStepIds.has(tool_call.id)) {
+        const toolCallId = tool_call.id ?? '';
+        if (!toolCallId || this.toolCallStepIds.has(toolCallId)) {
           continue;
         }
-        this.toolCallStepIds.set(tool_call.id, stepId);
+        this.toolCallStepIds.set(toolCallId, stepId);
       }
     }
 
@@ -369,8 +370,9 @@ export class StandardGraph extends Graph<
       usage: null,
     };
 
-    if (this.runId) {
-      runStep.runId = this.runId;
+    const runId = this.runId ?? '';
+    if (runId) {
+      runStep.runId = runId;
     }
 
     this.contentData.push(runStep);
@@ -386,7 +388,7 @@ export class StandardGraph extends Graph<
 
     const { input, output } = data;
     const { tool_call_id } = output;
-    const stepId = this.toolCallStepIds.get(tool_call_id);
+    const stepId = this.toolCallStepIds.get(tool_call_id) ?? '';
     if (!stepId) {
       throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
     }
@@ -396,8 +398,6 @@ export class StandardGraph extends Graph<
     }
 
     if (!data.output) {
-      // console.warn('No output found in tool_end event');
-      // console.dir(data, { depth: null });
       return;
     }
 

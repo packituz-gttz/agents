@@ -50,7 +50,7 @@ export class ToolEndHandler implements t.EventHandler {
 
     this.callback?.(toolEndData);
 
-    graph.handleToolCallCompleted({ input: toolEndData.input, output: toolEndData.output });
+    graph.handleToolCallCompleted({ input: toolEndData.input, output: toolEndData.output }, metadata);
   }
 }
 
