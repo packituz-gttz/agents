@@ -8,7 +8,7 @@ export * from './messages';
 export * from './graphs';
 
 /* Tools */
-export { createCodeExecutionTool } from './tools/CodeExecutor';
+export * from './tools/CodeExecutor';
 
 /* Misc. */
 export * from './common';
