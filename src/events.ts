@@ -32,18 +32,25 @@ export class ModelEndHandler implements t.EventHandler {
 }
 
 export class ToolEndHandler implements t.EventHandler {
+  private callback?: t.ToolEndCallback;
+  constructor(callback?: t.ToolEndCallback) {
+    this.callback = callback;
+  }
   handle(event: string, data: t.StreamEventData | undefined, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
       return;
     }
 
-    if (!data?.output) {
+    const toolEndData = data as t.ToolEndData | undefined;
+    if (!toolEndData?.output) {
       console.warn('No output found in tool_end event');
       return;
     }
 
-    graph.handleToolCallCompleted({ input: data.input, output: data.output } as t.ToolEndData);
+    this.callback?.(toolEndData);
+
+    graph.handleToolCallCompleted({ input: toolEndData.input, output: toolEndData.output });
   }
 }
 

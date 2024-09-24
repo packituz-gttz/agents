@@ -91,6 +91,7 @@ export type MessageCreationDetails = {
 };
 
 export type ToolEndData = { input: string | Record<string, unknown>, output: ToolMessage };
+export type ToolEndCallback = (data: ToolEndData) => void;
 
 export type ProcessedToolCall = {
   name: string;

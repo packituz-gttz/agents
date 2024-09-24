@@ -2,8 +2,8 @@
 import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/langgraph';
 import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
 import type { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type { Graph } from '@/graphs';
-import { RunnableConfig } from '@langchain/core/runnables';
 // import type { RunnableConfig } from '@langchain/core/runnables';
 
 export type BaseGraphState = {

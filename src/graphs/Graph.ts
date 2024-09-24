@@ -379,7 +379,7 @@ export class StandardGraph extends Graph<
     return stepId;
   }
 
-  handleToolCallCompleted(data: t.ToolEndData, metadata?:  Record<string, unknown>): void {
+  handleToolCallCompleted(data: t.ToolEndData, metadata?: Record<string, unknown>): void {
     if (!this.config) {
       throw new Error('No config provided');
     }
