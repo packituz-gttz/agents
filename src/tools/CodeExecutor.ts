@@ -100,10 +100,13 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
             }
           }
 
-          return [formattedOutput.trim(), result.files];
+          return [formattedOutput.trim(), {
+            session_id: result.session_id,
+            files: result.files,
+          }];
         }
 
-        return [formattedOutput.trim(), undefined];
+        return [formattedOutput.trim(), { session_id: result.session_id }];
       } catch (error) {
         return `Calling tool with arguments:\n\n${JSON.stringify({
           lang,
