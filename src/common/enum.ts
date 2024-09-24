@@ -137,6 +137,10 @@ export enum Callback {
   */
 }
 
+export enum Constants {
+  OFFICIAL_CODE_BASEURL = 'https://api.librechat.ai/v1',
+}
+
 export enum EnvVar {
   CODE_API_KEY = 'LIBRECHAT_CODE_API_KEY',
   CODE_BASEURL = 'LIBRECHAT_CODE_BASEURL'

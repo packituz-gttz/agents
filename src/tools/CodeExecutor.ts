@@ -2,34 +2,12 @@ import { z } from 'zod';
 import { config } from 'dotenv';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import { getEnvironmentVariable } from '@langchain/core/utils/env';
-import { EnvVar } from '@/common';
+import type * as t from '@/types';
+import { EnvVar, Constants } from '@/common';
 
 config();
 
-const BASEURL = getEnvironmentVariable(EnvVar.CODE_BASEURL) ?? 'https://api.librechat.ai';
-const EXEC_ENDPOINT = `${BASEURL}/exec`;
-
-export type CodeExecutionToolParams = undefined | {
-  session_id?: string;
-  user_id?: string;
-  apiKey?: string;
-  [EnvVar.CODE_API_KEY]?: string;
-}
-
-export type FileRef = {
-  id: string;
-  name: string;
-  path?: string;
-};
-
-export type FileRefs = FileRef[];
-
-export type ExecuteResult = {
-  session_id: string;
-  stdout: string;
-  stderr: string;
-  files?: FileRefs;
-};
+export const getCodeBaseURL = (): string => getEnvironmentVariable(EnvVar.CODE_BASEURL) ?? Constants.OFFICIAL_CODE_BASEURL;
 
 const CodeExecutionToolSchema = z.object({
   lang: z.enum([
@@ -42,7 +20,6 @@ const CodeExecutionToolSchema = z.object({
     'php',
     'rs',
     'go',
-    'bash',
     'd',
     'f90',
   ])
@@ -53,7 +30,9 @@ const CodeExecutionToolSchema = z.object({
     .describe('Additional arguments to execute the code with.'),
 });
 
-function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
+const EXEC_ENDPOINT = `${getCodeBaseURL()}/exec`;
+
+function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
   const apiKey = params[EnvVar.CODE_API_KEY] ?? params.apiKey ?? getEnvironmentVariable(EnvVar.CODE_API_KEY) ?? '';
   if (!apiKey) {
     throw new Error('No API key provided for code execution tool.');
@@ -82,7 +61,7 @@ function createCodeExecutionTool(params: CodeExecutionToolParams = {}): DynamicS
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const result: ExecuteResult = await response.json();
+        const result: t.ExecuteResult = await response.json();
         let formattedOutput = '';
         if (result.stdout) {
           formattedOutput += `stdout:\n${result.stdout}\n`;

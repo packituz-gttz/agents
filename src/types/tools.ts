@@ -2,7 +2,7 @@
 import type { RunnableToolLike } from '@langchain/core/runnables';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import { ContentTypes } from '@/common';
+import { ContentTypes, EnvVar } from '@/common';
 
 /** Replacement type for `import type { ToolCall } from '@langchain/core/messages/tool'` in order to have stringified args typed */
 export type CustomToolCall = {
@@ -44,4 +44,26 @@ export type ToolEndEvent = {
 export type ToolCallContent = {
   type: ContentTypes.TOOL_CALL;
   tool_call: ToolCall;
+};
+
+export type CodeExecutionToolParams = undefined | {
+  session_id?: string;
+  user_id?: string;
+  apiKey?: string;
+  [EnvVar.CODE_API_KEY]?: string;
+}
+
+export type FileRef = {
+  id: string;
+  name: string;
+  path?: string;
+};
+
+export type FileRefs = FileRef[];
+
+export type ExecuteResult = {
+  session_id: string;
+  stdout: string;
+  stderr: string;
+  files?: FileRefs;
 };
