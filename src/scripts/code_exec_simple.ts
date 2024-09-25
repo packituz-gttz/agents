@@ -60,6 +60,7 @@ async function testCodeExecution(): Promise<void> {
   const llmConfig = getLLMConfig(provider);
 
   const run = await Run.create<t.IState>({
+    runId: 'message-num-1',
     graphConfig: {
       type: 'standard',
       llmConfig,
@@ -75,7 +76,6 @@ async function testCodeExecution(): Promise<void> {
     configurable: {
       provider,
       thread_id: 'conversation-num-1',
-      message_id: 'message-num-1',
     },
     streamMode: 'values',
     version: 'v2' as const,

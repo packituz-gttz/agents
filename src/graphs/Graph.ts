@@ -189,8 +189,8 @@ export class StandardGraph extends Graph<
     if (!metadata) return [];
 
     return [
+      metadata.run_id as string,
       metadata.thread_id as string,
-      metadata.message_id as string,
       metadata.langgraph_node as string,
       metadata.langgraph_step as number,
       metadata.langgraph_task_idx as number,
@@ -387,19 +387,20 @@ export class StandardGraph extends Graph<
       throw new Error('No config provided');
     }
 
+    if (!data.output) {
+      return;
+    }
+
     const { input, output } = data;
     const { tool_call_id } = output;
     const stepId = this.toolCallStepIds.get(tool_call_id) ?? '';
     if (!stepId) {
       throw new Error(`No stepId found for tool_call_id ${tool_call_id}`);
     }
+
     const runStep = this.getRunStep(stepId);
     if (!runStep) {
       throw new Error(`No run step found for stepId ${stepId}`);
-    }
-
-    if (!data.output) {
-      return;
     }
 
     const args = typeof input === 'string' ? input : input.input;

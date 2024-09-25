@@ -90,7 +90,7 @@ export type MessageCreationDetails = {
   };
 };
 
-export type ToolEndData = { input: string | Record<string, unknown>, output: ToolMessage };
+export type ToolEndData = { input: string | Record<string, unknown>, output?: ToolMessage };
 export type ToolEndCallback = (data: ToolEndData, metadata?: Record<string, unknown>) => void;
 
 export type ProcessedToolCall = {
@@ -122,7 +122,7 @@ export type ToolCompleteEvent = ToolCallCompleted & {
 
 export type ToolCallsDetails = {
   type: StepTypes.TOOL_CALLS;
-  tool_calls: AgentToolCall[]; // #new
+  tool_calls?: AgentToolCall[]; // #new
 };
 
 export type ToolCallDelta = {

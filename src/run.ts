@@ -15,12 +15,19 @@ export class Run<T extends t.BaseGraphState> {
   // private collab!: CollabGraph;
   // private taskManager!: TaskManager;
   private handlerRegistry: HandlerRegistry;
+  id: string;
   Graph: StandardGraph | undefined;
   provider: Providers | undefined;
-  run_id: string | undefined;
   returnContent: boolean = false;
 
   private constructor(config: t.RunConfig) {
+    const runId = config.runId ?? '';
+    if (!runId) {
+      throw new Error('Run ID not provided');
+    }
+
+    this.id = runId;
+
     const handlerRegistry = new HandlerRegistry();
 
     if (config.customHandlers) {
@@ -43,11 +50,11 @@ export class Run<T extends t.BaseGraphState> {
   }
 
   private createStandardGraph(config: t.StandardGraphConfig): t.CompiledWorkflow<t.IState, Partial<t.IState>, string> {
-    const { runId, llmConfig, instructions, additional_instructions, streamBuffer, tools = [] } = config;
+    const { llmConfig, instructions, additional_instructions, streamBuffer, tools = [] } = config;
     const { provider, ...clientOptions } = llmConfig;
 
     const standardGraph = new StandardGraph({
-      runId,
+      runId: this.id,
       tools,
       provider,
       instructions,
@@ -72,7 +79,7 @@ export class Run<T extends t.BaseGraphState> {
 
   async processStream(
     inputs: t.IState,
-    config: Partial<RunnableConfig> & { version: 'v1' | 'v2' },
+    config: Partial<RunnableConfig> & { version: 'v1' | 'v2'; run_id?: string },
     clientCallbacks?: ClientCallbacks,
   ): Promise<MessageContentComplex[] | undefined> {
     if (!this.graphRunnable) {
@@ -90,6 +97,14 @@ export class Run<T extends t.BaseGraphState> {
       const callbacks = config.callbacks as t.ProvidedCallbacks ?? [];
       config.callbacks = callbacks.concat(this.getCallbacks(clientCallbacks));
     }
+
+    if (!this.id) {
+      throw new Error('Run ID not provided');
+    }
+
+    config.run_id = this.id;
+    config.configurable = Object.assign(config.configurable ?? {}, { run_id: this.id });
+
     const stream = this.graphRunnable.streamEvents(inputs, config);
 
     for await (const event of stream) {

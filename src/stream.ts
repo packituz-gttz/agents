@@ -39,8 +39,8 @@ export class ChatModelStreamHandler implements t.EventHandler {
       throw new Error('Graph not found');
     }
 
-    const chunk = data.chunk as AIMessageChunk;
-    const content = chunk.content;
+    const chunk = data.chunk as AIMessageChunk | undefined;
+    const content = chunk?.content;
 
     if (!graph.config) {
       throw new Error('Config not found in graph');
@@ -51,10 +51,11 @@ export class ChatModelStreamHandler implements t.EventHandler {
       return;
     }
 
-    const hasToolCalls = (chunk.tool_calls && chunk.tool_calls.length > 0) ?? false;
+    let hasToolCalls = false;
     const hasToolCallChunks = (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) ?? false;
 
-    if (hasToolCalls && chunk.tool_calls?.every((tc) => tc.id)) {
+    if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id)) {
+      hasToolCalls = true;
       const tool_calls: ToolCall[] = [];
       const tool_call_ids: string[] = [];
       for (const tool_call of chunk.tool_calls) {
@@ -107,17 +108,18 @@ export class ChatModelStreamHandler implements t.EventHandler {
       });
     }
 
-    const isEmptyContent = !content || !content.length;
+    const isEmptyContent = typeof content === 'undefined' || !content.length || typeof content === 'string' && !content;
     const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
-    if (isEmptyChunk && chunk.id && chunk.id.startsWith('msg')) {
-      if (graph.messageIdsByStepKey.has(chunk.id)) {
+    const chunkId = chunk.id ?? '';
+    if (isEmptyChunk && chunkId && chunkId.startsWith('msg')) {
+      if (graph.messageIdsByStepKey.has(chunkId)) {
         return;
-      } else if (graph.prelimMessageIdsByStepKey.has(chunk.id)) {
+      } else if (graph.prelimMessageIdsByStepKey.has(chunkId)) {
         return;
       }
 
       const stepKey = graph.getStepKey(metadata);
-      graph.prelimMessageIdsByStepKey.set(stepKey, chunk.id);
+      graph.prelimMessageIdsByStepKey.set(stepKey, chunkId);
       return;
     } else if (isEmptyChunk) {
       return;
@@ -125,7 +127,10 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const stepKey = graph.getStepKey(metadata);
 
-    if (hasToolCallChunks && chunk.tool_call_chunks?.length && typeof chunk.tool_call_chunks[0]?.index === 'number') {
+    if (hasToolCallChunks
+      && chunk.tool_call_chunks
+      && chunk.tool_call_chunks.length
+      && typeof chunk.tool_call_chunks[0]?.index === 'number') {
       const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
       const prevRunStep = graph.getRunStep(prevStepId);
       const stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
@@ -287,7 +292,7 @@ export function createContentAggregator(): ContentAggregatorResult {
       stepMap.set(runStep.id, runStep);
 
       // Store tool call IDs if present
-      if (runStep.stepDetails.type === StepTypes.TOOL_CALLS) {
+      if (runStep.stepDetails.type === StepTypes.TOOL_CALLS && runStep.stepDetails.tool_calls) {
         runStep.stepDetails.tool_calls.forEach((toolCall) => {
           const toolCallId = toolCall.id ?? '';
           if ('id' in toolCall && toolCallId) {
