@@ -124,6 +124,7 @@ export type StreamEvent = {
 export type GraphConfig = {
     provider: string;
     thread_id?: string;
+    message_id?: string;
 };
 
 export type PartMetadata = {

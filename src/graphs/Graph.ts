@@ -190,6 +190,7 @@ export class StandardGraph extends Graph<
 
     return [
       metadata.thread_id as string,
+      metadata.message_id as string,
       metadata.langgraph_node as string,
       metadata.langgraph_step as number,
       metadata.langgraph_task_idx as number,

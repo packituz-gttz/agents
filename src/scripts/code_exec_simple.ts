@@ -75,6 +75,7 @@ async function testCodeExecution(): Promise<void> {
     configurable: {
       provider,
       thread_id: 'conversation-num-1',
+      message_id: 'message-num-1',
     },
     streamMode: 'values',
     version: 'v2' as const,
