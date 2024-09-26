@@ -11,7 +11,7 @@ export const imageExtRegex = /\.(jpg|jpeg|png|gif|webp)$/i;
 export const getCodeBaseURL = (): string => getEnvironmentVariable(EnvVar.CODE_BASEURL) ?? Constants.OFFICIAL_CODE_BASEURL;
 
 const imageMessage = ' - the image is already displayed to the user';
-const otherMessage = ' - the download link has already been provided to the user';
+const otherMessage = ' - the file is already downloaded by the user';
 
 const CodeExecutionToolSchema = z.object({
   lang: z.enum([
