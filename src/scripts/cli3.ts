@@ -103,6 +103,7 @@ async function testStandardStreaming(): Promise<void> {
   });
 
   const run = await Run.create<t.IState>({
+    runId: 'test-run-id',
     graphConfig: {
       type: 'standard',
       llmConfig,

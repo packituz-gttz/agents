@@ -62,6 +62,7 @@ async function executePersonalizedQuerySuite(): Promise<void> {
   const llmConfig = getLLMConfig(provider);
 
   const run = await Run.create<t.IState>({
+    runId: 'test-run-id',
     graphConfig: {
       type: 'standard',
       llmConfig,

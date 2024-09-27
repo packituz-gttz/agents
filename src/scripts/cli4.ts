@@ -99,6 +99,7 @@ async function testStandardStreaming(): Promise<void> {
   };
 
   let run = await Run.create<t.IState>({
+    runId: 'test-run-id',
     graphConfig,
     customHandlers,
   });
@@ -155,6 +156,7 @@ then search weather in ${location} for today which is ${currentDate}`));
   config.configurable.provider = Providers.ANTHROPIC;
 
   run = await Run.create<t.IState>({
+    runId: 'test-run-id',
     graphConfig,
     customHandlers,
   });
