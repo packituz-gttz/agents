@@ -20,7 +20,7 @@ export class Run<T extends t.BaseGraphState> {
   provider: Providers | undefined;
   returnContent: boolean = false;
 
-  private constructor(config: t.RunConfig) {
+  private constructor(config: Partial<t.RunConfig>) {
     const runId = config.runId ?? '';
     if (!runId) {
       throw new Error('Run ID not provided');
@@ -37,6 +37,10 @@ export class Run<T extends t.BaseGraphState> {
     }
 
     this.handlerRegistry = handlerRegistry;
+
+    if (!config.graphConfig) {
+      throw new Error('Graph config not provided');
+    }
 
     if (config.graphConfig.type === 'standard' || !config.graphConfig.type) {
       this.provider = config.graphConfig.llmConfig.provider;

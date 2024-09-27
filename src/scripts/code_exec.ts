@@ -60,6 +60,7 @@ async function testCodeExecution(): Promise<void> {
   const llmConfig = getLLMConfig(provider);
 
   const run = await Run.create<t.IState>({
+    runId: 'message-num-1',
     graphConfig: {
       type: 'standard',
       llmConfig,

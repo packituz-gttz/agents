@@ -52,10 +52,10 @@ export type TaskManagerGraphConfig = {
 };
 
 export type RunConfig = {
+  runId: string;
   graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
   returnContent?: boolean;
-  runId?: string;
 };
 
 export type ProvidedCallbacks = (BaseCallbackHandler | CallbackHandlerMethods)[] | undefined;
