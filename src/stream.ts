@@ -15,10 +15,10 @@ function getNonEmptyValue(possibleValues: string[]): string | undefined {
   return undefined;
 }
 
-const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>): string | undefined => {
+const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>, returnExistingId = false): string | undefined => {
   const messageId = graph.messageIdsByStepKey.get(stepKey);
   if (messageId != null && messageId) {
-    return;
+    return returnExistingId ? messageId : undefined;
   }
 
   const prelimMessageId = graph.prelimMessageIdsByStepKey.get(stepKey);
@@ -93,7 +93,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
         dispatchToolCallIds(prevStepId);
         /* If the previous step doesn't exist or is not a message creation */
       } else if (!prevRunStep || prevRunStep.type !== StepTypes.MESSAGE_CREATION) {
-        const messageId = getMessageId(stepKey, graph) ?? '';
+        const messageId = getMessageId(stepKey, graph, true) ?? '';
         const stepId = graph.dispatchRunStep(stepKey, {
           type: StepTypes.MESSAGE_CREATION,
           message_creation: {
