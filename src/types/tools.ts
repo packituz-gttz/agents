@@ -46,10 +46,17 @@ export type ToolCallContent = {
   tool_call: ToolCall;
 };
 
+export type CodeEnvFile = {
+  id: string;
+  name: string;
+  session_id: string;
+};
+
 export type CodeExecutionToolParams = undefined | {
   session_id?: string;
   user_id?: string;
   apiKey?: string;
+  files?: CodeEnvFile[];
   [EnvVar.CODE_API_KEY]?: string;
 }
 
