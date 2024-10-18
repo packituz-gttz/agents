@@ -29,9 +29,16 @@ const CodeExecutionToolSchema = z.object({
   ])
     .describe('The programming language or runtime to execute the code in.'),
   code: z.string()
-    .describe('The complete, self-contained code to execute, without any truncation or minimization.'),
+    .describe(`The complete, self-contained code to execute, without any truncation or minimization.
+- The environment is stateless; variables and imports don't persist between executions.
+- Input code **IS ALREADY** displayed to the user, so **DO NOT** repeat it in your response unless asked.
+- Output code **IS NOT** displayed to the user, so **DO** write all desired output explicitly.
+- py: This is not a Jupyter notebook environment. Use \`print()\` for all outputs.
+- py: Matplotlib: Use \`plt.savefig()\` to save plots as files.
+- js: use the \`console\` or \`process\` methods for all outputs.
+- Other languages: use appropriate output functions.`),
   args: z.array(z.string()).optional()
-    .describe('Additional arguments to execute the code with.'),
+    .describe('Additional arguments to execute the code with. This should only be used if the input code requires additional arguments to run.'),
 });
 
 const EXEC_ENDPOINT = `${getCodeBaseURL()}/exec`;
@@ -52,20 +59,16 @@ function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): Dynami
     fileInstructions += '\nUse these files in your code as needed.\n';
   }
 
-  const description = `Executes code in various programming languages, returning stdout/stderr output.
+  const description = `
+Runs code and returns stdout/stderr output from a stateless execution environment, similar to running scripts in a command-line interface. Each execution is isolated and independent.
 
-# Usage
-- Input code is automatically displayed to the user, so don't repeat it in your response unless asked.
-- All desired output must be explicitly written to stdout; e.g.:
-  - For \`py\`, use the \`print()\` function.
-  - For \`js\` and \`ts\`, use the \`console\` or \`process\` methods.
-  - For other languages, use the appropriate output functions.
-- There is no network access.
-- NEVER provide a link to download any generated files.
-  - Files are automatically delivered to the user.
+Usage:
+- No network access available.
+- Generated files are automatically delivered; **DO NOT** provide download links.
 - NEVER use this tool to execute malicious code.
 
-${fileInstructions}`.trim();
+${fileInstructions}
+`.trim();
 
   return tool<typeof CodeExecutionToolSchema>(
     async ({ lang, code, ...rest }) => {
@@ -96,7 +99,7 @@ ${fileInstructions}`.trim();
         if (result.stdout) {
           formattedOutput += `stdout:\n${result.stdout}\n`;
         } else {
-          formattedOutput += 'stdout: Empty. To output values, write explicitly to stdout.\n';
+          formattedOutput += 'stdout: Empty. Ensure you\'re writing output explicitly.\n';
         }
         if (result.stderr) formattedOutput += `stderr:\n${result.stderr}\n`;
         if (result.files && result.files.length > 0) {
@@ -121,11 +124,7 @@ ${fileInstructions}`.trim();
 
         return [formattedOutput.trim(), { session_id: result.session_id }];
       } catch (error) {
-        return `Calling tool with arguments:\n\n${JSON.stringify({
-          lang,
-          code,
-          ...rest,
-        })}\n\nraised the following error:\n\n${(error as Error | undefined)?.message}`;
+        return `Execution error:\n\n${(error as Error | undefined)?.message}`;
       }
     },
     {
