@@ -41,6 +41,32 @@ function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): Dynami
   if (!apiKey) {
     throw new Error('No API key provided for code execution tool.');
   }
+
+  let fileInstructions = '';
+  if (params.files && params.files.length > 0) {
+    fileInstructions = 'Available files:\n';
+    params.files.forEach((file) => {
+      const filePath = `/mnt/data/${file.name}`;
+      fileInstructions += `- ${filePath}\n`;
+    });
+    fileInstructions += '\nUse these files in your code as needed.\n';
+  }
+
+  const description = `Executes code in various programming languages, returning stdout/stderr output.
+
+# Usage
+- Input code is automatically displayed to the user, so don't repeat it in your response unless asked.
+- All desired output must be explicitly written to stdout; e.g.:
+  - For \`py\`, use the \`print()\` function.
+  - For \`js\` and \`ts\`, use the \`console\` or \`process\` methods.
+  - For other languages, use the appropriate output functions.
+- There is no network access.
+- NEVER provide a link to download any generated files.
+  - Files are automatically delivered to the user.
+- NEVER use this tool to execute malicious code.
+
+${fileInstructions}`.trim();
+
   return tool<typeof CodeExecutionToolSchema>(
     async ({ lang, code, ...rest }) => {
       const postData = {
@@ -103,21 +129,10 @@ function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): Dynami
       }
     },
     {
-      name: 'execute_code',
-      description: `Executes code in various programming languages, returning stdout/stderr output.
-
-# Usage
-- Input code is automatically displayed to the user, so don't repeat it in your response unless asked.
-- All desired output must be explicitly written to stdout; e.g.:
-  - For \`py\`, use the \`print()\` function.
-  - For \`js\` and \`ts\`, use the \`console\` or \`process\` methods.
-  - For other languages, use the appropriate output functions.
-- There is no network access.
-- NEVER provide a link to download any generated files.
-  - Files are automatically delivered to the user.
-- NEVER use this tool to execute malicious code.`,
+      name: Constants.EXECUTE_CODE,
+      description,
       schema: CodeExecutionToolSchema,
-      responseFormat: 'content_and_artifact',
+      responseFormat: Constants.CONTENT_AND_ARTIFACT,
     }
   );
 }
