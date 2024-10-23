@@ -2,7 +2,7 @@
 import { nanoid } from 'nanoid';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
-import { START, StateGraph  } from '@langchain/langgraph';
+import { START, END, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
@@ -81,6 +81,7 @@ export class StandardGraph extends Graph<
   toolMap?: t.ToolMap;
   startIndex: number = 0;
   provider: Providers;
+  toolEnd: boolean;
 
   constructor({
     runId,
@@ -91,6 +92,7 @@ export class StandardGraph extends Graph<
     instructions,
     additional_instructions = '',
     streamBuffer,
+    toolEnd = false,
   } : {
     runId?: string;
     provider: Providers;
@@ -100,6 +102,7 @@ export class StandardGraph extends Graph<
     instructions?: string;
     additional_instructions?: string;
     streamBuffer?: number;
+    toolEnd?: boolean;
   }) {
     super();
     this.runId = runId;
@@ -110,6 +113,7 @@ export class StandardGraph extends Graph<
     this.streamBuffer = streamBuffer;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
+    this.toolEnd = toolEnd;
 
     let finalInstructions = instructions ?? '';
     if (additional_instructions) {
@@ -336,7 +340,7 @@ export class StandardGraph extends Graph<
       .addNode(TOOLS, this.initializeTools())
       .addEdge(START, AGENT)
       .addConditionalEdges(AGENT, routeMessage)
-      .addEdge(TOOLS, AGENT);
+      .addEdge(TOOLS, this.toolEnd ? END : AGENT);
 
     return workflow.compile();
   }

@@ -2,7 +2,7 @@
 import { Providers } from '@/common';
 import type * as t from '@/types';
 
-const llmConfigs: Record<string, t.LLMConfig> = {
+const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   [Providers.OPENAI]: {
     provider: Providers.OPENAI,
     model: 'gpt-4o',

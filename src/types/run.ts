@@ -22,6 +22,7 @@ export type StandardGraphConfig = {
   additional_instructions?: string;
   streamBuffer?: number;
   clientOptions?: Record<string, unknown>;
+  toolEnd?: boolean;
 };
 
 export interface AgentStateChannels {
