@@ -49,7 +49,7 @@ async function testStandardStreaming(): Promise<void> {
       },
       tools: [setMemory],
       instructions: 'You can use the `set_memory` tool to save important data about the user into memory.',
-      toolEnd: false,
+      toolEnd: true,
     },
     returnContent: true,
   });
