@@ -1,16 +1,14 @@
-import { END } from '@langchain/langgraph';
+import { END, MessagesAnnotation } from '@langchain/langgraph';
 import { ToolMessage, isBaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig, RunnableToolLike } from '@langchain/core/runnables';
-import type { MessagesState } from '@langchain/langgraph/dist/graph/message';
 import type { BaseMessage, AIMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type * as t from '@/types';
 import{ RunnableCallable } from '@/utils';
 import { GraphNodeKeys } from '@/common';
 
-export class ToolNode<
-  T extends BaseMessage[] | MessagesState
-> extends RunnableCallable<T, T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class ToolNode<T = any> extends RunnableCallable<T, T> {
   tools: t.GenericTool[];
   private toolMap: Map<string, StructuredToolInterface | RunnableToolLike>;
   private loadRuntimeTools?: t.ToolRefGenerator;
@@ -31,10 +29,8 @@ export class ToolNode<
     this.loadRuntimeTools = loadRuntimeTools;
   }
 
-  private async run(
-    input: BaseMessage[] | MessagesState,
-    config: RunnableConfig
-  ): Promise<BaseMessage[] | MessagesState> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected async run(input: any, config: RunnableConfig): Promise<T> {
     const message = Array.isArray(input)
       ? input[input.length - 1]
       : input.messages[input.messages.length - 1];
@@ -86,13 +82,13 @@ export class ToolNode<
       }) ?? []
     );
 
-    return Array.isArray(input) ? outputs : { messages: outputs };
+    return (Array.isArray(input) ? outputs : { messages: outputs }) as T;
   }
 }
 
 export function toolsCondition(
-  state: BaseMessage[] | MessagesState
-): GraphNodeKeys.TOOLS | typeof END {
+  state: BaseMessage[] | typeof MessagesAnnotation.State
+): 'tools' | typeof END {
   const message = Array.isArray(state)
     ? state[state.length - 1]
     : state.messages[state.messages.length - 1];

@@ -31,6 +31,7 @@ export type SystemCallbacks = {
 
 export abstract class Graph<
   T extends t.BaseGraphState = t.BaseGraphState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   TNodeName extends string = string,
 > {
   abstract resetValues(): void;
@@ -51,7 +52,7 @@ export abstract class Graph<
   abstract handleToolCallCompleted(data: t.ToolEndData, metadata?: Record<string, unknown>): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
-  abstract createWorkflow(): t.CompiledWorkflow<T, Partial<T>, TNodeName>;
+  abstract createWorkflow(): t.CompiledWorkflow<T>;
   messageIdsByStepKey: Map<string, string> = new Map();
   prelimMessageIdsByStepKey: Map<string, string> = new Map();
   config: RunnableConfig | undefined;
@@ -323,7 +324,7 @@ export class StandardGraph extends Graph<
     };
   }
 
-  createWorkflow(): t.CompiledWorkflow<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode> {
+  createWorkflow(): t.CompiledWorkflow<t.BaseGraphState> {
     const routeMessage = (state: t.BaseGraphState, config?: RunnableConfig): string => {
       this.config = config;
       // const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
@@ -334,7 +335,7 @@ export class StandardGraph extends Graph<
       return toolsCondition(state);
     };
 
-    const workflow = new StateGraph<t.BaseGraphState, Partial<t.BaseGraphState>, GraphNode>({
+    const workflow = new StateGraph<t.BaseGraphState>({
       channels: this.graphState,
     })
       .addNode(AGENT, this.createCallModel())
