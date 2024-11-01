@@ -76,6 +76,7 @@
     "@langchain/google-vertexai": "^0.0.20",
     "@langchain/langgraph": "^0.2.19",
     "@langchain/mistralai": "^0.0.26",
+    "@langchain/ollama": "^0.1.1",
     "@langchain/openai": "^0.3.11",
     "@smithy/eventstream-codec": "^2.2.0",
     "@smithy/protocol-http": "^3.0.6",

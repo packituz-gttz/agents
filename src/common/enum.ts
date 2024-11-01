@@ -73,6 +73,7 @@ export enum Providers {
   BEDROCK = 'bedrock',
   ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
+  OLLAMA = 'ollama',
 }
 
 export enum GraphNodeKeys {

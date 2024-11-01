@@ -1,23 +1,27 @@
 // src/llm/providers.ts
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatOllama } from '@langchain/ollama';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
-import type * as t from '@/types';
+import type { ChatModelConstructorMap, ProviderOptionsMap, ChatModelMap } from '@/types';
 import { Providers } from '@/common';
 
-export const llmProviders: Record<Providers, t.ChatModelConstructor> = {
+export const llmProviders: Partial<ChatModelConstructorMap> = {
   [Providers.OPENAI]: ChatOpenAI,
+  [Providers.OLLAMA]: ChatOllama,
   [Providers.VERTEXAI]: ChatVertexAI,
-  [Providers.BEDROCK_LEGACY]: BedrockChat as unknown as t.ChatModelConstructor,
+  [Providers.BEDROCK_LEGACY]: BedrockChat,
   [Providers.MISTRALAI]: ChatMistralAI,
-  [Providers.BEDROCK]: ChatBedrockConverse as unknown as t.ChatModelConstructor,
+  [Providers.BEDROCK]: ChatBedrockConverse,
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
-export const getChatModelClass = (provider: Providers): t.ChatModelConstructor => {
+export const getChatModelClass = <P extends Providers>(
+  provider: P
+): new (config: ProviderOptionsMap[P]) => ChatModelMap[P] => {
   const ChatModelClass = llmProviders[provider];
   if (!ChatModelClass) {
     throw new Error(`Unsupported LLM provider: ${provider}`);

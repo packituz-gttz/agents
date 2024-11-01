@@ -1,38 +1,50 @@
 // src/types/llm.ts
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatOllama } from '@langchain/ollama';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
-import { BedrockChat, BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
+import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
+import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
 import type { AnthropicInput } from '@langchain/anthropic';
-import type { OpenAIInput } from '@langchain/openai';
+import type { ChatOpenAIFields } from '@langchain/openai';
+import type { ChatOllamaInput } from '@langchain/ollama';
 import { Providers } from '@/common';
 
-export type OpenAIClientOptions = Partial<OpenAIInput>;
-export type AnthropicClientOptions = Partial<AnthropicInput>;
-export type MistralAIClientOptions = Partial<ChatMistralAIInput>;
-export type VertexAIClientOptions = Partial<ChatVertexAIInput>;
-export type BedrockClientOptions = Partial<BedrockChatFields>;
-export type BedrockConverseClientOptions = Partial<ChatBedrockConverseInput>;
+export type OpenAIClientOptions = ChatOpenAIFields;
+export type OllamaClientOptions = ChatOllamaInput;
+export type AnthropicClientOptions = AnthropicInput;
+export type MistralAIClientOptions = ChatMistralAIInput;
+export type VertexAIClientOptions = ChatVertexAIInput;
+export type BedrockClientOptions = BedrockChatFields;
+export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 
-export type ClientOptions =
-  | OpenAIClientOptions
-  | AnthropicClientOptions
-  | MistralAIClientOptions
-  | VertexAIClientOptions
-  | BedrockClientOptions
-  | BedrockConverseClientOptions;
+export type ProviderOptionsMap = {
+  [Providers.OPENAI]: OpenAIClientOptions;
+  [Providers.OLLAMA]: OllamaClientOptions;
+  [Providers.ANTHROPIC]: AnthropicClientOptions;
+  [Providers.MISTRALAI]: MistralAIClientOptions;
+  [Providers.VERTEXAI]: VertexAIClientOptions;
+  [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
+  [Providers.BEDROCK]: BedrockConverseClientOptions;
+};
 
-export type ChatModel = typeof ChatAnthropic | typeof ChatOpenAI | typeof ChatMistralAI | typeof ChatVertexAI | typeof BedrockChat | typeof ChatBedrockConverse;
+export type ChatModelMap = {
+  [Providers.OPENAI]: ChatOpenAI;
+  [Providers.OLLAMA]: ChatOllama;
+  [Providers.ANTHROPIC]: ChatAnthropic;
+  [Providers.MISTRALAI]: ChatMistralAI;
+  [Providers.VERTEXAI]: ChatVertexAI;
+  [Providers.BEDROCK_LEGACY]: BedrockChat;
+  [Providers.BEDROCK]: ChatBedrockConverse;
+};
 
-export type LLMConfig = {
-  provider: Providers;
-} & ClientOptions;
+export type ChatModelConstructorMap = {
+  [P in Providers]: new (config: ProviderOptionsMap[P]) => ChatModelMap[P];
+};
 
-export type ChatModelInstance = ChatOpenAI | ChatAnthropic | ChatMistralAI | ChatVertexAI | BedrockChat | ChatBedrockConverse;
-
-export type ChatModelConstructor = new (config: ClientOptions) => ChatModelInstance;
+export type ChatModelInstance = ChatModelMap[Providers];
