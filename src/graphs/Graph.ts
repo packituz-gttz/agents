@@ -7,7 +7,6 @@ import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
-import type { StructuredTool } from '@langchain/core/tools';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
@@ -248,10 +247,12 @@ export class StandardGraph extends Graph<
   initializeModel(): Runnable {
     const ChatModelClass = getChatModelClass(this.provider);
     const model = new ChatModelClass(this.clientOptions);
+
     if (!this.tools || this.tools.length === 0) {
-      return model;
+      return model as unknown as Runnable;
     }
-    return model.bindTools(this.tools as StructuredTool[]);
+
+    return (model as t.ModelWithTools).bindTools(this.tools);
   }
 
   getNewModel({

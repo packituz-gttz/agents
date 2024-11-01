@@ -6,14 +6,21 @@ import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
+import type { Runnable } from '@langchain/core/runnables';
+import type { StructuredTool } from '@langchain/core/tools';
+import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
+import type { ChatOpenAIFields } from '@langchain/openai';
+import type { OpenAI as OpenAIClient } from 'openai';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
 import type { AnthropicInput } from '@langchain/anthropic';
-import type { ChatOpenAIFields } from '@langchain/openai';
 import type { ChatOllamaInput } from '@langchain/ollama';
 import { Providers } from '@/common';
+
+export type ChatOpenAIToolType = BindToolsInput | OpenAIClient.ChatCompletionTool;
+export type CommonToolType = StructuredTool | ChatOpenAIToolType;
 
 export type OpenAIClientOptions = ChatOpenAIFields;
 export type OllamaClientOptions = ChatOllamaInput;
@@ -54,3 +61,7 @@ export type ChatModelConstructorMap = {
 };
 
 export type ChatModelInstance = ChatModelMap[Providers];
+
+export type ModelWithTools = ChatModelInstance & {
+  bindTools(tools: CommonToolType[]): Runnable;
+}
