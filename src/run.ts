@@ -6,6 +6,7 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
+import { doubleCallProviders } from '@/llm/providers';
 import { createTitleRunnable } from '@/utils/title';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
@@ -116,9 +117,8 @@ export class Run<T extends t.BaseGraphState> {
       const { data, name, metadata, ...info } = event;
 
       let eventName: t.EventName = info.event;
-      const isDoubleCallProvider = provider === Providers.ANTHROPIC || provider === Providers.BEDROCK;
-      if (hasTools && isDoubleCallProvider && eventName === GraphEvents.CHAT_MODEL_STREAM) {
-        /* Skipping CHAT_MODEL_STREAM event for Anthropic due to double-call edge case */
+      if (hasTools && doubleCallProviders.has(provider) && eventName === GraphEvents.CHAT_MODEL_STREAM) {
+        /* Skipping CHAT_MODEL_STREAM event due to double-call edge case */
         continue;
       }
 

@@ -19,6 +19,9 @@ export const llmProviders: Partial<ChatModelConstructorMap> = {
   [Providers.ANTHROPIC]: ChatAnthropic,
 };
 
+export const doubleCallProviders = new Set<Providers | string>([Providers.ANTHROPIC, Providers.BEDROCK]);
+export const manualToolStreamProviders = new Set<Providers | string>([Providers.ANTHROPIC, Providers.BEDROCK, Providers.OLLAMA]);
+
 export const getChatModelClass = <P extends Providers>(
   provider: P
 ): new (config: ProviderOptionsMap[P]) => ChatModelMap[P] => {

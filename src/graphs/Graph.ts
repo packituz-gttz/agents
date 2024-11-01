@@ -9,10 +9,10 @@ import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/mess
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
+import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import { modifyDeltaProperties, convertMessagesToContent } from '@/messages';
 import { resetIfNotEmpty, joinKeys, sleep } from '@/utils';
-import { getChatModelClass } from '@/llm/providers';
 import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
@@ -302,7 +302,7 @@ export class StandardGraph extends Graph<
 
       this.lastStreamCall = Date.now();
 
-      if ((this.tools?.length ?? 0) > 0 && (provider === Providers.ANTHROPIC || provider === Providers.BEDROCK)) {
+      if ((this.tools?.length ?? 0) > 0 && manualToolStreamProviders.has(provider)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
         for await (const chunk of stream) {

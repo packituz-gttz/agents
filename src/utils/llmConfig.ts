@@ -10,6 +10,13 @@ const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streaming: true,
     streamUsage: true,
   },
+  [Providers.OLLAMA]: {
+    provider: Providers.OLLAMA,
+    model: 'llama3.2',
+    streaming: true,
+    streamUsage: true,
+    baseUrl: 'http://host.docker.internal:11434'
+  },
   [Providers.ANTHROPIC]: {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-5-sonnet-20240620',
