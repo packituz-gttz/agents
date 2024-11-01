@@ -23,6 +23,12 @@ export type VertexAIClientOptions = ChatVertexAIInput;
 export type BedrockClientOptions = BedrockChatFields;
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 
+export type ClientOptions = OpenAIClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions;
+
+export type LLMConfig = {
+  provider: Providers;
+} & ClientOptions;
+
 export type ProviderOptionsMap = {
   [Providers.OPENAI]: OpenAIClientOptions;
   [Providers.OLLAMA]: OllamaClientOptions;

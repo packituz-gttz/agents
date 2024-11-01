@@ -43,7 +43,7 @@ const llmConfigs: Record<string, t.LLMConfig | undefined> = {
 
 export function getLLMConfig(provider: string): t.LLMConfig {
   const config = llmConfigs[provider];
-  if (!config) {
+  if (config === undefined) {
     throw new Error(`Unsupported provider: ${provider}`);
   }
   return config;
