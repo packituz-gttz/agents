@@ -197,7 +197,7 @@ export class StandardGraph extends Graph<
       metadata.thread_id as string,
       metadata.langgraph_node as string,
       metadata.langgraph_step as number,
-      metadata.langgraph_task_idx as number,
+      metadata.checkpoint_ns as string,
     ];
   }
 
