@@ -73,7 +73,6 @@ async function testStandardStreaming(): Promise<void> {
 
   const config = {
     configurable: {
-      provider,
       thread_id: 'conversation-num-1',
     },
     streamMode: 'values',

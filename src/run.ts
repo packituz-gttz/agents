@@ -109,7 +109,7 @@ export class Run<T extends t.BaseGraphState> {
     }
 
     config.run_id = this.id;
-    config.configurable = Object.assign(config.configurable ?? {}, { run_id: this.id });
+    config.configurable = Object.assign(config.configurable ?? {}, { run_id: this.id, provider: this.provider });
 
     const stream = this.graphRunnable.streamEvents(inputs, config);
 
