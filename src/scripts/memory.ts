@@ -48,7 +48,7 @@ async function testStandardStreaming(): Promise<void> {
         streaming: false,
       },
       tools: [setMemory],
-      instructions: 'You can use the `set_memory` tool to save important data about the user into memory.',
+      instructions: 'You can use the `set_memory` tool to save important data about the user into memory. If there is nothing to note about the user specifically, respond with `nothing`.',
       toolEnd: true,
     },
     returnContent: true,
@@ -65,7 +65,7 @@ async function testStandardStreaming(): Promise<void> {
 
   console.log('Test 1: Simple message test');
 
-  const userMessage = `hi my name is ${userName}`;
+  const userMessage = `hi`;
 
   conversationHistory.push(new HumanMessage(userMessage));
 
