@@ -62,6 +62,7 @@ export abstract class Graph<
   toolCallStepIds: Map<string, string> = new Map();
   /** The amount of time that should pass before another consecutive API call */
   streamBuffer: number | undefined;
+  signal?: AbortSignal;
 }
 
 export class StandardGraph extends Graph<
@@ -82,6 +83,7 @@ export class StandardGraph extends Graph<
   startIndex: number = 0;
   provider: Providers;
   toolEnd: boolean;
+  signal: AbortSignal | undefined;
 
   constructor({
     runId,
@@ -90,11 +92,13 @@ export class StandardGraph extends Graph<
     provider,
     clientOptions,
     instructions,
+    signal,
     additional_instructions = '',
     streamBuffer,
     toolEnd = false,
   } : {
     runId?: string;
+    signal?: AbortSignal;
     provider: Providers;
     tools?: t.GenericTool[];
     toolMap?: t.ToolMap;
@@ -109,6 +113,7 @@ export class StandardGraph extends Graph<
     this.tools = tools;
     this.toolMap = toolMap;
     this.provider = provider;
+    this.signal = signal;
     this.clientOptions = clientOptions;
     this.streamBuffer = streamBuffer;
     this.graphState = this.createGraphState();
@@ -276,6 +281,9 @@ export class StandardGraph extends Graph<
       const { provider = '' } = (config?.configurable as t.GraphConfig | undefined) ?? {} ;
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
+      }
+      if (!config.signal) {
+        config.signal = this.signal;
       }
       this.config = config;
       const { messages } = state;

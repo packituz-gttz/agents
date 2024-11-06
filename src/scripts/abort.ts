@@ -58,11 +58,12 @@ async function testStandardStreaming(): Promise<void> {
   };
 
   const llmConfig = getLLMConfig(provider);
-
+  const signal = controller.signal;
   const run = await Run.create<t.IState>({
     runId: 'test-run-id',
     graphConfig: {
       type: 'standard',
+      signal,
       llmConfig,
       tools: [new TavilySearchResults()],
       instructions: 'You are a friendly AI assistant. Always address the user by their name.',
@@ -76,7 +77,7 @@ async function testStandardStreaming(): Promise<void> {
       provider,
       thread_id: 'conversation-num-1',
     },
-    signal: controller.signal,
+    signal,
     streamMode: 'values',
     version: 'v2' as const,
   };
@@ -101,7 +102,7 @@ async function testStandardStreaming(): Promise<void> {
     console.log('Operation aborted');
     console.log('Current content parts:');
     console.dir(contentParts, { depth: null });
-  }, 8000);
+  }, 4000);
 
   try {
     const finalContentParts = await run.processStream(inputs, config);
