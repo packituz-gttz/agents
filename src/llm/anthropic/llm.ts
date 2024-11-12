@@ -1,4 +1,4 @@
-import { ChatAnthropic  } from '@langchain/anthropic';
+import { ChatAnthropicMessages } from '@langchain/anthropic';
 import { AIMessageChunk } from '@langchain/core/messages';
 import { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { BaseMessage } from '@langchain/core/messages';
@@ -33,7 +33,7 @@ function extractToken(chunk: AIMessageChunk): string | undefined {
   return undefined;
 }
 
-export class CustomAnthropic extends ChatAnthropic {
+export class CustomAnthropic extends ChatAnthropicMessages {
   constructor(fields: AnthropicInput) {
     super(fields);
   }
