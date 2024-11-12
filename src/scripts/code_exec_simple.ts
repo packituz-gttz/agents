@@ -64,7 +64,7 @@ async function testCodeExecution(): Promise<void> {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      tools: [new TavilySearchResults(), createCodeExecutionTool({ apiKey: 'test' })],
+      tools: [new TavilySearchResults(), createCodeExecutionTool()],
       instructions: 'You are a friendly AI assistant with coding capabilities. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
