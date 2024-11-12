@@ -1,41 +1,62 @@
-import { ChatAnthropicMessages } from '@langchain/anthropic';
 import { AIMessageChunk } from '@langchain/core/messages';
+import { ChatAnthropicMessages } from '@langchain/anthropic';
 import { ChatGenerationChunk } from '@langchain/core/outputs';
-import type { BaseMessage } from '@langchain/core/messages';
+import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
 import type { AnthropicInput } from '@langchain/anthropic';
 import type { AnthropicMessageCreateParams } from '@/llm/anthropic/types';
 import { _makeMessageChunkFromAnthropicEvent } from './utils/message_outputs';
 import { _convertMessagesToAnthropicPayload } from './utils/message_inputs';
+import { TextStream } from '@/llm/text';
 
 function _toolsInParams(params: AnthropicMessageCreateParams): boolean {
   return !!(params.tools && params.tools.length > 0);
 }
 
-function extractToken(chunk: AIMessageChunk): string | undefined {
+function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'content'] | [undefined] {
   if (typeof chunk.content === 'string') {
-    return chunk.content;
+    return [chunk.content, 'string'];
   } else if (
     Array.isArray(chunk.content) &&
     chunk.content.length >= 1 &&
     'input' in chunk.content[0]
   ) {
     return typeof chunk.content[0].input === 'string'
-      ? chunk.content[0].input
-      : JSON.stringify(chunk.content[0].input);
+      ? [chunk.content[0].input, 'input']
+      : [JSON.stringify(chunk.content[0].input), 'input'];
   } else if (
     Array.isArray(chunk.content) &&
     chunk.content.length >= 1 &&
     'text' in chunk.content[0]
   ) {
-    return chunk.content[0].text;
+    return [chunk.content[0].text, 'content'];
   }
-  return undefined;
+  return [undefined];
 }
 
+function cloneChunk(text: string, tokenType: string, chunk: AIMessageChunk): AIMessageChunk {
+  if (tokenType === 'string') {
+    return new AIMessageChunk(Object.assign({}, chunk, { content: text }));
+  } else if (tokenType === 'input') {
+    return chunk;
+  }
+  const content = chunk.content[0] as MessageContentComplex;
+  if (tokenType === 'content' && content.type === 'text') {
+    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
+  } else if (tokenType === 'content' && content.type === 'text_delta') {
+    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
+  }
+
+  return chunk;
+}
+
+export type CustomAnthropicInput = AnthropicInput & { _lc_stream_delay?: number };
+
 export class CustomAnthropic extends ChatAnthropicMessages {
-  constructor(fields: AnthropicInput) {
+  _lc_stream_delay: number;
+  constructor(fields: CustomAnthropicInput) {
     super(fields);
+    this._lc_stream_delay = fields._lc_stream_delay ?? 25;
   }
 
   async *_streamResponseChunks(
@@ -77,29 +98,53 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       const { chunk } = result;
 
       // Extract the text content token for text field and runManager.
-      const token = extractToken(chunk);
-      const generationChunk = new ChatGenerationChunk({
-        message: new AIMessageChunk({
+      const [token = '', tokenType] = extractToken(chunk);
+      const createGenerationChunk = (text: string, incomingChunk: AIMessageChunk): ChatGenerationChunk => {
+        return new ChatGenerationChunk({
+          message: new AIMessageChunk({
           // Just yield chunk as it is and tool_use will be concat by BaseChatModel._generateUncached().
-          content: chunk.content,
-          additional_kwargs: chunk.additional_kwargs,
-          tool_call_chunks: chunk.tool_call_chunks,
-          usage_metadata: shouldStreamUsage ? chunk.usage_metadata : undefined,
-          response_metadata: chunk.response_metadata,
-          id: chunk.id,
-        }),
-        text: token ?? '',
-      });
-      yield generationChunk;
+            content: incomingChunk.content,
+            additional_kwargs: incomingChunk.additional_kwargs,
+            tool_call_chunks: incomingChunk.tool_call_chunks,
+            usage_metadata: shouldStreamUsage ? incomingChunk.usage_metadata : undefined,
+            response_metadata: incomingChunk.response_metadata,
+            id: incomingChunk.id,
+          }),
+          text,
+        });
+      };
 
-      await runManager?.handleLLMNewToken(
-        token ?? '',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        { chunk: generationChunk }
-      );
+      if (!tokenType || tokenType === 'input') {
+        const generationChunk = createGenerationChunk(token, chunk);
+        yield generationChunk;
+        await runManager?.handleLLMNewToken(
+          token,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { chunk: generationChunk }
+        );
+        continue;
+      }
+
+      const textStream = new TextStream(token, {
+        delay: this._lc_stream_delay,
+      });
+      for await (const currentToken of textStream.generateText()) {
+        const newChunk = cloneChunk(currentToken, tokenType, chunk);
+        const generationChunk = createGenerationChunk(currentToken, newChunk);
+        yield generationChunk;
+
+        await runManager?.handleLLMNewToken(
+          token,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { chunk: generationChunk }
+        );
+      }
     }
   }
 

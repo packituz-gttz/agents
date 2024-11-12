@@ -17,8 +17,8 @@ export const llmProviders: Partial<ChatModelConstructorMap> = {
   [Providers.BEDROCK_LEGACY]: BedrockChat,
   [Providers.MISTRALAI]: ChatMistralAI,
   [Providers.BEDROCK]: ChatBedrockConverse,
-  // [Providers.ANTHROPIC]: CustomAnthropic,
   [Providers.ANTHROPIC]: CustomAnthropic,
+  // [Providers.ANTHROPIC]: CustomAnthropic,
 };
 
 export const manualToolStreamProviders = new Set<Providers | string>([Providers.ANTHROPIC, Providers.BEDROCK, Providers.OLLAMA]);
