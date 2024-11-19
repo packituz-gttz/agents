@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents-types",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Type definitions for @librechat/agents",
   "types": "index.d.ts",
   "scripts": {
