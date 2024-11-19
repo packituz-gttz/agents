@@ -87,7 +87,7 @@ export class Run<T extends t.BaseGraphState> {
   async processStream(
     inputs: t.IState,
     config: Partial<RunnableConfig> & { version: 'v1' | 'v2'; run_id?: string },
-    clientCallbacks?: ClientCallbacks,
+    streamOptions?: t.EventStreamOptions,
   ): Promise<MessageContentComplex[] | undefined> {
     if (!this.graphRunnable) {
       throw new Error('Run not initialized. Make sure to use Run.create() to instantiate the Run.');
@@ -96,13 +96,13 @@ export class Run<T extends t.BaseGraphState> {
       throw new Error('Graph not initialized. Make sure to use Run.create() to instantiate the Run.');
     }
 
-    this.Graph.resetValues();
+    this.Graph.resetValues(streamOptions?.keepContent);
     const provider = this.Graph.provider;
     const hasTools = this.Graph.tools ? this.Graph.tools.length > 0 : false;
-    if (clientCallbacks) {
+    if (streamOptions?.callbacks) {
       /* TODO: conflicts with callback manager */
       const callbacks = config.callbacks as t.ProvidedCallbacks ?? [];
-      config.callbacks = callbacks.concat(this.getCallbacks(clientCallbacks));
+      config.callbacks = callbacks.concat(this.getCallbacks(streamOptions.callbacks));
     }
 
     if (!this.id) {
@@ -126,8 +126,6 @@ export class Run<T extends t.BaseGraphState> {
       if (eventName && eventName === GraphEvents.ON_CUSTOM_EVENT) {
         eventName = name;
       }
-
-      // console.log(`Event: ${event.event} | Executing Event: ${eventName}`);
 
       const handler = this.handlerRegistry.getHandler(eventName);
       if (handler) {

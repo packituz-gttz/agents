@@ -132,13 +132,15 @@ export class StandardGraph extends Graph<
 
   /* Init */
 
-  resetValues(): void {
+  resetValues(keepContent?: boolean): void {
     this.messages = [];
     this.config = resetIfNotEmpty(this.config, undefined);
-    this.contentData = resetIfNotEmpty(this.contentData, []);
+    if (keepContent !== true) {
+      this.contentData = resetIfNotEmpty(this.contentData, []);
+      this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
+    }
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
-    this.contentIndexMap = resetIfNotEmpty(this.contentIndexMap, new Map());
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
   }
