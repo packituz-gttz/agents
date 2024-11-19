@@ -131,9 +131,11 @@ async function testStandardStreaming(): Promise<void> {
     messages: conversationHistory,
   };
   const contentParts = await run.processStream(inputs, config, {
+    callbacks: {
     [Callback.TOOL_ERROR]: (graph, error, toolId) => {
       console.error(`Tool ${toolId} failed with error: ${error.message}`);
     },
+  },
   });
   const finalMessages = run.getRunMessages();
   if (finalMessages) {
