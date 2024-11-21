@@ -197,6 +197,7 @@ hasToolCallChunks: ${hasToolCallChunks}
 }
 
 export type ContentAggregatorResult = {
+  stepMap: Map<string, t.RunStep | undefined>;
   contentParts: Array<t.MessageContentComplex | undefined>;
   aggregateContent: ({ event, data }: {
     event: GraphEvents;
@@ -361,7 +362,8 @@ export function createContentAggregator(): ContentAggregatorResult {
 
       updateContent(runStep.index, contentPart, true);
     }
+
   };
 
-  return { contentParts, aggregateContent };
+  return { contentParts, aggregateContent, stepMap };
 }
