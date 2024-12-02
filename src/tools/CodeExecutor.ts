@@ -124,7 +124,7 @@ ${fileInstructions}
 
         return [formattedOutput.trim(), { session_id: result.session_id }];
       } catch (error) {
-        return `Execution error:\n\n${(error as Error | undefined)?.message}`;
+        return [`Execution error:\n\n${(error as Error | undefined)?.message}`, {}];
       }
     },
     {
