@@ -308,12 +308,12 @@ export class StandardGraph extends Graph<
       Array.isArray(lastMessageY.artifact?.content) &&
       Array.isArray(lastMessageY.content);
       if (
-        hasContentArtifacts === true &&
+        hasContentArtifacts &&
         provider === Providers.ANTHROPIC
       ) {
         finalMessages[finalMessages.length - 1].content = lastMessageY.content.concat(lastMessageY.artifact?.content);
       } else if (
-        hasContentArtifacts === true &&
+        hasContentArtifacts &&
         provider === Providers.OPENAI
       ) {
         const newContent = (lastMessageY.content.concat(lastMessageY.artifact?.content)) as t.MessageContentComplex[];
