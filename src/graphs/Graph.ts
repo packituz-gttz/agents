@@ -5,7 +5,7 @@ import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { START, END, StateGraph  } from '@langchain/langgraph';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
-import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
+import { AIMessageChunk, ToolMessage, SystemMessage, HumanMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
@@ -301,6 +301,24 @@ export class StandardGraph extends Graph<
         && typeof lastMessageX.content === 'string'
       ) {
         finalMessages[finalMessages.length - 2].content = '';
+      }
+
+      const hasContentArtifacts = lastMessageY instanceof ToolMessage &&
+      lastMessageY.artifact != null &&
+      Array.isArray(lastMessageY.artifact?.content) &&
+      Array.isArray(lastMessageY.content);
+      if (
+        hasContentArtifacts === true &&
+        provider === Providers.ANTHROPIC
+      ) {
+        finalMessages[finalMessages.length - 1].content = lastMessageY.content.concat(lastMessageY.artifact?.content);
+      } else if (
+        hasContentArtifacts === true &&
+        provider === Providers.OPENAI
+      ) {
+        const newContent = (lastMessageY.content.concat(lastMessageY.artifact?.content)) as t.MessageContentComplex[];
+        finalMessages[finalMessages.length - 1].content = 'Tool response is included in the next message as a Human message';
+        finalMessages.push(new HumanMessage({ content: newContent }));
       }
 
       if (this.lastStreamCall != null && this.streamBuffer != null) {

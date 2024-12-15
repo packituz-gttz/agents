@@ -2,16 +2,16 @@
 import { config } from 'dotenv';
 config();
 import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
+import { fetchRandomImageTool } from '@/tools/example';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
 import { GraphEvents } from '@/common';
 import { Run } from '@/run';
-import { createCodeExecutionTool } from '@/tools/CodeExecutor';
+
 
 const conversationHistory: BaseMessage[] = [];
 
@@ -65,8 +65,8 @@ async function testCodeExecution(): Promise<void> {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      tools: [new TavilySearchResults(), createCodeExecutionTool()],
-      instructions: 'You are a friendly AI assistant with coding capabilities. Always address the user by their name.',
+      tools: [fetchRandomImageTool],
+      instructions: 'You are a friendly AI assistant with internet capabilities. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
     returnContent: true,
@@ -80,23 +80,11 @@ async function testCodeExecution(): Promise<void> {
     },
     streamMode: 'values',
     version: 'v2' as const,
-    // recursionLimit: 3,
   };
 
-  console.log('Test 1: Sorting Algorithm Comparison');
+  console.log('Fetch Random Image');
 
-  const userMessage1 = `
-  Hi ${userName} here. I need a Python script that compares different sorting algorithms. Can you write a script that:
-  1. Implements three sorting algorithms: Bubble Sort, Insertion Sort, and Merge Sort
-  2. Generates three random lists of integers:
-     - A small list (20 elements)
-     - A medium list (100 elements)
-     - A large list (1000 elements)
-  3. Applies each sorting algorithm to each list and measures the execution time
-  4. Prints a comparison table showing the time taken by each algorithm for each list size
-  5. Determines and announces the fastest algorithm for each list size
-  Please write the script and then execute it to show the results.
-  `;
+  const userMessage1 = `Hi ${userName} here. Please get me a random image and then describe it please.`;
 
   conversationHistory.push(new HumanMessage(userMessage1));
 
@@ -111,48 +99,26 @@ async function testCodeExecution(): Promise<void> {
   console.log('\n\n====================\n\n');
   console.dir(contentParts, { depth: null });
 
-  console.log('Test 2: Text File Analysis and Processing');
+  // console.log('Test 2:');
 
-  const userMessage2 = `
-  Great job on the sorting algorithms! Now, let's solve a popular LeetCode problem using the Merge Sort algorithm we implemented. The problem is "Merge Intervals". Here's what I need:
+  // const userMessage2 = ``;
 
-  1. Implement a solution to the Merge Intervals problem:
-     - Given an array of intervals where intervals[i] = [starti, endi], merge all overlapping intervals.
-     - Return an array of the non-overlapping intervals that cover all the intervals in the input.
+  // conversationHistory.push(new HumanMessage(userMessage2));
 
-  2. Use the Merge Sort algorithm as part of the solution to sort the intervals based on their start times.
-
-  3. Implement a function to generate a random list of intervals for testing.
-
-  4. Create test cases:
-     - A small case with 5 intervals
-     - A medium case with 20 intervals
-     - A large case with 100 intervals
-
-  5. Apply your solution to each test case and print:
-     - The original intervals
-     - The merged intervals
-     - The time taken to solve each case
-
-  Please write the script and execute it to demonstrate the results for all three test cases.
-  `;
-
-  conversationHistory.push(new HumanMessage(userMessage2));
-
-  inputs = {
-    messages: conversationHistory,
-  };
-  const finalContentParts2 = await run.processStream(inputs, config);
-  const finalMessages2 = run.getRunMessages();
-  if (finalMessages2) {
-    conversationHistory.push(...finalMessages2);
-  }
-  console.log('\n\n====================\n\n');
-  console.dir(contentParts, { depth: null });
+  // inputs = {
+  //   messages: conversationHistory,
+  // };
+  // const finalContentParts2 = await run.processStream(inputs, config);
+  // const finalMessages2 = run.getRunMessages();
+  // if (finalMessages2) {
+  //   conversationHistory.push(...finalMessages2);
+  // }
+  // console.log('\n\n====================\n\n');
+  // console.dir(contentParts, { depth: null });
 
   const { handleLLMEnd, collected } = createMetadataAggregator();
   const titleResult = await run.generateTitle({
-    inputText: userMessage2,
+    inputText: userMessage1,
     contentParts,
     chainOptions: {
       callbacks: [{
