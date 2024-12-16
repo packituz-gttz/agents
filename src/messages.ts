@@ -208,3 +208,79 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
 
   return processedContent;
 }
+
+export function formatAnthropicArtifactContent(messages: BaseMessage[]): void {
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
+    // Handle AIMessage with tool_calls
+    if (message instanceof AIMessageChunk && (message.tool_calls?.length ?? 0) > 0) {
+      const toolCallIds = message.tool_calls?.map(tc => tc.id) ?? [];
+      const toolMessages: ToolMessage[] = [];
+      let lastToolIndex = i;
+
+      // Collect all corresponding ToolMessages
+      for (let j = i + 1; j < messages.length; j++) {
+        const potentialToolMessage = messages[j];
+        if (potentialToolMessage instanceof ToolMessage &&
+            toolCallIds.includes(potentialToolMessage.tool_call_id)) {
+
+          const hasContentArtifacts = potentialToolMessage.artifact != null &&
+            Array.isArray(potentialToolMessage.artifact?.content) &&
+            Array.isArray(potentialToolMessage.content);
+
+          if (hasContentArtifacts) {
+            potentialToolMessage.content = potentialToolMessage.content.concat(potentialToolMessage.artifact?.content);
+          }
+
+          toolMessages.push(potentialToolMessage);
+          lastToolIndex = Math.max(lastToolIndex, j);
+        }
+      }
+
+      // If we found multiple tool messages, restructure them
+      if (toolMessages.length > 1) {
+        // Keep only first tool call in original AI message
+        const originalContent = Array.isArray(message.content) ? message.content : [];
+        message.content = [
+          // Keep the text part
+          originalContent.find(c => c.type === 'text'),
+          // Keep only the first tool_use
+          originalContent.find(c => c.type === 'tool_use' && c.id === toolCallIds[0])
+        ].filter(Boolean) as t.ExtendedMessageContent[];
+
+        message.tool_calls = [message.tool_calls![0]];
+        if (message.tool_call_chunks) {
+          message.tool_call_chunks = [message.tool_call_chunks[0]];
+        }
+
+        const newMessages: BaseMessage[] = [];
+        newMessages.push(toolMessages[0]);
+
+        // Create new AI+Tool message pairs for remaining tool calls
+        for (let k = 1; k < toolMessages.length; k++) {
+          const relevantToolCall = message.lc_kwargs.tool_calls[k];
+          const relevantToolChunk = message.lc_kwargs.tool_call_chunks?.[k];
+          const relevantToolUse = originalContent.find(c =>
+            c.type === 'tool_use' && c.id === toolCallIds[k]
+          );
+
+          const newAIMessage = new AIMessage({
+            content: [
+              // Include only the text and relevant tool_use
+              originalContent.find(c => c.type === 'text'),
+              relevantToolUse
+            ].filter(Boolean),
+            tool_calls: [relevantToolCall],
+            tool_call_chunks: relevantToolChunk != null ? [relevantToolChunk] : undefined,
+            additional_kwargs: { ...message.additional_kwargs }
+          } as AIMessageChunk);
+          newMessages.push(newAIMessage, toolMessages[k]);
+        }
+
+        // Replace the sequence in the original messages array
+        messages.splice(i + 1, lastToolIndex - i, ...newMessages);
+      }
+    }
+  }
+}

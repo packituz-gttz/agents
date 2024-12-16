@@ -84,7 +84,7 @@ async function testCodeExecution(): Promise<void> {
 
   console.log('Fetch Random Image');
 
-  const userMessage1 = `Hi ${userName} here. Please get me a random image and then describe it please.`;
+  const userMessage1 = `Hi ${userName} here. Please get me 2 random images and then describe both please.`;
 
   conversationHistory.push(new HumanMessage(userMessage1));
 

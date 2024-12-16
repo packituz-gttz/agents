@@ -11,7 +11,7 @@ import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
-import { modifyDeltaProperties, convertMessagesToContent } from '@/messages';
+import { modifyDeltaProperties, convertMessagesToContent, formatAnthropicArtifactContent } from '@/messages';
 import { resetIfNotEmpty, joinKeys, sleep } from '@/utils';
 import { HandlerRegistry } from '@/events';
 
@@ -311,7 +311,8 @@ export class StandardGraph extends Graph<
         hasContentArtifacts &&
         provider === Providers.ANTHROPIC
       ) {
-        finalMessages[finalMessages.length - 1].content = lastMessageY.content.concat(lastMessageY.artifact?.content);
+        // finalMessages[finalMessages.length - 1].content = lastMessageY.content.concat(lastMessageY.artifact?.content);
+        formatAnthropicArtifactContent(finalMessages);
       } else if (
         hasContentArtifacts &&
         provider === Providers.OPENAI
