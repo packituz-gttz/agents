@@ -299,6 +299,56 @@ export function formatAnthropicArtifactContent(messages: BaseMessage[]): void {
   }
 }
 
+export function formatOpenAIArtifactContent(messages: BaseMessage[]): void {
+  const lastMessageY = messages[messages.length - 1];
+  if (!(lastMessageY instanceof ToolMessage)) return;
+
+  // Find the latest AIMessage with tool_calls that this tool message belongs to
+  const latestAIParentIndex = findLastIndex(messages,
+    msg => (msg instanceof AIMessageChunk &&
+          (msg.tool_calls?.length ?? 0) > 0 &&
+          msg.tool_calls?.some(tc => tc.id === lastMessageY.tool_call_id)) ?? false
+  );
+
+  if (latestAIParentIndex === -1) return;
+
+  // Check if any tool message after the AI message has array artifact content
+  const hasArtifactContent = messages.some(
+    (msg, i) => i > latestAIParentIndex
+      && msg instanceof ToolMessage
+      && msg.artifact != null
+      && msg.artifact?.content != null
+      && Array.isArray(msg.artifact.content)
+  );
+
+  if (!hasArtifactContent) return;
+
+  // Collect all relevant tool messages and their artifacts
+  const relevantMessages = messages
+    .slice(latestAIParentIndex + 1)
+    .filter(msg => msg instanceof ToolMessage) as ToolMessage[];
+
+  // Aggregate all content and artifacts
+  const aggregatedContent: t.MessageContentComplex[] = [];
+
+  relevantMessages.forEach(msg => {
+    if (!Array.isArray(msg.artifact?.content)) {
+      return;
+    }
+    if (!Array.isArray(msg.content)) {
+      return;
+    }
+    aggregatedContent.push(...msg.content);
+    msg.content = 'Tool response is included in the next message as a Human message';
+    aggregatedContent.push(...msg.artifact.content);
+  });
+
+  // Add single HumanMessage with all aggregated content
+  if (aggregatedContent.length > 0) {
+    messages.push(new HumanMessage({ content: aggregatedContent }));
+  }
+}
+
 export function findLastIndex<T>(array: T[], predicate: (value: T) => boolean): number {
   for (let i = array.length - 1; i >= 0; i--) {
     if (predicate(array[i])) {

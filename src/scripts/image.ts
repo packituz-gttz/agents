@@ -99,26 +99,26 @@ async function testCodeExecution(): Promise<void> {
   console.log('\n\n====================\n\n');
   console.dir(contentParts, { depth: null });
 
-  // console.log('Test 2:');
+  console.log('Test 2: Follow up with another message');
 
-  // const userMessage2 = ``;
+  const userMessage2 = `thanks, you're the best!`;
 
-  // conversationHistory.push(new HumanMessage(userMessage2));
+  conversationHistory.push(new HumanMessage(userMessage2));
 
-  // inputs = {
-  //   messages: conversationHistory,
-  // };
-  // const finalContentParts2 = await run.processStream(inputs, config);
-  // const finalMessages2 = run.getRunMessages();
-  // if (finalMessages2) {
-  //   conversationHistory.push(...finalMessages2);
-  // }
-  // console.log('\n\n====================\n\n');
-  // console.dir(contentParts, { depth: null });
+  inputs = {
+    messages: conversationHistory,
+  };
+  const finalContentParts2 = await run.processStream(inputs, config, { keepContent: true });
+  const finalMessages2 = run.getRunMessages();
+  if (finalMessages2) {
+    conversationHistory.push(...finalMessages2);
+  }
+  console.log('\n\n====================\n\n');
+  console.dir(contentParts, { depth: null });
 
   const { handleLLMEnd, collected } = createMetadataAggregator();
   const titleResult = await run.generateTitle({
-    inputText: userMessage1,
+    inputText: userMessage2,
     contentParts,
     chainOptions: {
       callbacks: [{
