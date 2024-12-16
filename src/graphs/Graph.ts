@@ -303,18 +303,12 @@ export class StandardGraph extends Graph<
         finalMessages[finalMessages.length - 2].content = '';
       }
 
-      const hasContentArtifacts = lastMessageY instanceof ToolMessage &&
-      lastMessageY.artifact != null &&
-      Array.isArray(lastMessageY.artifact?.content) &&
-      Array.isArray(lastMessageY.content);
-      if (
-        hasContentArtifacts &&
-        provider === Providers.ANTHROPIC
-      ) {
-        // finalMessages[finalMessages.length - 1].content = lastMessageY.content.concat(lastMessageY.artifact?.content);
+      const isLatestToolMessage = lastMessageY instanceof ToolMessage;
+
+      if (isLatestToolMessage && provider === Providers.ANTHROPIC) {
         formatAnthropicArtifactContent(finalMessages);
       } else if (
-        hasContentArtifacts &&
+        isLatestToolMessage &&
         provider === Providers.OPENAI
       ) {
         const newContent = (lastMessageY.content.concat(lastMessageY.artifact?.content)) as t.MessageContentComplex[];
