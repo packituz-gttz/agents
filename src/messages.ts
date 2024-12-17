@@ -210,14 +210,14 @@ export function convertMessagesToContent(messages: BaseMessage[]): t.MessageCont
 }
 
 export function formatAnthropicArtifactContent(messages: BaseMessage[]): void {
-  const lastMessageY = messages[messages.length - 1];
-  if (!(lastMessageY instanceof ToolMessage)) return;
+  const lastMessage = messages[messages.length - 1];
+  if (!(lastMessage instanceof ToolMessage)) return;
 
   // Find the latest AIMessage with tool_calls that this tool message belongs to
   const latestAIParentIndex = findLastIndex(messages,
     msg => (msg instanceof AIMessageChunk &&
           (msg.tool_calls?.length ?? 0) > 0 &&
-          msg.tool_calls?.some(tc => tc.id === lastMessageY.tool_call_id)) ?? false
+          msg.tool_calls?.some(tc => tc.id === lastMessage.tool_call_id)) ?? false
   );
 
   if (latestAIParentIndex === -1) return;
@@ -233,69 +233,18 @@ export function formatAnthropicArtifactContent(messages: BaseMessage[]): void {
 
   if (!hasArtifactContent) return;
 
-  // Now we know we need to process these messages
   const message = messages[latestAIParentIndex] as AIMessageChunk;
   const toolCallIds = message.tool_calls?.map(tc => tc.id) ?? [];
-  const toolMessages: ToolMessage[] = [];
-  let lastToolIndex = latestAIParentIndex;
 
-  // Collect all corresponding ToolMessages
   for (let j = latestAIParentIndex + 1; j < messages.length; j++) {
-    const potentialToolMessage = messages[j];
-    if (potentialToolMessage instanceof ToolMessage &&
-        toolCallIds.includes(potentialToolMessage.tool_call_id)) {
-
-      const hasContentArtifacts = potentialToolMessage.artifact != null &&
-        Array.isArray(potentialToolMessage.artifact?.content) &&
-        Array.isArray(potentialToolMessage.content);
-
-      if (hasContentArtifacts) {
-        potentialToolMessage.content = potentialToolMessage.content.concat(potentialToolMessage.artifact?.content);
-      }
-
-      toolMessages.push(potentialToolMessage);
-      lastToolIndex = Math.max(lastToolIndex, j);
+    const msg = messages[j];
+    if (msg instanceof ToolMessage &&
+        toolCallIds.includes(msg.tool_call_id) &&
+        msg.artifact != null &&
+        Array.isArray(msg.artifact?.content) &&
+        Array.isArray(msg.content)) {
+      msg.content = msg.content.concat(msg.artifact.content);
     }
-  }
-
-  // Rest of the function remains the same...
-  if (toolMessages.length > 1) {
-    // Keep only first tool call in original AI message
-    const originalContent = Array.isArray(message.content) ? message.content : [];
-    message.content = [
-      originalContent.find(c => c.type === 'text'),
-      originalContent.find(c => c.type === 'tool_use' && c.id === toolCallIds[0])
-    ].filter(Boolean) as t.ExtendedMessageContent[];
-
-    message.tool_calls = [message.tool_calls![0]];
-    if (message.tool_call_chunks) {
-      message.tool_call_chunks = [message.tool_call_chunks[0]];
-    }
-
-    const newMessages: BaseMessage[] = [];
-    newMessages.push(toolMessages[0]);
-
-    // Create new AI+Tool message pairs for remaining tool calls
-    for (let k = 1; k < toolMessages.length; k++) {
-      const relevantToolCall = message.lc_kwargs.tool_calls[k];
-      const relevantToolChunk = message.lc_kwargs.tool_call_chunks?.[k];
-      const relevantToolUse = originalContent.find(c =>
-        c.type === 'tool_use' && c.id === toolCallIds[k]
-      );
-
-      const newAIMessage = new AIMessage({
-        content: [
-          originalContent.find(c => c.type === 'text'),
-          relevantToolUse
-        ].filter(Boolean),
-        tool_calls: [relevantToolCall],
-        tool_call_chunks: relevantToolChunk != null ? [relevantToolChunk] : undefined,
-        additional_kwargs: { ...message.additional_kwargs }
-      } as AIMessageChunk);
-      newMessages.push(newAIMessage, toolMessages[k]);
-    }
-
-    messages.splice(latestAIParentIndex  + 1, lastToolIndex - latestAIParentIndex , ...newMessages);
   }
 }
 
