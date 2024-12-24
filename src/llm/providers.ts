@@ -5,6 +5,7 @@ import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatVertexAI } from '@langchain/google-vertexai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type { ChatModelConstructorMap, ProviderOptionsMap, ChatModelMap } from '@/types';
 import { Providers } from '@/common';
@@ -19,6 +20,7 @@ export const llmProviders: Partial<ChatModelConstructorMap> = {
   [Providers.BEDROCK]: ChatBedrockConverse,
   // [Providers.ANTHROPIC]: CustomAnthropic,
   [Providers.ANTHROPIC]: ChatAnthropic,
+  [Providers.GOOGLE]: ChatGoogleGenerativeAI,
 };
 
 export const manualToolStreamProviders = new Set<Providers | string>([Providers.ANTHROPIC, Providers.BEDROCK, Providers.OLLAMA]);

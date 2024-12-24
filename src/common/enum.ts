@@ -74,6 +74,7 @@ export enum Providers {
   ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
   OLLAMA = 'ollama',
+  GOOGLE = 'google',
 }
 
 export enum GraphNodeKeys {

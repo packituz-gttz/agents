@@ -6,12 +6,14 @@ import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import type { Runnable } from '@langchain/core/runnables';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { ChatOpenAIFields } from '@langchain/openai';
 import type { OpenAI as OpenAIClient } from 'openai';
+import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
@@ -29,8 +31,9 @@ export type MistralAIClientOptions = ChatMistralAIInput;
 export type VertexAIClientOptions = ChatVertexAIInput;
 export type BedrockClientOptions = BedrockChatFields;
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
+export type GoogleClientOptions = GoogleGenerativeAIChatInput;
 
-export type ClientOptions = OpenAIClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions;
+export type ClientOptions = OpenAIClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions | GoogleClientOptions;
 
 export type LLMConfig = {
   provider: Providers;
@@ -44,6 +47,7 @@ export type ProviderOptionsMap = {
   [Providers.VERTEXAI]: VertexAIClientOptions;
   [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
   [Providers.BEDROCK]: BedrockConverseClientOptions;
+  [Providers.GOOGLE]: GoogleClientOptions;
 };
 
 export type ChatModelMap = {
@@ -54,6 +58,7 @@ export type ChatModelMap = {
   [Providers.VERTEXAI]: ChatVertexAI;
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
+  [Providers.GOOGLE]: ChatGoogleGenerativeAI;
 };
 
 export type ChatModelConstructorMap = {

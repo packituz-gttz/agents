@@ -35,6 +35,12 @@ const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streaming: true,
     streamUsage: true,
   },
+  [Providers.GOOGLE]: {
+    provider: Providers.GOOGLE,
+    model: 'gemini-2.0-flash-exp',
+    streaming: true,
+    streamUsage: true,
+  },
   [Providers.BEDROCK]: {
     provider: Providers.BEDROCK,
     model: 'anthropic.claude-3-sonnet-20240229-v1:0',
