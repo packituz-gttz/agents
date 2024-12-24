@@ -74,7 +74,7 @@
     "@langchain/aws": "^0.1.2",
     "@langchain/community": "^0.3.14",
     "@langchain/core": "^0.3.18",
-    "@langchain/google-vertexai": "^0.1.2",
+    "@langchain/google-vertexai": "^0.1.5",
     "@langchain/langgraph": "^0.2.19",
     "@langchain/mistralai": "^0.0.26",
     "@langchain/ollama": "^0.1.1",
