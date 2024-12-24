@@ -84,7 +84,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     );
 
     for await (const data of stream) {
-      if (options.signal?.aborted) {
+      if (options.signal?.aborted === true) {
         stream.controller.abort();
         throw new Error('AbortError: User aborted the request.');
       }
