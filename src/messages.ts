@@ -33,7 +33,7 @@ User: ${userMessage[1]}
 
 const modifyContent = (messageType: string, content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
   return content.map(item => {
-    if (item && typeof item === 'object' && 'type' in item && item.type) {
+    if (item && typeof item === 'object' && 'type' in item && item.type != null && item.type) {
       let newType = item.type;
       if (newType.endsWith('_delta')) {
         newType = newType.replace('_delta', '');
@@ -80,9 +80,9 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
     formattedContent = message.content.reduce<t.ExtendedMessageContent[]>((acc, item) => {
       if (typeof item === 'object' && item !== null) {
         const extendedItem = item as t.ExtendedMessageContent;
-        if (extendedItem.type === 'text' && extendedItem.text) {
+        if (extendedItem.type === 'text' && extendedItem.text != null && extendedItem.text) {
           acc.push({ type: 'text', text: extendedItem.text });
-        } else if (extendedItem.type === 'tool_use' && extendedItem.id) {
+        } else if (extendedItem.type === 'tool_use' && extendedItem.id != null && extendedItem.id) {
           const toolCall = toolCallMap.get(extendedItem.id);
           if (toolCall) {
             acc.push({
@@ -92,7 +92,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
               input: toolCall.args as unknown as string
             });
           }
-        } else if ('input' in extendedItem && extendedItem.input) {
+        } else if ('input' in extendedItem && extendedItem.input != null && extendedItem.input) {
           try {
             const parsedInput = JSON.parse(extendedItem.input);
             const toolCall = message.tool_calls?.find(tc => tc.args.input === parsedInput.input);
