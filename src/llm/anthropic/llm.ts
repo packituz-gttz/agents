@@ -125,29 +125,28 @@ export class CustomAnthropic extends ChatAnthropicMessages {
           undefined,
           { chunk: generationChunk }
         );
-        continue;
-      }
+      } else {
+        const textStream = new TextStream(token, { delay: this._lc_stream_delay });
+        const generator = textStream.generateText();
+        let result = await generator.next();
 
-      const textStream = new TextStream(token, { delay: this._lc_stream_delay });
-      const generator = textStream.generateText();
-      let textResult = await generator.next();
+        while (result.done !== true) {
+          const currentToken = result.value;
+          const newChunk = cloneChunk(currentToken, tokenType, chunk);
+          const generationChunk = createGenerationChunk(currentToken, newChunk);
+          yield generationChunk;
 
-      while (textResult.done !== true) {
-        const currentToken = textResult.value;
-        const newChunk = cloneChunk(currentToken, tokenType, chunk);
-        const generationChunk = createGenerationChunk(currentToken, newChunk);
-        yield generationChunk;
+          await runManager?.handleLLMNewToken(
+            token,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            { chunk: generationChunk }
+          );
 
-        await runManager?.handleLLMNewToken(
-          token,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          { chunk: generationChunk }
-        );
-
-        textResult = await generator.next();
+          result = await generator.next();
+        }
       }
     }
   }
