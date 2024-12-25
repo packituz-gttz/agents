@@ -1,10 +1,11 @@
+import { Providers } from './../common/enum';
 import { END, MessagesAnnotation } from '@langchain/langgraph';
 import { ToolMessage, isBaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig, RunnableToolLike } from '@langchain/core/runnables';
 import type { BaseMessage, AIMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type * as t from '@/types';
-import{ RunnableCallable } from '@/utils';
+import{ RunnableCallable, unescapeObject } from '@/utils';
 import { GraphNodeKeys } from '@/common';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,8 +55,9 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (tool === undefined) {
             throw new Error(`Tool "${call.name}" not found.`);
           }
+          const args = config.metadata?.provider === Providers.GOOGLE ? unescapeObject(call.args) : call.args;
           const output = await tool.invoke(
-            { ...call, type: 'tool_call' },
+            { ...call, args, type: 'tool_call' },
             config
           );
           if (isBaseMessage(output) && output._getType() === 'tool') {
