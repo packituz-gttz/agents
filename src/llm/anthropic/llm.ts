@@ -97,71 +97,62 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       }
     );
 
-    const streamPromise = (async function* (
-      this: CustomAnthropic
-    ): AsyncGenerator<ChatGenerationChunk> {
+    for await (const data of stream) {
+      if (options.signal?.aborted === true) {
+        stream.controller.abort();
+        throw new Error('AbortError: User aborted the request.');
+      }
+
+      const shouldStreamUsage = this.streamUsage ?? options.streamUsage;
+      const result = _makeMessageChunkFromAnthropicEvent(data, {
+        streamUsage: shouldStreamUsage,
+        coerceContentToString,
+      });
+      if (!result) continue;
+
+      const { chunk } = result;
+      const [token = '', tokenType] = extractToken(chunk);
+
+      if (!tokenType || tokenType === 'input') {
+        const generationChunk = this.createGenerationChunk(token, chunk);
+        yield generationChunk;
+        await runManager?.handleLLMNewToken(
+          token,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { chunk: generationChunk }
+        );
+        continue;
+      }
+
+      const textStream = new TextStream(token, {
+        delay: this._lc_stream_delay,
+        firstWordChunk: true,
+        minChunkSize: 4,
+        maxChunkSize: 8,
+      });
+
+      const generator = textStream.generateText();
       try {
-        for await (const data of stream) {
-          if (options.signal?.aborted === true) {
-            stream.controller.abort();
-            throw new Error('AbortError: User aborted the request.');
-          }
+        for await (const currentToken of generator) {
+          const newChunk = cloneChunk(currentToken, tokenType, chunk);
+          const generationChunk = this.createGenerationChunk(currentToken, newChunk);
+          yield generationChunk;
 
-          const shouldStreamUsage = this.streamUsage ?? options.streamUsage;
-          const result = _makeMessageChunkFromAnthropicEvent(data, {
-            streamUsage: shouldStreamUsage,
-            coerceContentToString,
-          });
-          if (!result) continue;
-
-          const { chunk } = result;
-          const [token = '', tokenType] = extractToken(chunk);
-
-          if (!tokenType || tokenType === 'input') {
-            const generationChunk = this.createGenerationChunk(token, chunk);
-            yield generationChunk;
-            await runManager?.handleLLMNewToken(
-              token,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              { chunk: generationChunk }
-            );
-          } else {
-            const textStream = new TextStream(token, {
-              delay: this._lc_stream_delay,
-              firstWordChunk: true,
-              minChunkSize: 4,
-              maxChunkSize: 8,
-            });
-
-            const generator = textStream.generateText();
-            try {
-              for await (const currentToken of generator) {
-                const newChunk = cloneChunk(currentToken, tokenType, chunk);
-                const generationChunk = this.createGenerationChunk(currentToken, newChunk);
-                yield generationChunk;
-
-                await runManager?.handleLLMNewToken(
-                  token,
-                  undefined,
-                  undefined,
-                  undefined,
-                  undefined,
-                  { chunk: generationChunk }
-                );
-              }
-            } finally {
-              await generator.return();
-            }
-          }
+          await runManager?.handleLLMNewToken(
+            token,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            { chunk: generationChunk }
+          );
         }
       } finally {
-        stream.controller.abort();
+        await generator.return();
       }
-    }).bind(this)();
-
-    yield* streamPromise;
+    }
   }
 }
