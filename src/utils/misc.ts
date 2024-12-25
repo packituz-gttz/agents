@@ -1,4 +1,9 @@
-const replaceEscapedChars = (string: string): string => string.replace(/\\(.)/g, (_, char) => {
+/**
+ * Unescapes a c-escaped string
+ * @param str The string to unescape
+ * @returns The unescaped string
+ */
+const unescapeString = (string: string): string => string.replace(/\\(.)/g, (_, char) => {
   switch (char) {
   case 'n':
     return '\n';
@@ -16,24 +21,6 @@ const replaceEscapedChars = (string: string): string => string.replace(/\\(.)/g,
     return char;
   }
 });
-
-function safeUnescape(str: string): string {
-  try {
-    return JSON.parse(`"${str}"`);
-  } catch (e) {
-    console.error('Failed to unescape string:', e);
-    return replaceEscapedChars(str);
-  }
-}
-
-/**
- * Unescapes a c-escaped string
- * @param str The string to unescape
- * @returns The unescaped string
- */
-function unescapeString(str: string): string {
-  return safeUnescape(str);
-}
 
 /**
  * Recursively unescapes all string values in an object

@@ -1,12 +1,11 @@
-import { Providers } from './../common/enum';
-import { END, MessagesAnnotation } from '@langchain/langgraph';
+import { END, MessagesAnnotation, isCommand, isGraphInterrupt } from '@langchain/langgraph';
 import { ToolMessage, isBaseMessage } from '@langchain/core/messages';
 import type { RunnableConfig, RunnableToolLike } from '@langchain/core/runnables';
 import type { BaseMessage, AIMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type * as t from '@/types';
 import{ RunnableCallable, unescapeObject } from '@/utils';
-import { GraphNodeKeys } from '@/common';
+import { GraphNodeKeys, Providers } from '@/common';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class ToolNode<T = any> extends RunnableCallable<T, T> {
@@ -47,7 +46,6 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
       this.tools = tools;
       this.toolMap = toolMap ?? new Map(tools.map(tool => [tool.name, tool]));
     }
-
     const outputs = await Promise.all(
       (message as AIMessage).tool_calls?.map(async (call) => {
         const tool = this.toolMap.get(call.name);
@@ -60,7 +58,10 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
             { ...call, args, type: 'tool_call' },
             config
           );
-          if (isBaseMessage(output) && output._getType() === 'tool') {
+          if (
+            (isBaseMessage(output) && output._getType() === 'tool') ||
+            isCommand(output)
+          ) {
             return output;
           } else {
             return new ToolMessage({
@@ -70,9 +71,12 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
               tool_call_id: call.id!,
             });
           }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (e: any) {
+        } catch (_e: unknown) {
+          const e = _e as Error;
           if (!this.handleToolErrors) {
+            throw e;
+          }
+          if (isGraphInterrupt(e)) {
             throw e;
           }
           return new ToolMessage({
@@ -84,7 +88,17 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
       }) ?? []
     );
 
-    return (Array.isArray(input) ? outputs : { messages: outputs }) as T;
+    if (!outputs.some(isCommand)) {
+      return (Array.isArray(input) ? outputs : { messages: outputs }) as T;
+    }
+
+    const combinedOutputs = outputs.map((output) => {
+      if (isCommand(output)) {
+        return output;
+      }
+      return Array.isArray(input) ? [output] : { messages: [output] };
+    });
+    return combinedOutputs as T;
   }
 }
 
