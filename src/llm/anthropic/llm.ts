@@ -59,17 +59,26 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     this._lc_stream_delay = fields._lc_stream_delay ?? 25;
   }
 
-  private createGenerationChunk(text: string, chunk: AIMessageChunk): ChatGenerationChunk {
+  private createGenerationChunk({
+    token,
+    chunk,
+    shouldStreamUsage,
+  }: {
+    token?: string,
+    chunk: AIMessageChunk,
+    shouldStreamUsage: boolean
+  }): ChatGenerationChunk {
     return new ChatGenerationChunk({
       message: new AIMessageChunk({
+        // Just yield chunk as it is and tool_use will be concat by BaseChatModel._generateUncached().
         content: chunk.content,
         additional_kwargs: chunk.additional_kwargs,
         tool_call_chunks: chunk.tool_call_chunks,
-        usage_metadata: chunk.usage_metadata,
+        usage_metadata: shouldStreamUsage ? chunk.usage_metadata : undefined,
         response_metadata: chunk.response_metadata,
         id: chunk.id,
       }),
-      text,
+      text: token ?? '',
     });
   }
 
@@ -114,7 +123,11 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       const [token = '', tokenType] = extractToken(chunk);
 
       if (!tokenType || tokenType === 'input') {
-        const generationChunk = this.createGenerationChunk(token, chunk);
+        const generationChunk = this.createGenerationChunk({
+          token,
+          chunk,
+          shouldStreamUsage,
+        });
         yield generationChunk;
         await runManager?.handleLLMNewToken(
           token,
@@ -138,7 +151,11 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       try {
         for await (const currentToken of generator) {
           const newChunk = cloneChunk(currentToken, tokenType, chunk);
-          const generationChunk = this.createGenerationChunk(currentToken, newChunk);
+          const generationChunk = this.createGenerationChunk({
+            token: currentToken,
+            chunk: newChunk,
+            shouldStreamUsage,
+          });
           yield generationChunk;
 
           await runManager?.handleLLMNewToken(
