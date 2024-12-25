@@ -128,10 +128,12 @@ export class CustomAnthropic extends ChatAnthropicMessages {
         continue;
       }
 
-      const textStream = new TextStream(token, {
-        delay: this._lc_stream_delay,
-      });
-      for await (const currentToken of textStream.generateText()) {
+      const textStream = new TextStream(token, { delay: this._lc_stream_delay });
+      const generator = textStream.generateText();
+      let textResult = await generator.next();
+
+      while (textResult.done !== true) {
+        const currentToken = textResult.value;
         const newChunk = cloneChunk(currentToken, tokenType, chunk);
         const generationChunk = createGenerationChunk(currentToken, newChunk);
         yield generationChunk;
@@ -144,8 +146,9 @@ export class CustomAnthropic extends ChatAnthropicMessages {
           undefined,
           { chunk: generationChunk }
         );
+
+        textResult = await generator.next();
       }
     }
   }
-
 }
