@@ -81,7 +81,7 @@ async function testStandardStreaming(): Promise<void> {
 
   console.log('Test 1: Simple message test');
 
-  const userMessage = `hi`;
+  const userMessage = `hi tell me a long story`;
 
   conversationHistory.push(new HumanMessage(userMessage));
 
