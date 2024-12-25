@@ -117,6 +117,10 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 testStandardStreaming().catch((err) => {
   console.error(err);
   console.log('Conversation history:');
