@@ -149,5 +149,16 @@ export class CustomAnthropic extends ChatAnthropicMessages {
         }
       }
     }
+
+    /** Hack to force langgraph to continue */
+    if (options.signal?.aborted !== true) {
+      try {
+        stream.controller.abort();
+      } catch (e) {
+        console.warn('Error aborting stream after data stream', e);
+        console.error(e);
+        // Ignore
+      }
+    }
   }
 }
