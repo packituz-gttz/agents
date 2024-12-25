@@ -1,19 +1,25 @@
+/* eslint-disable no-console */
 /**
  * This util file contains functions for converting LangChain messages to Anthropic messages.
  */
 import {
-  BaseMessage,
-  SystemMessage,
-  HumanMessage,
   AIMessage,
+  BaseMessage,
   ToolMessage,
-  MessageContent,
   isAIMessage,
+  HumanMessage,
+  SystemMessage,
+  MessageContent,
 } from '@langchain/core/messages';
 import { ToolCall } from '@langchain/core/messages/tool';
 import type {
-  AnthropicMessageCreateParams,
   AnthropicToolResponse,
+  AnthropicMessageParam,
+  AnthropicTextBlockParam,
+  AnthropicImageBlockParam,
+  AnthropicToolUseBlockParam,
+  AnthropicMessageCreateParams,
+  AnthropicToolResultBlockParam,
 } from '@/llm/anthropic/types';
 
 function _formatImage(imageUrl: string): { type: string; media_type: string; data: string } {
@@ -130,7 +136,7 @@ function _formatContent(content: MessageContent): string | Record<string, any>[]
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
       } else if (
-        textTypes.find((t) => t === contentPart.type) &&
+        textTypes.find((t) => t === contentPart.type) != null &&
         'text' in contentPart
       ) {
         // Assuming contentPart is of type MessageContentText here
@@ -139,7 +145,7 @@ function _formatContent(content: MessageContent): string | Record<string, any>[]
           text: contentPart.text,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
-      } else if (toolTypes.find((t) => t === contentPart.type)) {
+      } else if (toolTypes.find((t) => t === contentPart.type) != null) {
         const contentPartCopy = { ...contentPart };
         if ('index' in contentPartCopy) {
           // Anthropic does not support passing the index field here, so we remove it.
@@ -252,7 +258,79 @@ export function _convertMessagesToAnthropicPayload(
     }
   });
   return {
-    messages: formattedMessages,
+    messages: mergeMessages(formattedMessages as AnthropicMessageCreateParams['messages']),
     system,
   } as AnthropicMessageCreateParams;
+}
+
+function mergeMessages(messages?: AnthropicMessageCreateParams['messages']): AnthropicMessageParam[] {
+  if (!messages || messages.length <= 1) {
+    return messages ?? [];
+  }
+
+  const result: AnthropicMessageCreateParams['messages'] = [];
+  let currentMessage = messages[0];
+
+  const normalizeContent = (
+    content:
+      | string
+      | Array<
+          | AnthropicTextBlockParam
+          | AnthropicImageBlockParam
+          | AnthropicToolUseBlockParam
+          | AnthropicToolResultBlockParam
+        >
+  ): Array<
+    | AnthropicTextBlockParam
+    | AnthropicImageBlockParam
+    | AnthropicToolUseBlockParam
+    | AnthropicToolResultBlockParam
+  > => {
+    if (typeof content === 'string') {
+      return [
+        {
+          type: 'text',
+          text: content,
+        },
+      ];
+    }
+    return content;
+  };
+
+  const isToolResultMessage = (msg: (typeof messages)[0]): boolean => {
+    if (msg.role !== 'user') return false;
+
+    if (typeof msg.content === 'string') {
+      return false;
+    }
+
+    return (
+      Array.isArray(msg.content) &&
+      msg.content.every((item) => item.type === 'tool_result')
+    );
+  };
+
+  for (let i = 1; i < messages.length; i += 1) {
+    const nextMessage = messages[i];
+
+    if (
+      isToolResultMessage(currentMessage) &&
+      isToolResultMessage(nextMessage)
+    ) {
+      // Merge the messages by combining their content arrays
+      currentMessage = {
+        ...currentMessage,
+        content: [
+          ...normalizeContent(currentMessage.content),
+          ...normalizeContent(nextMessage.content),
+        ],
+      };
+    } else {
+      result.push(currentMessage);
+      currentMessage = nextMessage;
+    }
+  }
+
+  result.push(currentMessage);
+  return result;
 }

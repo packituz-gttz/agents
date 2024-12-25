@@ -10,6 +10,7 @@ export type AnthropicToolResponse = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: Record<string, any>;
 };
+
 export type AnthropicMessageParam = Anthropic.MessageParam;
 export type AnthropicMessageResponse =
   | Anthropic.ContentBlock
@@ -30,3 +31,8 @@ export type AnthropicToolChoice =
   | 'none'
   | string;
 export type ChatAnthropicToolType = AnthropicTool | BindToolsInput;
+export type AnthropicTextBlockParam = Anthropic.Messages.TextBlockParam;
+export type AnthropicImageBlockParam = Anthropic.Messages.ImageBlockParam;
+export type AnthropicToolUseBlockParam = Anthropic.Messages.ToolUseBlockParam;
+export type AnthropicToolResultBlockParam =
+  Anthropic.Messages.ToolResultBlockParam;
