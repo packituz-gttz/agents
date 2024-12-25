@@ -2,6 +2,8 @@
 // src/events.ts
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
+import { handleToolCalls } from '@/stream';
+import { Providers } from '@/common';
 
 export class HandlerRegistry {
   private handlers: Map<string, t.EventHandler> = new Map();
@@ -28,6 +30,12 @@ export class ModelEndHandler implements t.EventHandler {
     console.dir({
       usage,
     }, { depth: null });
+
+    if (metadata.provider !== Providers.GOOGLE) {
+      return;
+    }
+
+    handleToolCalls(data?.output?.tool_calls, metadata, graph);
   }
 }
 
@@ -58,7 +66,7 @@ export class TestLLMStreamHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData | undefined): void {
     const chunk = data?.chunk;
     const  isMessageChunk = !!(chunk && 'message' in chunk);
-    const msg = isMessageChunk && chunk.message;
+    const msg = isMessageChunk ? chunk.message : undefined;
     if (msg && msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
       console.log(msg.tool_call_chunks);
     } else if (msg && msg.content) {
