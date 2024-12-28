@@ -11,3 +11,4 @@ dist/
 *.txt
 .turbo
 google_auth.json
+credentials/**/*

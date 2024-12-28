@@ -53,7 +53,8 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (tool === undefined) {
             throw new Error(`Tool "${call.name}" not found.`);
           }
-          const args = config.metadata?.provider === Providers.GOOGLE ? unescapeObject(call.args) : call.args;
+          const provider = config.metadata?.provider;
+          const args = provider === Providers.GOOGLE || provider === Providers.VERTEXAI ? unescapeObject(call.args) : call.args;
           const output = await tool.invoke(
             { ...call, args, type: 'tool_call' },
             config
