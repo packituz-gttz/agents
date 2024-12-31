@@ -26,6 +26,7 @@ const CodeExecutionToolSchema = z.object({
     'go',
     'd',
     'f90',
+    'r',
   ])
     .describe('The programming language or runtime to execute the code in.'),
   code: z.string()
