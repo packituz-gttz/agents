@@ -37,6 +37,7 @@ const CodeExecutionToolSchema = z.object({
 - py: This is not a Jupyter notebook environment. Use \`print()\` for all outputs.
 - py: Matplotlib: Use \`plt.savefig()\` to save plots as files.
 - js: use the \`console\` or \`process\` methods for all outputs.
+- r: For graphics, use Cairo (X11 unavailable).
 - Other languages: use appropriate output functions.`),
   args: z.array(z.string()).optional()
     .describe('Additional arguments to execute the code with. This should only be used if the input code requires additional arguments to run.'),
