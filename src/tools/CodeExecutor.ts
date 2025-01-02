@@ -34,10 +34,11 @@ const CodeExecutionToolSchema = z.object({
 - The environment is stateless; variables and imports don't persist between executions.
 - Input code **IS ALREADY** displayed to the user, so **DO NOT** repeat it in your response unless asked.
 - Output code **IS NOT** displayed to the user, so **DO** write all desired output explicitly.
+- IMPORTANT: You MUST explicitly print/output ALL results you want the user to see.
 - py: This is not a Jupyter notebook environment. Use \`print()\` for all outputs.
 - py: Matplotlib: Use \`plt.savefig()\` to save plots as files.
 - js: use the \`console\` or \`process\` methods for all outputs.
-- r: For graphics, use Cairo (X11 unavailable).
+- r: IMPORTANT: No X11 display available. ALL graphics MUST use Cairo library (library(Cairo)).
 - Other languages: use appropriate output functions.`),
   args: z.array(z.string()).optional()
     .describe('Additional arguments to execute the code with. This should only be used if the input code requires additional arguments to run.'),
@@ -51,16 +52,6 @@ function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): Dynami
     throw new Error('No API key provided for code execution tool.');
   }
 
-  let fileInstructions = '';
-  if (params.files && params.files.length > 0) {
-    fileInstructions = 'Available files:\n';
-    params.files.forEach((file) => {
-      const filePath = `/mnt/data/${file.name}`;
-      fileInstructions += `- ${filePath}\n`;
-    });
-    fileInstructions += '\nUse these files in your code as needed.\n';
-  }
-
   const description = `
 Runs code and returns stdout/stderr output from a stateless execution environment, similar to running scripts in a command-line interface. Each execution is isolated and independent.
 
@@ -68,8 +59,6 @@ Usage:
 - No network access available.
 - Generated files are automatically delivered; **DO NOT** provide download links.
 - NEVER use this tool to execute malicious code.
-
-${fileInstructions}
 `.trim();
 
   return tool<typeof CodeExecutionToolSchema>(
