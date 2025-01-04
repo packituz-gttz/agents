@@ -2,7 +2,7 @@
 import { Providers } from '@/common';
 import type * as t from '@/types';
 
-const llmConfigs: Record<string, t.LLMConfig | undefined> = {
+export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   [Providers.OPENAI]: {
     provider: Providers.OPENAI,
     model: 'gpt-4o',
@@ -52,6 +52,16 @@ const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     },
     streaming: true,
     streamUsage: true,
+  },
+  perplexity: {
+    provider: Providers.OPENAI,
+    model: 'llama-3.1-sonar-small-128k-online',
+    streaming: true,
+    streamUsage: true,
+    apiKey: process.env.PERPLEXITY_API_KEY,
+    configuration: {
+      baseURL: 'https://api.perplexity.ai/',
+    }
   },
 };
 

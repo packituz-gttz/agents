@@ -1,6 +1,8 @@
 // src/scripts/args.ts
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+import { llmConfigs } from '@/utils/llmConfig';
+import { Providers } from '@/common';
 
 export async function getArgs(): Promise<{ userName: string; location: string; provider: string; currentDate: string; }> {
   const argv = yargs(hideBin(process.argv))
@@ -20,8 +22,8 @@ export async function getArgs(): Promise<{ userName: string; location: string; p
       alias: 'p',
       type: 'string',
       description: 'LLM provider',
-      choices: ['openAI', 'anthropic', 'mistralai', 'vertexai', 'bedrock', 'ollama', 'google'],
-      default: 'openAI'
+      choices: Object.keys(llmConfigs),
+      default: Providers.OPENAI
     })
     .help()
     .alias('help', 'h')
