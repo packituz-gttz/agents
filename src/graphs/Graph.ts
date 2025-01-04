@@ -262,16 +262,16 @@ export class StandardGraph extends Graph<
     const ChatModelClass = getChatModelClass(this.provider);
     const model = new ChatModelClass(this.clientOptions);
 
-    if (!this.tools || this.tools.length === 0) {
-      return model as unknown as Runnable;
-    }
-
     if (this.provider === Providers.OPENAI && model instanceof ChatOpenAI) {
       model.temperature = (this.clientOptions as t.OpenAIClientOptions).temperature as number;
       model.topP = (this.clientOptions as t.OpenAIClientOptions).topP as number;
       model.frequencyPenalty = (this.clientOptions as t.OpenAIClientOptions).frequencyPenalty as number;
       model.presencePenalty = (this.clientOptions as t.OpenAIClientOptions).presencePenalty as number;
       model.n = (this.clientOptions as t.OpenAIClientOptions).n as number;
+    }
+
+    if (!this.tools || this.tools.length === 0) {
+      return model as unknown as Runnable;
     }
 
     return (model as t.ModelWithTools).bindTools(this.tools);
