@@ -39,13 +39,13 @@ export const createTitleRunnable = async (model: t.ChatModelInstance, _titleProm
           convo: input.convo
         }) as { title: string };
       }
-      const languageResult = await languageChain.invoke({ text: input.inputText }) as { language: string };
-      const language = languageResult.language;
+      const languageResult = await languageChain.invoke({ text: input.inputText }) as { language: string } | undefined;
+      const language = languageResult?.language ?? 'English';
       const titleResult = await titlePrompt.pipe(titleLLM).invoke({
         language,
         convo: input.convo
-      }) as { title: string };
-      return { language, title: titleResult.title };
+      }) as { title: string } | undefined;
+      return { language, title: titleResult?.title ?? '' };
     },
   });
 };
