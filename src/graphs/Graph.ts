@@ -1,5 +1,6 @@
 // src/graphs/Graph.ts
 import { nanoid } from 'nanoid';
+import { ChatOpenAI } from '@langchain/openai';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { START, END, StateGraph  } from '@langchain/langgraph';
@@ -75,7 +76,7 @@ export class StandardGraph extends Graph<
   GraphNode
 > {
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
-  private clientOptions: Record<string, unknown>;
+  private clientOptions: t.ClientOptions;
   boundModel: Runnable;
   /** The last recorded timestamp that a stream API call was invoked */
   lastStreamCall: number | undefined;
@@ -263,6 +264,14 @@ export class StandardGraph extends Graph<
 
     if (!this.tools || this.tools.length === 0) {
       return model as unknown as Runnable;
+    }
+
+    if (this.provider === Providers.OPENAI && model instanceof ChatOpenAI) {
+      model.temperature = (this.clientOptions as t.OpenAIClientOptions).temperature as number;
+      model.topP = (this.clientOptions as t.OpenAIClientOptions).topP as number;
+      model.frequencyPenalty = (this.clientOptions as t.OpenAIClientOptions).frequencyPenalty as number;
+      model.presencePenalty = (this.clientOptions as t.OpenAIClientOptions).presencePenalty as number;
+      model.n = (this.clientOptions as t.OpenAIClientOptions).n as number;
     }
 
     return (model as t.ModelWithTools).bindTools(this.tools);

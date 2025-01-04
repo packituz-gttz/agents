@@ -1,9 +1,9 @@
 // src/run.ts
+import { ChatOpenAI } from '@langchain/openai';
 import { PromptTemplate } from '@langchain/core/prompts';
-
 import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
-import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
 import { manualToolStreamProviders } from '@/llm/providers';
@@ -185,6 +185,13 @@ export class Run<T extends t.BaseGraphState> {
     });
     if (!model) {
       return { language: '', title: '' };
+    }
+    if (this.provider === Providers.OPENAI && model instanceof ChatOpenAI) {
+      model.temperature = (clientOptions as t.OpenAIClientOptions | undefined)?.temperature as number;
+      model.topP = (clientOptions as t.OpenAIClientOptions | undefined)?.topP as number;
+      model.frequencyPenalty = (clientOptions as t.OpenAIClientOptions | undefined)?.frequencyPenalty as number;
+      model.presencePenalty = (clientOptions as t.OpenAIClientOptions | undefined)?.presencePenalty as number;
+      model.n = (clientOptions as t.OpenAIClientOptions | undefined)?.n as number;
     }
     const chain = await createTitleRunnable(model, titlePrompt);
     return await chain.invoke({ convo, inputText, skipLanguage }, chainOptions) as { language: string; title: string };
