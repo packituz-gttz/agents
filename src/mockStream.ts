@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
-import { nanoid } from 'nanoid';
+// import { nanoid } from 'nanoid';
 import type OpenAITypes from 'openai';
 import type * as t from '@/types';
-import { SplitStreamHandler } from '@/splitStream';
-import { GraphEvents } from '@/common';
+// import { SplitStreamHandler } from '@/splitStream';
+// import { GraphEvents } from '@/common';
 import { sleep } from '@/utils';
 
 const choiceProps: OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice = { finish_reason: null, index: 0, delta: {} };
@@ -71,6 +71,7 @@ And finally some more regular text to test our splitting logic.`;
   };
 };
 
+/**
 (async function testStream(): Promise<void> {
   const runId = nanoid();
 
@@ -94,3 +95,4 @@ And finally some more regular text to test our splitting logic.`;
     streamHandler.handle(chunk);
   }
 })();
+ */

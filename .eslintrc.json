@@ -25,7 +25,7 @@
       }
     }
   },
-  "ignorePatterns": ["dist/**/*", "config/**/*", "routes/**/*", "*.js", "src/proto/", "src/scripts/"],
+  "ignorePatterns": ["dist/**/*", "config/**/*", "routes/**/*", "*.js", "*.mjs", "src/proto/", "src/scripts/"],
   "rules": {
     "no-trailing-spaces": "error",
     "indent": ["error", 2],

@@ -24,15 +24,20 @@ export class SplitStreamHandler {
     runId,
     handlers,
     reasoningKey,
+    blockThreshold,
   }: {
       runId: string,
       handlers: StreamHandlers
+      blockThreshold?: number,
       reasoningKey?: 'reasoning_content' | 'reasoning',
     }) {
     this.runId = runId;
     this.handlers = handlers;
     if (reasoningKey) {
       this.reasoningKey = reasoningKey;
+    }
+    if (blockThreshold != null) {
+      this.blockThreshold = blockThreshold;
     }
   }
   getMessageId = (): string | undefined => {
@@ -111,27 +116,15 @@ export class SplitStreamHandler {
       return;
     }
 
+    this.dispatchMessageDelta(stepId, {
+      content: [{
+        type: 'text',
+        text: content,
+      }],
+    });
+
     if (this.currentLength > this.blockThreshold && !this.inCodeBlock) {
-      // Look for last separator
-      let splitIndex = -1;
-      for (const separator of SEPARATORS) {
-        const lastIndex = content.lastIndexOf(separator);
-        if (lastIndex > splitIndex) {
-          splitIndex = lastIndex;
-        }
-      }
-
-      if (splitIndex > -1 && splitIndex < content.length - 1) {
-        const firstPart = content.substring(0, splitIndex + 1);
-        const secondPart = content.substring(splitIndex + 1);
-
-        this.dispatchMessageDelta(stepId, {
-          content: [{
-            type: 'text',
-            text: firstPart,
-          }],
-        });
-
+      if (SEPARATORS.some(sep => content.includes(sep))) {
         const [newStepId, newMessageId] = this.createMessageStep();
         this.dispatchRunStep(newStepId, {
           type: StepTypes.MESSAGE_CREATION,
@@ -139,28 +132,7 @@ export class SplitStreamHandler {
             message_id: newMessageId,
           },
         });
-
-        if (!secondPart.length) {
-          return;
-        }
-
-        this.dispatchMessageDelta(newStepId, {
-          content: [{
-            type: 'text',
-            text: secondPart,
-          }],
-        });
-
-        this.currentLength += secondPart.length;
-        return;
       }
     }
-
-    this.dispatchMessageDelta(stepId, {
-      content: [{
-        type: 'text',
-        text: content,
-      }],
-    });
   }
 }
