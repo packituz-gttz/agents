@@ -15,6 +15,8 @@ export enum GraphEvents {
   ON_RUN_STEP_COMPLETED = 'on_run_step_completed',
   /** [Custom] Delta events for messages */
   ON_MESSAGE_DELTA = 'on_message_delta',
+  /** [Custom] Reasoning Delta events for messages */
+  ON_REASONING_DELTA = 'on_reasoning_delta',
 
   /* Official Events */
 

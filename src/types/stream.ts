@@ -1,4 +1,5 @@
 // src/types/stream.ts
+import type OpenAITypes from 'openai';
 import type { MessageContentImageUrl, MessageContentText, ToolMessage, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { LLMResult, Generation } from '@langchain/core/outputs';
@@ -54,7 +55,7 @@ export type RunStep = {
   index: number; // #new
   stepIndex?: number; // #new
   stepDetails: StepDetails;
-  usage: null | {
+  usage?: null | {
     // Define usage structure if it's ever non-null
     // prompt_tokens: number; // #new
     // completion_tokens: number; // #new
@@ -178,6 +179,32 @@ export interface MessageDelta {
   tool_call_ids?: string[];
 }
 
+/**
+ * Represents a reasoning delta i.e. any changed fields on a message during
+ * streaming.
+ */
+export interface ReasoningDeltaEvent {
+  /**
+   * The identifier of the message, which can be referenced in API endpoints.
+   */
+  id: string;
+
+  /**
+   * The delta containing the fields that have changed.
+   */
+  delta: ReasoningDelta;
+}
+
+/**
+ * The reasoning delta containing the fields that have changed on the Message.
+ */
+export interface ReasoningDelta {
+  /**
+   * The content of the message in array of text and/or images.
+   */
+  content?: MessageContentComplex[];
+}
+
 export type MessageDeltaUpdate = { type: ContentTypes.TEXT; text: string; tool_call_ids?: string[] };
 
 export type ContentType = 'text' | 'image_url' | 'tool_call' | string;
@@ -192,3 +219,12 @@ export type MessageContentComplex = (MessageContentText | MessageContentImageUrl
   tool_call_ids?: string[];
 };
 // #new
+
+export type CustomChunk = Partial<OpenAITypes.ChatCompletionChunk> & {
+  choices?: Partial<Array<Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice> & {
+    delta?: Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice.Delta> & {
+      reasoning?: string | null;
+      reasoning_content?: string | null;
+    };
+  }>>;
+}
