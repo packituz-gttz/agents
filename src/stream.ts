@@ -266,6 +266,17 @@ export function createContentAggregator(): ContentAggregatorResult {
         update.tool_call_ids = contentPart.tool_call_ids;
       }
       contentParts[index] = update;
+    } else if (
+      partType.startsWith(ContentTypes.THINK) &&
+      ContentTypes.THINK in contentPart &&
+      typeof contentPart.think === 'string'
+    ) {
+      const currentContent = contentParts[index] as t.ReasoningDeltaUpdate;
+      const update: t.ReasoningDeltaUpdate = {
+        type: ContentTypes.THINK,
+        think: (currentContent.think || '') + contentPart.think,
+      };
+      contentParts[index] = update;
     } else if (partType === ContentTypes.IMAGE_URL && 'image_url' in contentPart) {
       const currentContent = contentParts[index] as { type: 'image_url'; image_url: string };
       contentParts[index] = {
@@ -331,6 +342,21 @@ export function createContentAggregator(): ContentAggregatorResult {
         const contentPart = Array.isArray(messageDelta.delta.content)
           ? messageDelta.delta.content[0]
           : messageDelta.delta.content;
+
+        updateContent(runStep.index, contentPart);
+      }
+    } else if (event === GraphEvents.ON_REASONING_DELTA) {
+      const reasoningDelta = data as t.ReasoningDeltaEvent;
+      const runStep = stepMap.get(reasoningDelta.id);
+      if (!runStep) {
+        console.warn('No run step or runId found for message delta event');
+        return;
+      }
+
+      if (reasoningDelta.delta.content) {
+        const contentPart = Array.isArray(reasoningDelta.delta.content)
+          ? reasoningDelta.delta.content[0]
+          : reasoningDelta.delta.content;
 
         updateContent(runStep.index, contentPart);
       }
