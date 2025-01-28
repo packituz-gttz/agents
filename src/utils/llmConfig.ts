@@ -9,6 +9,17 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     temperature: 0.7,
     streaming: true,
     streamUsage: true,
+    // disableStreaming: true,
+  },
+  'azure': {
+    provider: Providers.OPENAI,
+    streaming: true,
+    streamUsage: true,
+    model: 'gpt-4o',
+    azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
+    azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE,
+    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT,
+    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
   },
   [Providers.OLLAMA]: {
     provider: Providers.OLLAMA,
@@ -44,7 +55,8 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   },
   [Providers.BEDROCK]: {
     provider: Providers.BEDROCK,
-    model: 'anthropic.claude-3-sonnet-20240229-v1:0',
+    // model: 'anthropic.claude-3-sonnet-20240229-v1:0',
+    model: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
     region: process.env.BEDROCK_AWS_REGION,
     credentials: {
       accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
