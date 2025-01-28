@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
 import { MessageContentText } from '@langchain/core/messages';
+import type * as t from '@/types';
 import { GraphEvents , StepTypes, ContentTypes } from '@/common';
 import { createContentAggregator } from './stream';
 import { SplitStreamHandler } from './splitStream';
@@ -335,5 +336,51 @@ After code.`;
     });
 
     expect(letterIndex).toBe(letters.length);
+  });
+});
+
+describe('SplitStreamHandler with Reasoning Tokens', () => {
+  it('should apply same splitting rules to both content types', async () => {
+    const runId = nanoid();
+    const mockHandlers: t.SplitStreamHandlers = {
+      [GraphEvents.ON_RUN_STEP]: jest.fn(),
+      [GraphEvents.ON_MESSAGE_DELTA]: jest.fn(),
+      [GraphEvents.ON_REASONING_DELTA]: jest.fn(),
+    };
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: mockHandlers,
+      blockThreshold: 10,
+    });
+
+    const stream = createMockStream({
+      text: 'First text. Second text. Third text.',
+      reasoningText: 'First thought. Second thought. Third thought.',
+      streamRate: 0,
+    })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    const runSteps = (mockHandlers[GraphEvents.ON_RUN_STEP] as jest.Mock).mock.calls;
+    const reasoningDeltas = (mockHandlers[GraphEvents.ON_REASONING_DELTA] as jest.Mock).mock.calls;
+    const messageDeltas = (mockHandlers[GraphEvents.ON_MESSAGE_DELTA] as jest.Mock).mock.calls;
+
+    // Both content types should create multiple blocks
+    expect(runSteps.length).toBeGreaterThan(2);
+    expect(reasoningDeltas.length).toBeGreaterThan(0);
+    expect(messageDeltas.length).toBeGreaterThan(0);
+
+    // Verify splitting behavior for both types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getStepTypes = (calls: any[]): string[] => calls.map(([{ data }]) =>
+      data.stepDetails?.type === StepTypes.MESSAGE_CREATION ?
+        data.stepDetails.message_creation.message_id : null
+    ).filter(Boolean);
+
+    const messageSteps = getStepTypes(runSteps);
+    expect(new Set(messageSteps).size).toBeGreaterThan(1);
   });
 });

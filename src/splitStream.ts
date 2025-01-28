@@ -2,12 +2,6 @@ import { nanoid } from 'nanoid';
 import type * as t from '@/types';
 import { ContentTypes, GraphEvents, StepTypes } from '@/common';
 
-type StreamHandlers = Partial<{
-  [GraphEvents.ON_RUN_STEP]: ({ event, data}: { event: GraphEvents, data: t.RunStep }) => void;
-  [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: GraphEvents, data: t.MessageDeltaEvent }) => void;
-  [GraphEvents.ON_REASONING_DELTA]: ({ event, data}: { event: GraphEvents, data: t.ReasoningDeltaEvent }) => void;
-}>
-
 export const SEPARATORS = ['.', '?', '!', '۔', '。', '‥', ';', '¡', '¿', '\n', '```'];
 
 export class SplitStreamHandler {
@@ -17,14 +11,14 @@ export class SplitStreamHandler {
   reasoningTokens: string[] = [];
   currentStepId?: string;
   currentMessageId?: string;
-  currentType?: 'text' | 'think';
+  currentType?: ContentTypes.TEXT | ContentTypes.THINK;
   currentLength = 0;
   reasoningKey: 'reasoning_content' | 'reasoning' = 'reasoning_content';
   currentIndex = -1;
   blockThreshold = 4500;
   /** The run ID AKA the Message ID associated with the complete generation */
   runId: string;
-  handlers?: StreamHandlers;
+  handlers?: t.SplitStreamHandlers;
   constructor({
     runId,
     handlers,
@@ -34,7 +28,7 @@ export class SplitStreamHandler {
   }: {
       runId: string,
       accumulate?: boolean,
-      handlers: StreamHandlers
+      handlers: t.SplitStreamHandlers
       blockThreshold?: number,
       reasoningKey?: 'reasoning_content' | 'reasoning',
     }) {
@@ -55,8 +49,8 @@ export class SplitStreamHandler {
     }
     return undefined;
   };
-  createMessageStep = (type?: 'text' | 'think'): [string, string] => {
-    if (type && this.currentType !== type) {
+  createMessageStep = (type?: ContentTypes.TEXT | ContentTypes.THINK): [string, string] => {
+    if (type != null && this.currentType !== type) {
       this.currentType = type;
     }
     this.currentLength = 0;
@@ -90,13 +84,17 @@ export class SplitStreamHandler {
     };
     this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({ event: GraphEvents.ON_REASONING_DELTA, data: reasoningDelta });
   };
-  handleContent = (content: string, stepId: string): void => {
+  handleContent = (content: string, stepId: string, type: ContentTypes.TEXT | ContentTypes.THINK): void => {
     if (this.accumulate) {
-      this.tokens.push(content);
+      if (type === ContentTypes.THINK) {
+        this.reasoningTokens.push(content);
+      } else {
+        this.tokens.push(content);
+      }
     }
 
-    if (this.currentType !== 'text') {
-      const [newStepId, newMessageId] = this.createMessageStep('text');
+    if (this.currentType !== type) {
+      const [newStepId, newMessageId] = this.createMessageStep(type);
       this.dispatchRunStep(newStepId, {
         type: StepTypes.MESSAGE_CREATION,
         message_creation: {
@@ -111,19 +109,28 @@ export class SplitStreamHandler {
 
     this.currentLength += content.length;
 
-    this.dispatchMessageDelta(stepId, {
-      content: [{
-        type: ContentTypes.TEXT,
-        text: content,
-      }],
-    });
+    if (type === ContentTypes.THINK) {
+      this.dispatchReasoningDelta(stepId, {
+        content: [{
+          type: ContentTypes.THINK,
+          think: content,
+        }],
+      });
+    } else {
+      this.dispatchMessageDelta(stepId, {
+        content: [{
+          type: ContentTypes.TEXT,
+          text: content,
+        }],
+      });
+    }
 
     if (this.inCodeBlock) {
       return;
     }
 
     if (this.currentLength > this.blockThreshold && SEPARATORS.some(sep => content.includes(sep))) {
-      const [newStepId, newMessageId] = this.createMessageStep('text');
+      const [newStepId, newMessageId] = this.createMessageStep(type);
       this.dispatchRunStep(newStepId, {
         type: StepTypes.MESSAGE_CREATION,
         message_creation: {
@@ -136,8 +143,8 @@ export class SplitStreamHandler {
     if (this.accumulate) {
       this.reasoningTokens.push(reasoning_content);
     }
-    if (this.currentType !== 'think') {
-      const [newStepId, newMessageId] = this.createMessageStep('think');
+    if (this.currentType !== ContentTypes.THINK) {
+      const [newStepId, newMessageId] = this.createMessageStep(ContentTypes.THINK);
       this.dispatchRunStep(newStepId, {
         type: StepTypes.MESSAGE_CREATION,
         message_creation: {
@@ -169,7 +176,7 @@ export class SplitStreamHandler {
     const message_id = this.getMessageId() ?? '';
 
     if (!message_id) {
-      const initialType = reasoning_content ? 'think' : 'text';
+      const initialType = reasoning_content ? ContentTypes.THINK : ContentTypes.TEXT;
       const [stepId, message_id] = this.createMessageStep(initialType);
       this.dispatchRunStep(stepId, {
         type: StepTypes.MESSAGE_CREATION,
@@ -185,9 +192,9 @@ export class SplitStreamHandler {
     }
 
     if (reasoning_content) {
-      return this.handleReasoning(reasoning_content, stepId);
+      this.handleContent(reasoning_content, stepId, ContentTypes.THINK);
+    } else {
+      this.handleContent(content, stepId, ContentTypes.TEXT);
     }
-
-    this.handleContent(content, stepId);
   }
 }
