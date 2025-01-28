@@ -206,12 +206,13 @@ export interface ReasoningDelta {
 }
 
 export type MessageDeltaUpdate = { type: ContentTypes.TEXT; text: string; tool_call_ids?: string[] };
+export type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string; };
 
-export type ContentType = 'text' | 'image_url' | 'tool_call' | string;
+export type ContentType = 'text' | 'image_url' | 'tool_call' | 'think' | string;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type MessageContentComplex = (MessageContentText | MessageContentImageUrl | (Record<string, any> & {
-  type?: 'text' | 'image_url' | string;
+  type?: 'text' | 'image_url' | 'think' | string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) | (Record<string, any> & {
   type?: never;

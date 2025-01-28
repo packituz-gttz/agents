@@ -83,6 +83,13 @@ export class SplitStreamHandler {
     };
     this.handlers?.[GraphEvents.ON_MESSAGE_DELTA]?.({ event: GraphEvents.ON_MESSAGE_DELTA, data: messageDelta });
   };
+  dispatchReasoningDelta = (stepId: string, delta: t.ReasoningDelta): void => {
+    const reasoningDelta: t.ReasoningDeltaEvent = {
+      id: stepId,
+      delta,
+    };
+    this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({ event: GraphEvents.ON_REASONING_DELTA, data: reasoningDelta });
+  };
   handle(chunk?: t.CustomChunk): void {
     if (!chunk) {
       return;
