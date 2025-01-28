@@ -3,8 +3,8 @@ import type * as t from '@/types';
 import { GraphEvents, StepTypes } from '@/common';
 
 type StreamHandlers = Partial<{
-  [GraphEvents.ON_RUN_STEP]: ({ event, data}: { event: string, data: t.RunStep }) => void;
-  [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: string, data: t.MessageDeltaEvent }) => void;
+  [GraphEvents.ON_RUN_STEP]: ({ event, data}: { event: GraphEvents, data: t.RunStep }) => void;
+  [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: GraphEvents, data: t.MessageDeltaEvent }) => void;
 }>
 
 export const SEPARATORS = ['.', '?', '!', '۔', '。', '‥', ';', '¡', '¿', '\n', '```'];

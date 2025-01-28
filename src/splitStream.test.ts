@@ -1,7 +1,9 @@
-import { createMockStream } from './mockStream';
-import { SplitStreamHandler } from './splitStream';
-import { GraphEvents } from '@/common';
 import { nanoid } from 'nanoid';
+import { MessageContentText } from '@langchain/core/messages';
+import { GraphEvents , StepTypes, ContentTypes } from '@/common';
+import { createContentAggregator } from './stream';
+import { SplitStreamHandler } from './splitStream';
+import { createMockStream } from './mockStream';
 
 // Mock sleep to speed up tests
 jest.mock('@/utils', () => ({
@@ -154,5 +156,184 @@ End code.`;
 
     expect(tokens).toContain(' ');
     expect(tokens.join('')).toBe('Hello  world');
+  });
+});
+
+describe('ContentAggregator with SplitStreamHandler', () => {
+  it('should aggregate content from multiple message blocks', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+      },
+      blockThreshold: 10,
+    });
+
+    const text = 'First sentence. Second sentence. Third sentence.';
+    const stream = createMockStream({ text, streamRate: 0 })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    expect(contentParts.length).toBeGreaterThan(1);
+    contentParts.forEach(part => {
+      expect(part?.type).toBe(ContentTypes.TEXT);
+      if (part?.type === ContentTypes.TEXT) {
+        expect(typeof part.text).toBe('string');
+        expect(part.text.length).toBeGreaterThan(0);
+      }
+    });
+
+    const fullText = contentParts
+      .filter(part => part?.type === ContentTypes.TEXT)
+      .map(part => (part?.type === ContentTypes.TEXT ? part.text : ''))
+      .join('');
+    expect(fullText).toBe(text);
+  });
+
+  it('should maintain content order across splits', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+      },
+      blockThreshold: 15,
+    });
+
+    const text = 'First part. Second part. Third part.';
+    const stream = createMockStream({ text, streamRate: 0 })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    const texts = contentParts
+      .filter(part => part?.type === ContentTypes.TEXT)
+      .map(part => (part?.type === ContentTypes.TEXT ? part.text : ''));
+
+    expect(texts[0]).toContain('First');
+    expect(texts[texts.length - 1]).toContain('Third');
+  });
+
+  it('should handle code blocks as single content parts', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+      },
+      blockThreshold: 10,
+    });
+
+    const text = `Before code.
+\`\`\`python
+def test():
+    return True
+\`\`\`
+After code.`;
+
+    const stream = createMockStream({ text, streamRate: 0 })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    const codeBlockPart = contentParts.find(part =>
+      part?.type === ContentTypes.TEXT &&
+      part.text.includes('```python')
+    );
+
+    expect(codeBlockPart).toBeDefined();
+    if (codeBlockPart?.type === ContentTypes.TEXT) {
+      expect(codeBlockPart.text).toContain('def test()');
+      expect(codeBlockPart.text).toContain('return True');
+    }
+  });
+
+  it('should properly map steps to their content', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent, stepMap } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+      },
+      blockThreshold: 5,
+    });
+
+    const text = 'Hi. Ok. Yes.';
+    const stream = createMockStream({ text, streamRate: 0 })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    Array.from(stepMap.entries()).forEach(([_stepId, step]) => {
+      expect(step?.type).toBe(StepTypes.MESSAGE_CREATION);
+      const currentIndex = step?.index ?? -1;
+      const stepContent = contentParts[currentIndex];
+      if (!stepContent && currentIndex > 0) {
+        const prevStepContent = contentParts[currentIndex - 1];
+        expect((prevStepContent as MessageContentText | undefined)?.text).toEqual(text);
+      } else if (stepContent?.type === ContentTypes.TEXT) {
+        expect(stepContent.text.length).toBeGreaterThan(0);
+      }
+    });
+
+    contentParts.forEach((part, index) => {
+      const hasMatchingStep = Array.from(stepMap.values()).some(
+        step => step?.index === index
+      );
+      expect(hasMatchingStep).toBe(true);
+    });
+  });
+
+  it('should aggregate content across multiple splits while preserving order', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+      },
+      blockThreshold: 10,
+    });
+
+    const text = 'A. B. C. D. E. F.';
+    const stream = createMockStream({ text, streamRate: 0 })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+    let letterIndex = 0;
+
+    contentParts.forEach(part => {
+      if (part?.type === ContentTypes.TEXT) {
+        while (letterIndex < letters.length &&
+               part.text.includes(letters[letterIndex]) === true) {
+          letterIndex++;
+        }
+      }
+    });
+
+    expect(letterIndex).toBe(letters.length);
   });
 });
