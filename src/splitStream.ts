@@ -1,10 +1,11 @@
 import { nanoid } from 'nanoid';
 import type * as t from '@/types';
-import { GraphEvents, StepTypes } from '@/common';
+import { ContentTypes, GraphEvents, StepTypes } from '@/common';
 
 type StreamHandlers = Partial<{
   [GraphEvents.ON_RUN_STEP]: ({ event, data}: { event: GraphEvents, data: t.RunStep }) => void;
   [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: GraphEvents, data: t.MessageDeltaEvent }) => void;
+  [GraphEvents.ON_REASONING_DELTA]: ({ event, data}: { event: GraphEvents, data: t.ReasoningDeltaEvent }) => void;
 }>
 
 export const SEPARATORS = ['.', '?', '!', '۔', '。', '‥', ';', '¡', '¿', '\n', '```'];
@@ -52,9 +53,9 @@ export class SplitStreamHandler {
       this.currentType = type;
     }
     this.currentLength = 0;
-    this.currentMessageId = `msg_${nanoid()}`;
-    this.currentStepId = `step_${nanoid()}`;
     this.currentIndex += 1;
+    this.currentStepId = `step_${nanoid()}`;
+    this.currentMessageId = `msg_${nanoid()}`;
     return [this.currentStepId, this.currentMessageId];
   };
   dispatchRunStep = (stepId: string, stepDetails: t.StepDetails): void => {
@@ -77,20 +78,17 @@ export class SplitStreamHandler {
   };
   handle(chunk?: t.CustomChunk): void {
     if (!chunk) {
-      // console.warn(`No chunk found in ${event} event`);
       return;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const content = chunk.choices?.[0]?.delta?.content ?? '';
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    // const reasoning_content = chunk.choices?.[0]?.delta?.[this.reasoningKey];
-
+    const reasoning_content = chunk.choices?.[0]?.delta?.[this.reasoningKey] ?? '';
     const isEmptyContent = typeof content === 'undefined' || !content.length || typeof content === 'string' && !content;
-    // const isEmptyReasoning = typeof reasoning_content === 'undefined' || !reasoning_content.length || typeof reasoning_content === 'string' && !reasoning_content;
+    const isEmptyReasoning = typeof reasoning_content === 'undefined' || !reasoning_content.length || typeof reasoning_content === 'string' && !reasoning_content;
 
-    // if (isEmptyContent && isEmptyReasoning) {
-    if (isEmptyContent) {
+    if (isEmptyContent && isEmptyReasoning) {
       return;
     }
 
@@ -118,21 +116,23 @@ export class SplitStreamHandler {
 
     this.dispatchMessageDelta(stepId, {
       content: [{
-        type: 'text',
+        type: ContentTypes.TEXT,
         text: content,
       }],
     });
 
-    if (this.currentLength > this.blockThreshold && !this.inCodeBlock) {
-      if (SEPARATORS.some(sep => content.includes(sep))) {
-        const [newStepId, newMessageId] = this.createMessageStep();
-        this.dispatchRunStep(newStepId, {
-          type: StepTypes.MESSAGE_CREATION,
-          message_creation: {
-            message_id: newMessageId,
-          },
-        });
-      }
+    if (this.inCodeBlock) {
+      return;
+    }
+
+    if (this.currentLength > this.blockThreshold && SEPARATORS.some(sep => content.includes(sep))) {
+      const [newStepId, newMessageId] = this.createMessageStep();
+      this.dispatchRunStep(newStepId, {
+        type: StepTypes.MESSAGE_CREATION,
+        message_creation: {
+          message_id: newMessageId,
+        },
+      });
     }
   }
 }
