@@ -12,6 +12,9 @@ export const SEPARATORS = ['.', '?', '!', '۔', '。', '‥', ';', '¡', '¿', '
 
 export class SplitStreamHandler {
   private inCodeBlock = false;
+  private accumulate: boolean;
+  tokens: string[] = [];
+  reasoningTokens: string[] = [];
   currentStepId?: string;
   currentMessageId?: string;
   currentType?: 'text' | 'think';
@@ -19,15 +22,18 @@ export class SplitStreamHandler {
   reasoningKey: 'reasoning_content' | 'reasoning' = 'reasoning_content';
   currentIndex = -1;
   blockThreshold = 4500;
+  /** The run ID AKA the Message ID associated with the complete generation */
   runId: string;
   handlers?: StreamHandlers;
   constructor({
     runId,
     handlers,
+    accumulate,
     reasoningKey,
     blockThreshold,
   }: {
       runId: string,
+      accumulate?: boolean,
       handlers: StreamHandlers
       blockThreshold?: number,
       reasoningKey?: 'reasoning_content' | 'reasoning',
@@ -40,6 +46,7 @@ export class SplitStreamHandler {
     if (blockThreshold != null) {
       this.blockThreshold = blockThreshold;
     }
+    this.accumulate = accumulate ?? false;
   }
   getMessageId = (): string | undefined => {
     const messageId = this.currentMessageId;
@@ -85,11 +92,17 @@ export class SplitStreamHandler {
     const content = chunk.choices?.[0]?.delta?.content ?? '';
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const reasoning_content = chunk.choices?.[0]?.delta?.[this.reasoningKey] ?? '';
-    const isEmptyContent = typeof content === 'undefined' || !content.length || typeof content === 'string' && !content;
-    const isEmptyReasoning = typeof reasoning_content === 'undefined' || !reasoning_content.length || typeof reasoning_content === 'string' && !reasoning_content;
 
-    if (isEmptyContent && isEmptyReasoning) {
+    if (!content.length && !reasoning_content.length) {
       return;
+    }
+
+    if (this.accumulate && content) {
+      this.tokens.push(content);
+    }
+
+    if (this.accumulate && reasoning_content) {
+      this.reasoningTokens.push(reasoning_content);
     }
 
     if (content.includes('```')) {
