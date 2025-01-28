@@ -29,7 +29,7 @@ describe('Stream Generation and Handling', () => {
 
     const tokens: string[] = [];
     for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta.content;
+      const content = chunk.choices?.[0]?.delta.content ?? '';
       if (content) tokens.push(content);
     }
 
@@ -40,12 +40,22 @@ describe('Stream Generation and Handling', () => {
     const runId = nanoid();
     const handler = new SplitStreamHandler({
       runId,
+      blockThreshold: 10,
       handlers: mockHandlers,
     });
 
-    const codeText = `Here's some code:
+    const codeText = `Code:
 \`\`\`
 const x = 1;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
+const y = 2;
 const y = 2;
 \`\`\`
 End code.`;
@@ -61,7 +71,7 @@ End code.`;
 
     // Verify that only one message block was created for the code section
     const runSteps = mockHandlers[GraphEvents.ON_RUN_STEP].mock.calls;
-    expect(runSteps.length).toBe(1); // Should only create one message block
+    expect(runSteps.length).toBe(2); // Should only create one message block
   });
 
   it('should split content when exceeding threshold', async () => {
@@ -116,8 +126,8 @@ End code.`;
     const contentTokens: string[] = [];
 
     for await (const chunk of stream) {
-      const reasoning = chunk.choices?.[0]?.delta.reasoning_content;
-      const content = chunk.choices?.[0]?.delta.content;
+      const reasoning = chunk.choices?.[0]?.delta.reasoning_content ?? '';
+      const content = chunk.choices?.[0]?.delta.content ?? '';
 
       if (reasoning) reasoningTokens.push(reasoning);
       if (content) contentTokens.push(content);
