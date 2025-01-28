@@ -90,26 +90,19 @@ export class SplitStreamHandler {
     };
     this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({ event: GraphEvents.ON_REASONING_DELTA, data: reasoningDelta });
   };
-  handle(chunk?: t.CustomChunk): void {
-    if (!chunk) {
-      return;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    const content = chunk.choices?.[0]?.delta?.content ?? '';
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    const reasoning_content = chunk.choices?.[0]?.delta?.[this.reasoningKey] ?? '';
-
-    if (!content.length && !reasoning_content.length) {
-      return;
-    }
-
-    if (this.accumulate && content) {
+  handleContent = (content: string, stepId: string): void => {
+    if (this.accumulate) {
       this.tokens.push(content);
     }
 
-    if (this.accumulate && reasoning_content) {
-      this.reasoningTokens.push(reasoning_content);
+    if (this.currentType !== 'text') {
+      const [newStepId, newMessageId] = this.createMessageStep('text');
+      this.dispatchRunStep(newStepId, {
+        type: StepTypes.MESSAGE_CREATION,
+        message_creation: {
+          message_id: newMessageId,
+        },
+      });
     }
 
     if (content.includes('```')) {
@@ -117,22 +110,6 @@ export class SplitStreamHandler {
     }
 
     this.currentLength += content.length;
-    const message_id = this.getMessageId() ?? '';
-
-    if (!message_id) {
-      const [stepId, message_id] = this.createMessageStep();
-      this.dispatchRunStep(stepId, {
-        type: StepTypes.MESSAGE_CREATION,
-        message_creation: {
-          message_id,
-        },
-      });
-    }
-
-    const stepId = this.currentStepId ?? '';
-    if (!stepId) {
-      return;
-    }
 
     this.dispatchMessageDelta(stepId, {
       content: [{
@@ -146,7 +123,7 @@ export class SplitStreamHandler {
     }
 
     if (this.currentLength > this.blockThreshold && SEPARATORS.some(sep => content.includes(sep))) {
-      const [newStepId, newMessageId] = this.createMessageStep();
+      const [newStepId, newMessageId] = this.createMessageStep('text');
       this.dispatchRunStep(newStepId, {
         type: StepTypes.MESSAGE_CREATION,
         message_creation: {
@@ -154,5 +131,63 @@ export class SplitStreamHandler {
         },
       });
     }
+  };
+  handleReasoning = (reasoning_content: string, stepId: string): void => {
+    if (this.accumulate) {
+      this.reasoningTokens.push(reasoning_content);
+    }
+    if (this.currentType !== 'think') {
+      const [newStepId, newMessageId] = this.createMessageStep('think');
+      this.dispatchRunStep(newStepId, {
+        type: StepTypes.MESSAGE_CREATION,
+        message_creation: {
+          message_id: newMessageId,
+        },
+      });
+    }
+
+    this.dispatchReasoningDelta(stepId, {
+      content: [{
+        type: ContentTypes.THINK,
+        think: reasoning_content,
+      }],
+    });
+    return;
+  };
+  handle(chunk?: t.CustomChunk): void {
+    if (!chunk) {
+      return;
+    }
+
+    const content = chunk.choices?.[0]?.delta.content ?? '';
+    const reasoning_content = chunk.choices?.[0]?.delta[this.reasoningKey] ?? '';
+
+    if (!content.length && !reasoning_content.length) {
+      return;
+    }
+
+    const message_id = this.getMessageId() ?? '';
+
+    if (!message_id) {
+      const initialType = reasoning_content ? 'think' : 'text';
+      const [stepId, message_id] = this.createMessageStep(initialType);
+      this.dispatchRunStep(stepId, {
+        type: StepTypes.MESSAGE_CREATION,
+        message_creation: {
+          message_id,
+        },
+      });
+    }
+
+    const stepId = this.currentStepId ?? '';
+    if (!stepId) {
+      return;
+    }
+
+    if (reasoning_content) {
+      return this.handleReasoning(reasoning_content, stepId);
+    }
+
+    this.handleContent(content, stepId);
   }
 }
