@@ -48,15 +48,15 @@ describe('Stream Generation and Handling', () => {
 \`\`\`
 const x = 1;
 const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
-const y = 2;
+const z = 2;
+const a = 2;
+const b = 2;
+const c = 2;
+const d = 2;
+const e = 2;
+const f = 2;
+const g = 2;
+const h = 2;
 \`\`\`
 End code.`;
 
