@@ -383,4 +383,64 @@ describe('SplitStreamHandler with Reasoning Tokens', () => {
     const messageSteps = getStepTypes(runSteps);
     expect(new Set(messageSteps).size).toBeGreaterThan(1);
   });
+
+  it('should properly map steps to their reasoning content', async () => {
+    const runId = nanoid();
+    const { contentParts, aggregateContent, stepMap } = createContentAggregator();
+
+    const handler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_RUN_STEP]: aggregateContent,
+        [GraphEvents.ON_MESSAGE_DELTA]: aggregateContent,
+        [GraphEvents.ON_REASONING_DELTA]: aggregateContent,
+      },
+      blockThreshold: 5,
+    });
+
+    const text = 'Main content.';
+    const reasoningText = 'First thought. Second thought. Third thought.';
+    const stream = createMockStream({
+      text,
+      reasoningText,
+      streamRate: 0
+    })();
+
+    for await (const chunk of stream) {
+      handler.handle(chunk);
+    }
+
+    Array.from(stepMap.entries()).forEach(([_stepId, step]) => {
+      expect(step?.type).toBe(StepTypes.MESSAGE_CREATION);
+      const currentIndex = step?.index ?? -1;
+      const stepContent = contentParts[currentIndex];
+
+      if (stepContent?.type === ContentTypes.THINK) {
+        // Verify reasoning content structure
+        expect(stepContent).toHaveProperty('think');
+        expect(typeof stepContent.think).toBe('string');
+        expect(stepContent.think.length).toBeGreaterThan(0);
+      }
+    });
+
+    // Verify at least one reasoning content part exists
+    const reasoningParts = contentParts.filter(
+      part => part?.type === ContentTypes.THINK
+    );
+    expect(reasoningParts.length).toBeGreaterThan(0);
+
+    // Verify the content order (reasoning should come before main content)
+    const contentTypes = contentParts
+      .filter(part => part !== undefined)
+      .map(part => part.type);
+
+    expect(contentTypes).toContain(ContentTypes.THINK);
+    expect(contentTypes).toContain(ContentTypes.TEXT);
+
+    // Verify the complete reasoning content is preserved
+    const fullReasoningText = reasoningParts
+      .map(part => (part?.type === ContentTypes.THINK ? part.think : ''))
+      .join('');
+    expect(fullReasoningText).toBe(reasoningText);
+  });
 });
