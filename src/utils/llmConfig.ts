@@ -11,16 +11,6 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     // disableStreaming: true,
   },
-  'azure': {
-    provider: Providers.OPENAI,
-    streaming: true,
-    streamUsage: true,
-    model: 'gpt-4o',
-    azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
-    azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_API_INSTANCE,
-    azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_API_DEPLOYMENT,
-    azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION,
-  },
   [Providers.OLLAMA]: {
     provider: Providers.OLLAMA,
     model: 'llama3.2',
