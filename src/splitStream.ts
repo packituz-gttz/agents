@@ -139,28 +139,6 @@ export class SplitStreamHandler {
       });
     }
   };
-  handleReasoning = (reasoning_content: string, stepId: string): void => {
-    if (this.accumulate) {
-      this.reasoningTokens.push(reasoning_content);
-    }
-    if (this.currentType !== ContentTypes.THINK) {
-      const [newStepId, newMessageId] = this.createMessageStep(ContentTypes.THINK);
-      this.dispatchRunStep(newStepId, {
-        type: StepTypes.MESSAGE_CREATION,
-        message_creation: {
-          message_id: newMessageId,
-        },
-      });
-    }
-
-    this.dispatchReasoningDelta(stepId, {
-      content: [{
-        type: ContentTypes.THINK,
-        think: reasoning_content,
-      }],
-    });
-    return;
-  };
   handle(chunk?: t.CustomChunk): void {
     if (!chunk) {
       return;
