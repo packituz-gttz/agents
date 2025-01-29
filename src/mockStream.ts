@@ -7,7 +7,8 @@ import type * as t from '@/types';
 import { sleep } from '@/utils';
 
 const choiceProps: OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice = { finish_reason: null, index: 0, delta: {} };
-
+const reasoningSplitRegex = /(?<=\s+)|(?=\s+)/;
+const contentSplitRegex = /(?<=<\/?think>)|(?=<\/?think>)|(?<=\s+)|(?=\s+)/;
 export const createMockStream = (options: {
   text?: string;
   reasoningText?: string;
@@ -41,7 +42,7 @@ And finally some more regular text to test our splitting logic.`;
 
     if (reasoningText != null && reasoningText) {
       // Split reasoning text into "token-like" chunks
-      const reasoningTokens = reasoningText.split(/(?<=\s+)|(?=\s+)/);
+      const reasoningTokens = reasoningText.split(reasoningSplitRegex);
       for (const token of reasoningTokens) {
         yield {
           choices: [{
@@ -56,7 +57,7 @@ And finally some more regular text to test our splitting logic.`;
     }
 
     // Split main content into "token-like" chunks
-    const tokens = content.split(/(?<=\s+)|(?=\s+)/);
+    const tokens = content.split(contentSplitRegex);
     for (const token of tokens) {
       yield {
         choices: [{

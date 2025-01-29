@@ -444,3 +444,96 @@ describe('SplitStreamHandler with Reasoning Tokens', () => {
     expect(fullReasoningText).toBe(reasoningText);
   });
 });
+
+describe('SplitStreamHandler', () => {
+  it('should handle think blocks correctly', async () => {
+    const runId = nanoid();
+    const messageDeltaEvents: t.MessageDeltaEvent[] = [];
+    const reasoningDeltaEvents: t.ReasoningDeltaEvent[] = [];
+
+    const streamHandler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_MESSAGE_DELTA]: ({ data }): void => {
+          messageDeltaEvents.push(data);
+        },
+        [GraphEvents.ON_REASONING_DELTA]: ({ data }): void => {
+          reasoningDeltaEvents.push(data);
+        },
+      },
+    });
+
+    const content = 'Here\'s some regular text. <think>Now I\'m thinking deeply about something important. This should all be reasoning.</think> Back to regular text.';
+
+    const stream = createMockStream({
+      text: content,
+      streamRate: 5,
+    })();
+
+    for await (const chunk of stream) {
+      streamHandler.handle(chunk);
+    }
+
+    // Check that content before <think> was handled as regular text
+    expect(messageDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.MessageDeltaUpdate | undefined)?.text.includes('Here\'s')
+    )).toBe(true);
+
+    // Check that <think> tag was handled as reasoning
+    expect(reasoningDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.ReasoningDeltaUpdate | undefined)?.think.includes('<think>')
+    )).toBe(true);
+
+    // Check that content inside <think> tags was handled as reasoning
+    expect(reasoningDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.ReasoningDeltaUpdate | undefined)?.think.includes('thinking')
+    )).toBe(true);
+
+    // Check that </think> tag was handled as reasoning
+    expect(reasoningDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.ReasoningDeltaUpdate | undefined)?.think.includes('</think>')
+    )).toBe(true);
+
+    // Check that content after </think> was handled as regular text
+    expect(messageDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.MessageDeltaUpdate | undefined)?.text.includes('Back')
+    )).toBe(true);
+  });
+
+  it('should ignore think tags inside code blocks', async () => {
+    const runId = nanoid();
+    const messageDeltaEvents: t.MessageDeltaEvent[] = [];
+    const reasoningDeltaEvents: t.ReasoningDeltaEvent[] = [];
+
+    const streamHandler = new SplitStreamHandler({
+      runId,
+      handlers: {
+        [GraphEvents.ON_MESSAGE_DELTA]: ({ data }): void => {
+          messageDeltaEvents.push(data);
+        },
+        [GraphEvents.ON_REASONING_DELTA]: ({ data }): void => {
+          reasoningDeltaEvents.push(data);
+        },
+      },
+    });
+
+    const content = 'Regular text. ```<think>This should stay as code</think>``` More text.';
+
+    const stream = createMockStream({
+      text: content,
+      streamRate: 5,
+    })();
+
+    for await (const chunk of stream) {
+      streamHandler.handle(chunk);
+    }
+
+    // Check that think tags inside code blocks were treated as regular text
+    expect(messageDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.MessageDeltaUpdate | undefined)?.text.includes('Regular')
+    )).toBe(true);
+
+    // Verify no reasoning events were generated
+    expect(reasoningDeltaEvents.length).toBe(0);
+  });
+});
