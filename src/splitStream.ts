@@ -86,7 +86,7 @@ export class SplitStreamHandler {
     };
     this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({ event: GraphEvents.ON_REASONING_DELTA, data: reasoningDelta });
   };
-  handleContent = (content: string, stepId: string, _type: ContentTypes.TEXT | ContentTypes.THINK): void => {
+  handleContent = (content: string, _type: ContentTypes.TEXT | ContentTypes.THINK): void => {
     let type = _type;
     if (this.inThinkBlock && type === ContentTypes.TEXT) {
       type = ContentTypes.THINK;
@@ -109,12 +109,7 @@ export class SplitStreamHandler {
       });
     }
 
-    if (content.includes('```')) {
-      this.inCodeBlock = !this.inCodeBlock;
-    }
-
-    this.currentLength += content.length;
-
+    const stepId = this.currentStepId ?? '';
     if (type === ContentTypes.THINK) {
       this.dispatchReasoningDelta(stepId, {
         content: [{
@@ -131,6 +126,7 @@ export class SplitStreamHandler {
       });
     }
 
+    this.currentLength += content.length;
     if (this.inCodeBlock) {
       return;
     }
@@ -157,6 +153,10 @@ export class SplitStreamHandler {
       return;
     }
 
+    if (content.includes('```')) {
+      this.inCodeBlock = !this.inCodeBlock;
+    }
+
     if (content === '<think>' && !this.inCodeBlock) {
       this.inThinkBlock = true;
     } else if (this.lastToken === '</think>' && !this.inCodeBlock) {
@@ -179,15 +179,10 @@ export class SplitStreamHandler {
       });
     }
 
-    const stepId = this.currentStepId ?? '';
-    if (!stepId) {
-      return;
-    }
-
     if (reasoning_content) {
-      this.handleContent(reasoning_content, stepId, ContentTypes.THINK);
+      this.handleContent(reasoning_content, ContentTypes.THINK);
     } else {
-      this.handleContent(content, stepId, ContentTypes.TEXT);
+      this.handleContent(content, ContentTypes.TEXT);
     }
   }
 }

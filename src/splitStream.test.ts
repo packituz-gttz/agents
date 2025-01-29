@@ -536,4 +536,95 @@ describe('SplitStreamHandler', () => {
     // Verify no reasoning events were generated
     expect(reasoningDeltaEvents.length).toBe(0);
   });
+
+  it('should properly split content with think tags while maintaining context', async () => {
+    const runId = nanoid();
+    const messageDeltaEvents: t.MessageDeltaEvent[] = [];
+    const reasoningDeltaEvents: t.ReasoningDeltaEvent[] = [];
+    const runStepEvents: t.RunStep[] = [];
+    const { contentParts, aggregateContent } = createContentAggregator();
+
+    const streamHandler = new SplitStreamHandler({
+      runId,
+      blockThreshold: 20, // Small threshold to force splits
+      handlers: {
+        [GraphEvents.ON_MESSAGE_DELTA]: (event): void => {
+          messageDeltaEvents.push(event.data);
+          aggregateContent(event);
+        },
+        [GraphEvents.ON_REASONING_DELTA]: (event): void => {
+          reasoningDeltaEvents.push(event.data);
+          aggregateContent(event);
+        },
+        [GraphEvents.ON_RUN_STEP]: (event): void => {
+          runStepEvents.push(event.data);
+          aggregateContent(event);
+        },
+      },
+    });
+
+    const content = 'Here\'s some regular text. <think>Now I\'m thinking deeply about something important. This is a long thought that should be split into multiple parts. We want to ensure the splitting works correctly.</think> Back to regular text after thinking.';
+
+    const stream = createMockStream({
+      text: content,
+      streamRate: 5,
+    })();
+
+    for await (const chunk of stream) {
+      streamHandler.handle(chunk);
+    }
+
+    // Verify that multiple message blocks were created
+    expect(runStepEvents.length).toBeGreaterThan(2);
+
+    // Check that content before <think> was handled as regular text
+    expect(messageDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.MessageDeltaUpdate | undefined)?.text.includes('regular')
+    )).toBe(true);
+
+    // Verify that reasoning content was split into multiple parts
+    const reasoningParts = reasoningDeltaEvents
+      .map(event => (event.delta.content?.[0] as t.ReasoningDeltaUpdate | undefined)?.think)
+      .filter(Boolean);
+    expect(reasoningParts.length).toBeGreaterThan(1);
+
+    // Verify that the complete reasoning content is preserved when joined
+    const fullReasoningContent = reasoningParts.join('');
+    expect(fullReasoningContent).toContain('thinking');
+    expect(fullReasoningContent).toContain('should');
+    expect(fullReasoningContent).toContain('be');
+    expect(fullReasoningContent).toContain('split');
+
+    // Check that each reasoning part maintains proper think context
+    let seenThinkOpen = false;
+    let seenThinkClose = false;
+    reasoningParts.forEach(part => {
+      if (part == null) return;
+      if (part.includes('<think>')) {
+        seenThinkOpen = true;
+      }
+      if (part.includes('</think>')) {
+        seenThinkClose = true;
+      }
+      // Middle parts should be handled as reasoning even without explicit think tags
+      if (!part.includes('<think>') && !part.includes('</think>')) {
+        expect(reasoningDeltaEvents.some(event =>
+          (event.delta.content?.[0] as t.ReasoningDeltaUpdate | undefined)?.think === part
+        )).toBe(true);
+      }
+    });
+    expect(seenThinkOpen).toBe(true);
+    expect(seenThinkClose).toBe(true);
+
+    // Check that content after </think> was handled as regular text
+    expect(messageDeltaEvents.some(event =>
+      (event.delta.content?.[0] as t.MessageDeltaUpdate | undefined)?.text.includes('Back')
+    )).toBe(true);
+
+    const thinkingBlocks = contentParts.filter(part =>
+      part?.type === ContentTypes.THINK
+    );
+    expect(thinkingBlocks.length).toEqual(4);
+    expect((thinkingBlocks[0] as t.ReasoningContentText).think.startsWith('<think>')).toBeTruthy();
+  });
 });
