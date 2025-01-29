@@ -210,8 +210,13 @@ export type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string; };
 
 export type ContentType = 'text' | 'image_url' | 'tool_call' | 'think' | string;
 
+export type ReasoningContentText = {
+  type: ContentTypes.THINK;
+  think: string;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MessageContentComplex = (MessageContentText | MessageContentImageUrl | (Record<string, any> & {
+export type MessageContentComplex = (ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
   type?: 'text' | 'image_url' | 'think' | string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) | (Record<string, any> & {
