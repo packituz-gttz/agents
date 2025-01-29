@@ -76,7 +76,7 @@ export class StandardGraph extends Graph<
   GraphNode
 > {
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
-  private clientOptions: t.ClientOptions;
+  clientOptions: t.ClientOptions;
   boundModel: Runnable;
   /** The last recorded timestamp that a stream API call was invoked */
   lastStreamCall: number | undefined;
