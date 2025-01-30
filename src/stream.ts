@@ -15,7 +15,7 @@ function getNonEmptyValue(possibleValues: string[]): string | undefined {
   return undefined;
 }
 
-const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>, returnExistingId = false): string | undefined => {
+export const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>, returnExistingId = false): string | undefined => {
   const messageId = graph.messageIdsByStepKey.get(stepKey);
   if (messageId != null && messageId) {
     return returnExistingId ? messageId : undefined;
