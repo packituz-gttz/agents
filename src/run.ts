@@ -1,6 +1,6 @@
 // src/run.ts
-import { ChatOpenAI } from '@langchain/openai';
 import { PromptTemplate } from '@langchain/core/prompts';
+import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
 import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type { RunnableConfig } from '@langchain/core/runnables';
@@ -10,6 +10,7 @@ import { manualToolStreamProviders } from '@/llm/providers';
 import { createTitleRunnable } from '@/utils/title';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
+import { isOpenAILike } from '@/utils/llm';
 
 export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
@@ -186,7 +187,7 @@ export class Run<T extends t.BaseGraphState> {
     if (!model) {
       return { language: '', title: '' };
     }
-    if (this.provider === Providers.OPENAI && model instanceof ChatOpenAI) {
+    if (isOpenAILike(this.provider) && (model instanceof ChatOpenAI || model instanceof AzureChatOpenAI)) {
       model.temperature = (clientOptions as t.OpenAIClientOptions | undefined)?.temperature as number;
       model.topP = (clientOptions as t.OpenAIClientOptions | undefined)?.topP as number;
       model.frequencyPenalty = (clientOptions as t.OpenAIClientOptions | undefined)?.frequencyPenalty as number;

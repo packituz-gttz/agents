@@ -77,6 +77,7 @@ export enum Providers {
   MISTRALAI = 'mistralai',
   OLLAMA = 'ollama',
   GOOGLE = 'google',
+  AZURE = 'azure',
 }
 
 export enum GraphNodeKeys {

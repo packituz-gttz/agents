@@ -1,0 +1,9 @@
+// src/utils/llm.ts
+import { Providers } from '@/common';
+
+export function isOpenAILike(provider?: string | Providers): boolean {
+  if (provider == null) {
+    return false;
+  }
+  return ([Providers.OPENAI, Providers.AZURE] as string[]).includes(provider);
+}

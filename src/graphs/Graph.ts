@@ -1,9 +1,9 @@
 // src/graphs/Graph.ts
 import { nanoid } from 'nanoid';
-import { ChatOpenAI } from '@langchain/openai';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { START, END, StateGraph  } from '@langchain/langgraph';
+import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
@@ -18,7 +18,7 @@ import {
   formatOpenAIArtifactContent,
   formatAnthropicArtifactContent,
 } from '@/messages';
-import { resetIfNotEmpty, joinKeys, sleep } from '@/utils';
+import { resetIfNotEmpty, isOpenAILike, joinKeys, sleep } from '@/utils';
 import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
@@ -262,7 +262,7 @@ export class StandardGraph extends Graph<
     const ChatModelClass = getChatModelClass(this.provider);
     const model = new ChatModelClass(this.clientOptions);
 
-    if (this.provider === Providers.OPENAI && model instanceof ChatOpenAI) {
+    if (isOpenAILike(this.provider) && (model instanceof ChatOpenAI || model instanceof AzureChatOpenAI)) {
       model.temperature = (this.clientOptions as t.OpenAIClientOptions).temperature as number;
       model.topP = (this.clientOptions as t.OpenAIClientOptions).topP as number;
       model.frequencyPenalty = (this.clientOptions as t.OpenAIClientOptions).frequencyPenalty as number;
@@ -323,7 +323,7 @@ export class StandardGraph extends Graph<
         formatAnthropicArtifactContent(finalMessages);
       } else if (
         isLatestToolMessage &&
-        provider === Providers.OPENAI
+        isOpenAILike(provider)
       ) {
         formatOpenAIArtifactContent(finalMessages);
       }
