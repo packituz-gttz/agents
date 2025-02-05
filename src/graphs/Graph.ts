@@ -20,6 +20,7 @@ import {
 } from '@/messages';
 import { resetIfNotEmpty, isOpenAILike, joinKeys, sleep } from '@/utils';
 import { HandlerRegistry } from '@/events';
+import { ChatVertexAI } from '@langchain/google-vertexai';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
 export type GraphNode = GraphNodeKeys | typeof START;
@@ -268,6 +269,14 @@ export class StandardGraph extends Graph<
       model.frequencyPenalty = (this.clientOptions as t.OpenAIClientOptions).frequencyPenalty as number;
       model.presencePenalty = (this.clientOptions as t.OpenAIClientOptions).presencePenalty as number;
       model.n = (this.clientOptions as t.OpenAIClientOptions).n as number;
+    } else if (this.provider === Providers.VERTEXAI && model instanceof ChatVertexAI) {
+      model.temperature = (this.clientOptions as t.VertexAIClientOptions).temperature as number;
+      model.topP = (this.clientOptions as t.VertexAIClientOptions).topP as number;
+      model.topK = (this.clientOptions as t.VertexAIClientOptions).topK as number;
+      model.topLogprobs = (this.clientOptions as t.VertexAIClientOptions).topLogprobs as number;
+      model.frequencyPenalty = (this.clientOptions as t.VertexAIClientOptions).frequencyPenalty as number;
+      model.presencePenalty = (this.clientOptions as t.VertexAIClientOptions).presencePenalty as number;
+      model.maxOutputTokens = (this.clientOptions as t.VertexAIClientOptions).maxOutputTokens as number;
     }
 
     if (!this.tools || this.tools.length === 0) {
