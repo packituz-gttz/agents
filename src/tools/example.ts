@@ -8,7 +8,7 @@ config();
 import fetch from 'node-fetch';
 import { Constants } from '@/common';
 
-const fetchImageSchema = z.object({});
+const fetchImageSchema = z.object({ input: z.string().optional() });
 
 export const fetchRandomImageTool = tool(
   async () => {
@@ -27,6 +27,41 @@ export const fetchRandomImageTool = tool(
           url: `data:image/jpeg;base64,${base64}`,
         },
       }];
+
+      const response = [
+        {
+          type: 'text',
+          text: 'Random image from Lorem Picsum, taken at 800x600',
+        },
+      ];
+      return [response, { content }];
+    } catch (error) {
+      return [`Error fetching image: ${(error as Error).message}`, undefined];
+    }
+  },
+  {
+    name: 'fetchRandomImage',
+    description: 'Fetches a random image from Lorem Picsum',
+    schema: fetchImageSchema,
+    responseFormat: Constants.CONTENT_AND_ARTIFACT,
+  }
+);
+
+export const fetchRandomImageURL = tool(
+  async () => {
+    try {
+      const imageUrl = 'https://picsum.photos/200/300';
+
+      const imageResponse = await fetch(imageUrl);
+      const content = [{
+        type: 'image_url',
+        image_url: {
+          url: imageResponse.url,
+        },
+      }];
+
+      // eslint-disable-next-line no-console
+      console.log('URL RESPONSE', imageResponse.url);
 
       const response = [
         {

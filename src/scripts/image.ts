@@ -6,7 +6,7 @@ import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
-import { fetchRandomImageTool } from '@/tools/example';
+import { fetchRandomImageTool, fetchRandomImageURL } from '@/tools/example';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
 import { GraphEvents } from '@/common';
@@ -65,7 +65,8 @@ async function testCodeExecution(): Promise<void> {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      tools: [fetchRandomImageTool],
+      // tools: [fetchRandomImageTool],
+      tools: [fetchRandomImageURL],
       instructions: 'You are a friendly AI assistant with internet capabilities. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
@@ -84,7 +85,7 @@ async function testCodeExecution(): Promise<void> {
 
   console.log('Fetch Random Image');
 
-  const userMessage1 = `Hi ${userName} here. Please get me 2 random images and then describe both please.`;
+  const userMessage1 = `Hi ${userName} here. Please get me 2 random images. Describe them after you receive them.`;
 
   conversationHistory.push(new HumanMessage(userMessage1));
 
