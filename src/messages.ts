@@ -248,7 +248,7 @@ export function formatAnthropicArtifactContent(messages: BaseMessage[]): void {
   }
 }
 
-export function formatOpenAIArtifactContent(messages: BaseMessage[]): void {
+export function formatArtifactPayload(messages: BaseMessage[]): void {
   const lastMessageY = messages[messages.length - 1];
   if (!(lastMessageY instanceof ToolMessage)) return;
 

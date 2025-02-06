@@ -2,6 +2,7 @@
 import { nanoid } from 'nanoid';
 import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
+import { ChatVertexAI } from '@langchain/google-vertexai';
 import { START, END, StateGraph  } from '@langchain/langgraph';
 import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
@@ -14,13 +15,12 @@ import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import {
   modifyDeltaProperties,
+  formatArtifactPayload,
   convertMessagesToContent,
-  formatOpenAIArtifactContent,
   formatAnthropicArtifactContent,
 } from '@/messages';
-import { resetIfNotEmpty, isOpenAILike, joinKeys, sleep } from '@/utils';
+import { resetIfNotEmpty, isOpenAILike, isGoogleLike, joinKeys, sleep } from '@/utils';
 import { HandlerRegistry } from '@/events';
-import { ChatVertexAI } from '@langchain/google-vertexai';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
 export type GraphNode = GraphNodeKeys | typeof START;
@@ -332,9 +332,9 @@ export class StandardGraph extends Graph<
         formatAnthropicArtifactContent(finalMessages);
       } else if (
         isLatestToolMessage &&
-        isOpenAILike(provider)
+        (isOpenAILike(provider) || isGoogleLike(provider))
       ) {
-        formatOpenAIArtifactContent(finalMessages);
+        formatArtifactPayload(finalMessages);
       }
 
       if (this.lastStreamCall != null && this.streamBuffer != null) {
