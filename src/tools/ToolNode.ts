@@ -4,8 +4,8 @@ import type { RunnableConfig, RunnableToolLike } from '@langchain/core/runnables
 import type { BaseMessage, AIMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type * as t from '@/types';
-import{ RunnableCallable, unescapeObject } from '@/utils';
-import { GraphNodeKeys, Providers } from '@/common';
+import{ RunnableCallable } from '@/utils';
+import { GraphNodeKeys } from '@/common';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class ToolNode<T = any> extends RunnableCallable<T, T> {
@@ -53,8 +53,7 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (tool === undefined) {
             throw new Error(`Tool "${call.name}" not found.`);
           }
-          const provider = config.metadata?.provider;
-          const args = provider === Providers.GOOGLE || provider === Providers.VERTEXAI ? unescapeObject(call.args) : call.args;
+          const args = call.args;
           const output = await tool.invoke(
             { ...call, args, type: 'tool_call' },
             config
