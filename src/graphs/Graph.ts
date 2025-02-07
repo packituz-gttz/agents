@@ -256,6 +256,7 @@ export class StandardGraph extends Graph<
     return new CustomToolNode<t.BaseGraphState>({
       tools: this.tools || [],
       toolMap: this.toolMap,
+      toolCallStepIds: this.toolCallStepIds,
     });
   }
 

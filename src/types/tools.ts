@@ -28,6 +28,7 @@ export type ToolNodeOptions = {
   tags?: string[];
   handleToolErrors?: boolean;
   loadRuntimeTools?: ToolRefGenerator;
+  toolCallStepIds?: Map<string, string>;
 };
 
 export type ToolNodeConstructorParams = ToolRefs & ToolNodeOptions;

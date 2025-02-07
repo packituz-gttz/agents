@@ -13,18 +13,21 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
   private toolMap: Map<string, StructuredToolInterface | RunnableToolLike>;
   private loadRuntimeTools?: t.ToolRefGenerator;
   handleToolErrors = true;
+  toolCallStepIds?: Map<string, string>;
 
   constructor({
     tools,
     toolMap,
     name,
     tags,
+    toolCallStepIds,
     handleToolErrors,
     loadRuntimeTools,
   }: t.ToolNodeConstructorParams) {
     super({ name, tags, func: (input, config) => this.run(input, config) });
     this.tools = tools;
     this.toolMap = toolMap ?? new Map(tools.map(tool => [tool.name, tool]));
+    this.toolCallStepIds = toolCallStepIds;
     this.handleToolErrors = handleToolErrors ?? this.handleToolErrors;
     this.loadRuntimeTools = loadRuntimeTools;
   }
@@ -54,9 +57,10 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
             throw new Error(`Tool "${call.name}" not found.`);
           }
           const args = call.args;
+          const stepId = this.toolCallStepIds?.get(call.id!);
           const output = await tool.invoke(
-            { ...call, args, type: 'tool_call' },
-            config
+            { ...call, args, type: 'tool_call', stepId },
+            config,
           );
           if (
             (isBaseMessage(output) && output._getType() === 'tool') ||
