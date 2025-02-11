@@ -157,9 +157,9 @@ export class SplitStreamHandler {
       this.inCodeBlock = !this.inCodeBlock;
     }
 
-    if (content === '<think>' && !this.inCodeBlock) {
+    if (content.includes('<think>') && !this.inCodeBlock) {
       this.inThinkBlock = true;
-    } else if (this.lastToken === '</think>' && !this.inCodeBlock) {
+    } else if (this.lastToken.includes('</think>') && !this.inCodeBlock) {
       this.inThinkBlock = false;
     }
 
