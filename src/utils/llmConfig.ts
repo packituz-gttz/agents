@@ -11,6 +11,16 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     // disableStreaming: true,
   },
+  alibaba: {
+    provider: Providers.OPENAI,
+    streaming: true,
+    streamUsage: true,
+    model: 'qwen-max',
+    openAIApiKey: process.env.ALIBABA_API_KEY,
+    configuration: {
+      baseURL: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    },
+  },
   [Providers.AZURE]: {
     provider: Providers.AZURE,
     temperature: 0.7,
