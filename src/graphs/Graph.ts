@@ -60,6 +60,7 @@ export abstract class Graph<
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T>;
+  messageStepHasToolCalls: Map<string, boolean> = new Map();
   messageIdsByStepKey: Map<string, string> = new Map();
   prelimMessageIdsByStepKey: Map<string, string> = new Map();
   config: RunnableConfig | undefined;
@@ -149,6 +150,7 @@ export class StandardGraph extends Graph<
     this.stepKeyIds = resetIfNotEmpty(this.stepKeyIds, new Map());
     this.toolCallStepIds = resetIfNotEmpty(this.toolCallStepIds, new Map());
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
+    this.messageStepHasToolCalls = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
   }
 
@@ -364,8 +366,16 @@ export class StandardGraph extends Graph<
         return { messages: [finalChunk as AIMessageChunk] };
       }
 
-      const finalMessage = await this.boundModel.invoke(finalMessages, config);
-      return { messages: [finalMessage as AIMessageChunk] };
+      const finalMessage = (await this.boundModel.invoke(finalMessages, config)) as AIMessageChunk;
+      if ((finalMessage.tool_calls?.length ?? 0) > 0) {
+        finalMessage.tool_calls = finalMessage.tool_calls?.filter((tool_call) => {
+          if (!tool_call.name) {
+            return false;
+          }
+          return true;
+        });
+      }
+      return { messages: [finalMessage] };
     };
   }
 
