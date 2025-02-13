@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 // src/events.ts
+import type { UsageMetadata, BaseMessageFields } from '@langchain/core/messages';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 import { handleToolCalls } from '@/stream';
@@ -18,6 +19,14 @@ export class HandlerRegistry {
 }
 
 export class ModelEndHandler implements t.EventHandler {
+  collectedUsage?: UsageMetadata[];
+  constructor(collectedUsage?: UsageMetadata[]) {
+    if (collectedUsage && !Array.isArray(collectedUsage)) {
+      throw new Error('collectedUsage must be an array');
+    }
+    this.collectedUsage = collectedUsage;
+  }
+
   handle(event: string, data: t.ModelEndData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
@@ -25,6 +34,9 @@ export class ModelEndHandler implements t.EventHandler {
     }
 
     const usage = data?.output?.usage_metadata;
+    if (usage != null && this.collectedUsage != null) {
+      this.collectedUsage.push(usage);
+    }
 
     console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
@@ -117,7 +129,7 @@ export class LLMStreamHandler implements t.EventHandler {
   }
 }
 
-export const createMetadataAggregator = (_collected?: Record<string, unknown>[]): t.MetadataAggregatorResult => {
+export const createMetadataAggregator = (_collected?: Record<string, NonNullable<BaseMessageFields['response_metadata']>>[]): t.MetadataAggregatorResult => {
   const collected = _collected || [];
 
   const handleLLMEnd: t.HandleLLMEnd = (output) => {

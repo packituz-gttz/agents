@@ -3,6 +3,7 @@ import type OpenAITypes from 'openai';
 import type { MessageContentImageUrl, MessageContentText, ToolMessage, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { LLMResult, Generation } from '@langchain/core/outputs';
+import type { ToolEndEvent } from '@/types/tools';
 import { StepTypes, ContentTypes, GraphEvents } from '@/common/enum';
 
 export type HandleLLMEnd = (output: LLMResult, runId: string, parentRunId?: string, tags?: string[]) => void;
@@ -240,3 +241,15 @@ export type SplitStreamHandlers = Partial<{
   [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: GraphEvents, data: MessageDeltaEvent }) => void;
   [GraphEvents.ON_REASONING_DELTA]: ({ event, data}: { event: GraphEvents, data: ReasoningDeltaEvent }) => void;
 }>
+
+export type ContentAggregator = ({ event, data }: {
+  event: GraphEvents;
+  data: RunStep | MessageDeltaEvent | RunStepDeltaEvent | {
+      result: ToolEndEvent;
+  };
+}) => void;
+export type ContentAggregatorResult = {
+  stepMap: Map<string, RunStep | undefined>;
+  contentParts: Array<MessageContentComplex | undefined>;
+  aggregateContent: ContentAggregator;
+};

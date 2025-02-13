@@ -5,7 +5,7 @@ import type * as t from '@/types';
 export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   [Providers.OPENAI]: {
     provider: Providers.OPENAI,
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     temperature: 0.7,
     streaming: true,
     streamUsage: true,

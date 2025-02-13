@@ -17,6 +17,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const excludedDirsInProd = [
   'src/scripts/',
+  'src/specs/',
   'src/proto/',
   'routes/',
   'config/'

@@ -84,7 +84,7 @@
     "@smithy/protocol-http": "^3.0.6",
     "@smithy/signature-v4": "^2.0.10",
     "@smithy/util-utf8": "^2.0.0",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.4.7",
     "nanoid": "^3.3.7"
   },
   "resolutions": {
@@ -98,6 +98,9 @@
     "~/*": "./*"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.8",
+    "@babel/preset-env": "^7.26.8",
+    "@babel/preset-typescript": "^7.26.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-json": "^6.1.0",

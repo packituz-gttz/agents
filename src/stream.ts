@@ -254,18 +254,7 @@ hasToolCallChunks: ${hasToolCallChunks}
   }
 }
 
-export type ContentAggregatorResult = {
-  stepMap: Map<string, t.RunStep | undefined>;
-  contentParts: Array<t.MessageContentComplex | undefined>;
-  aggregateContent: ({ event, data }: {
-    event: GraphEvents;
-    data: t.RunStep | t.MessageDeltaEvent | t.RunStepDeltaEvent | {
-        result: t.ToolEndEvent;
-    };
-}) => void
-};
-
-export function createContentAggregator(): ContentAggregatorResult {
+export function createContentAggregator(): t.ContentAggregatorResult {
   const contentParts: Array<t.MessageContentComplex | undefined> = [];
   const stepMap = new Map<string, t.RunStep>();
   const toolCallIdMap = new Map<string, string>();
