@@ -3,14 +3,14 @@
 // src/scripts/cli.test.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
+import { HumanMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
-import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
+import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
+import { ContentTypes, GraphEvents, Providers } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
-import { ContentTypes, GraphEvents, Providers } from '@/common';
 import { Run } from '@/run';
 
 function capitalizeFirstLetter(string: string): string {
@@ -84,7 +84,7 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
     },
   });
 
-  test('OpenAI: should process a simple message, generate title', async () => {
+  test(`${capitalizeFirstLetter(provider)}: should process a simple message, generate title`, async () => {
     const { userName, location } = await getArgs();
     const llmConfig = getLLMConfig(provider);
     const customHandlers = setupCustomHandlers();
@@ -146,7 +146,7 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
     expect(collected).toBeDefined();
   });
 
-  test('OpenAI: should follow-up', async () => {
+  test(`${capitalizeFirstLetter(provider)}: should follow-up`, async () => {
     console.log('Previous conversation length:', runningHistory.length);
     console.log('Last message:', runningHistory[runningHistory.length - 1].content);
     const { userName, location } = await getArgs();
