@@ -10,22 +10,22 @@ import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
-import { ContentTypes, GraphEvents } from '@/common';
+import { ContentTypes, GraphEvents, Providers } from '@/common';
 import { Run } from '@/run';
 
 function capitalizeFirstLetter(string: string): string {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-describe('Standard Streaming Integration Tests', () => {
+const provider = Providers.OPENAI;
+describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
   jest.setTimeout(30000);
-
-  let conversationHistory: BaseMessage[];
-  let runningHistory: BaseMessage[];
   let run: Run<t.IState>;
-  let contentParts: t.MessageContentComplex[];
-  let aggregateContent: t.ContentAggregator;
+  let runningHistory: BaseMessage[];
   let collectedUsage: UsageMetadata[];
+  let conversationHistory: BaseMessage[];
+  let aggregateContent: t.ContentAggregator;
+  let contentParts: t.MessageContentComplex[];
 
   const config = {
     configurable: {
@@ -85,7 +85,7 @@ describe('Standard Streaming Integration Tests', () => {
   });
 
   test('OpenAI: should process a simple message, generate title', async () => {
-    const { userName, location, provider } = await getArgs();
+    const { userName, location } = await getArgs();
     const llmConfig = getLLMConfig(provider);
     const customHandlers = setupCustomHandlers();
 
@@ -149,7 +149,7 @@ describe('Standard Streaming Integration Tests', () => {
   test('OpenAI: should follow-up', async () => {
     console.log('Previous conversation length:', runningHistory.length);
     console.log('Last message:', runningHistory[runningHistory.length - 1].content);
-    const { userName, location, provider } = await getArgs();
+    const { userName, location } = await getArgs();
     const llmConfig = getLLMConfig(provider);
     const customHandlers = setupCustomHandlers();
 
