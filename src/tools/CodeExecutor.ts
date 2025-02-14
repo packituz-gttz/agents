@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
+import fetch, { RequestInit } from 'node-fetch';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import { getEnvironmentVariable } from '@langchain/core/utils/env';
 import type * as t from '@/types';
@@ -71,7 +73,7 @@ Usage:
       };
 
       try {
-        const response = await fetch(EXEC_ENDPOINT, {
+        const fetchOptions: RequestInit = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -79,8 +81,12 @@ Usage:
             'X-API-Key': apiKey,
           },
           body: JSON.stringify(postData),
-        });
+        };
 
+        if (process.env.PROXY != null && process.env.PROXY !== '') {
+          fetchOptions.agent = new HttpsProxyAgent(process.env.PROXY);
+        }
+        const response = await fetch(EXEC_ENDPOINT, fetchOptions);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
