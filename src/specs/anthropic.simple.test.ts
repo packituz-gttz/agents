@@ -3,7 +3,7 @@
 // src/scripts/cli.test.ts
 import { config } from 'dotenv';
 config();
-import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
+import { Calculator } from '@langchain/community/tools/calculator';
 import { HumanMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { StandardGraph } from '@/graphs';
 import type * as t from '@/types';
@@ -92,7 +92,7 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
       graphConfig: {
         type: 'standard',
         llmConfig,
-        tools: [new TavilySearchResults()],
+        tools: [new Calculator()],
         instructions: 'You are a friendly AI assistant. Always address the user by their name.',
         additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
       },
@@ -158,7 +158,7 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
       graphConfig: {
         type: 'standard',
         llmConfig,
-        tools: [new TavilySearchResults()],
+        tools: [new Calculator()],
         instructions: 'You are a friendly AI assistant. Always address the user by their name.',
         additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
       },
