@@ -158,26 +158,29 @@ export class ChatModelStreamHandler implements t.EventHandler {
       tool_calls: toolCallChunks,
     });
   };
-  // handleContent(chunk: AIMessageChunk, graph: Graph, metadata?: Record<string, unknown>): void {
-
-  // }
+  handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
+    const reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
+    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '')) {
+      graph.currentTokenType = ContentTypes.THINK;
+    } else if (graph.currentTokenType !== ContentTypes.TEXT && chunk.content != null && chunk.content !== '') {
+      graph.currentTokenType = ContentTypes.TEXT;
+    }
+  }
   handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph) {
       throw new Error('Graph not found');
     }
-
-    const chunk = data.chunk as AIMessageChunk | undefined;
-    const reasoning_content = chunk?.additional_kwargs[graph.reasoningKey] as string | undefined;
-    const content = reasoning_content ?? chunk?.content;
-
     if (!graph.config) {
       throw new Error('Config not found in graph');
     }
-
-    if (!chunk) {
+    if (!data.chunk) {
       console.warn(`No chunk found in ${event} event`);
       return;
     }
+
+    const chunk = data.chunk as Partial<AIMessageChunk>;
+    const content = (chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined) ?? chunk.content;
+    this.handleReasoning(chunk, graph);
 
     let hasToolCalls = false;
     if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id)) {
@@ -254,12 +257,21 @@ hasToolCallChunks: ${hasToolCallChunks}
     } else if (hasToolCallChunks && (chunk.tool_call_chunks?.some((tc) => tc.args === content) ?? false)) {
       return;
     } else if (typeof content === 'string') {
-      graph.dispatchMessageDelta(stepId, {
-        content: [{
-          type: ContentTypes.TEXT,
-          text: content,
-        }],
-      });
+      if (graph.currentTokenType === ContentTypes.TEXT) {
+        graph.dispatchMessageDelta(stepId, {
+          content: [{
+            type: ContentTypes.TEXT,
+            text: content,
+          }],
+        });
+      } else {
+        graph.dispatchReasoningDelta(stepId, {
+          content: [{
+            type: ContentTypes.THINK,
+            think: content,
+          }],
+        });
+      }
     } else if (content.every((c) => c.type?.startsWith(ContentTypes.TEXT))) {
       graph.dispatchMessageDelta(stepId, {
         content,

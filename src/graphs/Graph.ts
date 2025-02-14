@@ -213,13 +213,18 @@ export class StandardGraph extends Graph<
   getKeyList(metadata: Record<string, unknown> | undefined): (string | number | undefined)[] {
     if (!metadata) return [];
 
-    return [
+    const keyList = [
       metadata.run_id as string,
       metadata.thread_id as string,
       metadata.langgraph_node as string,
       metadata.langgraph_step as number,
       metadata.checkpoint_ns as string,
     ];
+    if (this.currentTokenType === ContentTypes.THINK) {
+      keyList.push('reasoning');
+    }
+
+    return keyList;
   }
 
   checkKeyList(keyList: (string | number | undefined)[]): boolean {
