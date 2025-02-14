@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 config();
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import { HumanMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { StandardGraph } from '@/graphs';
 import type * as t from '@/types';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
@@ -61,8 +62,8 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
       }
     },
     [GraphEvents.ON_RUN_STEP]: {
-      handle: (event: GraphEvents.ON_RUN_STEP, data: t.StreamEventData): void => {
-        onRunStepSpy(event, data);
+      handle: (event: GraphEvents.ON_RUN_STEP, data: t.StreamEventData, metadata, graph): void => {
+        onRunStepSpy(event, data, metadata, graph);
         aggregateContent({ event, data: data as t.RunStep });
       }
     },
@@ -72,8 +73,8 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
       }
     },
     [GraphEvents.ON_MESSAGE_DELTA]: {
-      handle: (event: GraphEvents.ON_MESSAGE_DELTA, data: t.StreamEventData): void => {
-        onMessageDeltaSpy(event, data);
+      handle: (event: GraphEvents.ON_MESSAGE_DELTA, data: t.StreamEventData, metadata, graph): void => {
+        onMessageDeltaSpy(event, data, metadata, graph);
         aggregateContent({ event, data: data as t.MessageDeltaEvent });
       }
     },
@@ -125,9 +126,11 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
 
     expect(onMessageDeltaSpy).toHaveBeenCalled();
     expect(onMessageDeltaSpy.mock.calls.length).toBeGreaterThan(1);
+    expect((onMessageDeltaSpy.mock.calls[0][3] as StandardGraph).provider).toBeDefined();
 
     expect(onRunStepSpy).toHaveBeenCalled();
     expect(onRunStepSpy.mock.calls.length).toBeGreaterThan(0);
+    expect((onRunStepSpy.mock.calls[0][3] as StandardGraph).provider).toBeDefined();
 
     const { handleLLMEnd, collected } = createMetadataAggregator();
     const titleResult = await run.generateTitle({
