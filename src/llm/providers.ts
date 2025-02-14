@@ -1,25 +1,27 @@
 // src/llm/providers.ts
 import { ChatOllama } from '@langchain/ollama';
+import { ChatDeepSeek } from '@langchain/deepseek';
+import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 // import { ChatAnthropic } from '@langchain/anthropic';
-import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type { ChatModelConstructorMap, ProviderOptionsMap, ChatModelMap } from '@/types';
-import { Providers } from '@/common';
 import { CustomAnthropic } from '@/llm/anthropic/llm';
+import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {
   [Providers.OPENAI]: ChatOpenAI,
-  [Providers.AZURE]: AzureChatOpenAI,
   [Providers.OLLAMA]: ChatOllama,
+  [Providers.AZURE]: AzureChatOpenAI,
   [Providers.VERTEXAI]: ChatVertexAI,
-  [Providers.BEDROCK_LEGACY]: BedrockChat,
+  [Providers.DEEPSEEK]: ChatDeepSeek,
   [Providers.MISTRALAI]: ChatMistralAI,
-  [Providers.BEDROCK]: ChatBedrockConverse,
   [Providers.ANTHROPIC]: CustomAnthropic,
+  [Providers.BEDROCK_LEGACY]: BedrockChat,
+  [Providers.BEDROCK]: ChatBedrockConverse,
   // [Providers.ANTHROPIC]: ChatAnthropic,
   [Providers.GOOGLE]: ChatGoogleGenerativeAI,
 };

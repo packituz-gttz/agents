@@ -78,6 +78,7 @@ export enum Providers {
   OLLAMA = 'ollama',
   GOOGLE = 'google',
   AZURE = 'azureOpenAI',
+  DEEPSEEK = 'deepseek',
 }
 
 export enum GraphNodeKeys {

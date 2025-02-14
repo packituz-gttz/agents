@@ -1,5 +1,6 @@
 // src/types/llm.ts
 import { ChatOllama } from '@langchain/ollama';
+import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
@@ -12,6 +13,7 @@ import type { ChatOpenAIFields, OpenAIChatInput, AzureOpenAIInput } from '@langc
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
+import type { ChatDeepSeekCallOptions } from '@langchain/deepseek';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
 import type { StructuredTool } from '@langchain/core/tools';
@@ -41,32 +43,35 @@ export type VertexAIClientOptions = ChatVertexAIInput;
 export type BedrockClientOptions = BedrockChatFields;
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 export type GoogleClientOptions = GoogleGenerativeAIChatInput;
+export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
 
-export type ClientOptions = OpenAIClientOptions | AzureClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions | GoogleClientOptions;
+export type ClientOptions = OpenAIClientOptions | AzureClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions | GoogleClientOptions | DeepSeekClientOptions;
 
 export type LLMConfig = {
   provider: Providers;
 } & ClientOptions;
 
 export type ProviderOptionsMap = {
-  [Providers.OPENAI]: OpenAIClientOptions;
   [Providers.AZURE]: AzureClientOptions;
+  [Providers.OPENAI]: OpenAIClientOptions;
   [Providers.OLLAMA]: OllamaClientOptions;
+  [Providers.GOOGLE]: GoogleClientOptions;
+  [Providers.VERTEXAI]: VertexAIClientOptions;
+  [Providers.DEEPSEEK]: DeepSeekClientOptions;
   [Providers.ANTHROPIC]: AnthropicClientOptions;
   [Providers.MISTRALAI]: MistralAIClientOptions;
-  [Providers.VERTEXAI]: VertexAIClientOptions;
   [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
   [Providers.BEDROCK]: BedrockConverseClientOptions;
-  [Providers.GOOGLE]: GoogleClientOptions;
 };
 
 export type ChatModelMap = {
   [Providers.OPENAI]: ChatOpenAI;
   [Providers.OLLAMA]: ChatOllama;
   [Providers.AZURE]: AzureChatOpenAI;
+  [Providers.DEEPSEEK]: ChatDeepSeek;
+  [Providers.VERTEXAI]: ChatVertexAI;
   [Providers.ANTHROPIC]: ChatAnthropic;
   [Providers.MISTRALAI]: ChatMistralAI;
-  [Providers.VERTEXAI]: ChatVertexAI;
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
   [Providers.GOOGLE]: ChatGoogleGenerativeAI;

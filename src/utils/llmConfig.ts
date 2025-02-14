@@ -39,6 +39,12 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     baseUrl: 'http://host.docker.internal:11434'
   },
+  [Providers.DEEPSEEK]: {
+    provider: Providers.DEEPSEEK,
+    model: 'deepseek-reasoner',
+    streaming: true,
+    streamUsage: true,
+  },
   [Providers.ANTHROPIC]: {
     provider: Providers.ANTHROPIC,
     model: 'claude-3-5-sonnet-20240620',
