@@ -181,7 +181,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       if (!alreadyDispatched && tool_calls?.length === chunk.tool_call_chunks.length) {
         graph.dispatchMessageDelta(prevStepId, {
           content: [{
-            type: 'text',
+            type: ContentTypes.TEXT,
             text: '',
             tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
           }],
@@ -242,11 +242,11 @@ hasToolCallChunks: ${hasToolCallChunks}
     } else if (typeof content === 'string') {
       graph.dispatchMessageDelta(stepId, {
         content: [{
-          type: 'text',
+          type: ContentTypes.TEXT,
           text: content,
         }],
       });
-    } else if (content.every((c) => c.type?.startsWith('text'))) {
+    } else if (content.every((c) => c.type?.startsWith(ContentTypes.TEXT))) {
       graph.dispatchMessageDelta(stepId, {
         content,
       });
