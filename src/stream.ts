@@ -1,7 +1,7 @@
 // src/stream.ts
 import { nanoid } from 'nanoid';
 import type { AIMessageChunk } from '@langchain/core/messages';
-import type { ToolCall } from '@langchain/core/messages/tool';
+import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 import { StepTypes, ContentTypes, GraphEvents, ToolCallTypes } from '@/common';
@@ -103,13 +103,72 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
 };
 
 export class ChatModelStreamHandler implements t.EventHandler {
+  handleToolCallChunks = ({
+    graph,
+    stepKey,
+    toolCallChunks,
+  }: {
+    graph: Graph;
+    stepKey: string;
+    toolCallChunks: ToolCallChunk[],
+  }): void => {
+    const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
+    const prevRunStep = graph.getRunStep(prevStepId);
+    const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
+    /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
+    const tool_calls: ToolCall[] | undefined =
+    prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
+      ? []
+      : undefined;
+    /** Edge Case: `id` and `name` fields cannot be empty strings */
+    for (const toolCallChunk of toolCallChunks) {
+      if (toolCallChunk.name === '') {
+        toolCallChunk.name = undefined;
+      }
+      if (toolCallChunk.id === '') {
+        toolCallChunk.id = undefined;
+      } else if (tool_calls != null && toolCallChunk.id != null && toolCallChunk.name != null) {
+        tool_calls.push({
+          args: {},
+          id: toolCallChunk.id,
+          name: toolCallChunk.name,
+          type: ToolCallTypes.TOOL_CALL,
+        });
+      }
+    }
+
+    let stepId: string = _stepId;
+    const alreadyDispatched = prevRunStep?.type === StepTypes.MESSAGE_CREATION && graph.messageStepHasToolCalls.has(prevStepId);
+    if (!alreadyDispatched && tool_calls?.length === toolCallChunks.length) {
+      graph.dispatchMessageDelta(prevStepId, {
+        content: [{
+          type: ContentTypes.TEXT,
+          text: '',
+          tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
+        }],
+      });
+      graph.messageStepHasToolCalls.set(prevStepId, true);
+      stepId = graph.dispatchRunStep(stepKey, {
+        type: StepTypes.TOOL_CALLS,
+        tool_calls,
+      });
+    }
+    graph.dispatchRunStepDelta(stepId, {
+      type: StepTypes.TOOL_CALLS,
+      tool_calls: toolCallChunks,
+    });
+  };
+  // handleContent(chunk: AIMessageChunk, graph: Graph, metadata?: Record<string, unknown>): void {
+
+  // }
   handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph) {
       throw new Error('Graph not found');
     }
 
     const chunk = data.chunk as AIMessageChunk | undefined;
-    const content = chunk?.content;
+    const reasoning_content = chunk?.additional_kwargs[graph.reasoningKey] as string | undefined;
+    const content = reasoning_content ?? chunk?.content;
 
     if (!graph.config) {
       throw new Error('Config not found in graph');
@@ -121,13 +180,12 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     let hasToolCalls = false;
-    const hasToolCallChunks = (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) ?? false;
-
     if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id)) {
       hasToolCalls = true;
       handleToolCalls(chunk.tool_calls, metadata, graph);
     }
 
+    const hasToolCallChunks = (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) ?? false;
     const isEmptyContent = typeof content === 'undefined' || !content.length || typeof content === 'string' && !content;
     const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
     const chunkId = chunk.id ?? '';
@@ -151,51 +209,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
       && chunk.tool_call_chunks
       && chunk.tool_call_chunks.length
       && typeof chunk.tool_call_chunks[0]?.index === 'number') {
-      const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
-      const prevRunStep = graph.getRunStep(prevStepId);
-      const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
-      /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
-      const tool_calls: ToolCall[] | undefined =
-      prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
-        ? []
-        : undefined;
-      /** Edge Case: `id` and `name` fields cannot be empty strings */
-      for (const toolCallChunk of chunk.tool_call_chunks) {
-        if (toolCallChunk.name === '') {
-          toolCallChunk.name = undefined;
-        }
-        if (toolCallChunk.id === '') {
-          toolCallChunk.id = undefined;
-        } else if (tool_calls != null && toolCallChunk.id != null && toolCallChunk.name != null) {
-          tool_calls.push({
-            args: {},
-            id: toolCallChunk.id,
-            name: toolCallChunk.name,
-            type: ToolCallTypes.TOOL_CALL,
-          });
-        }
-      }
-
-      let stepId: string = _stepId;
-      const alreadyDispatched = prevRunStep?.type === StepTypes.MESSAGE_CREATION && graph.messageStepHasToolCalls.has(prevStepId);
-      if (!alreadyDispatched && tool_calls?.length === chunk.tool_call_chunks.length) {
-        graph.dispatchMessageDelta(prevStepId, {
-          content: [{
-            type: ContentTypes.TEXT,
-            text: '',
-            tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
-          }],
-        });
-        graph.messageStepHasToolCalls.set(prevStepId, true);
-        stepId = graph.dispatchRunStep(stepKey, {
-          type: StepTypes.TOOL_CALLS,
-          tool_calls,
-        });
-      }
-      graph.dispatchRunStepDelta(stepId, {
-        type: StepTypes.TOOL_CALLS,
-        tool_calls: chunk.tool_call_chunks,
-      });
+      this.handleToolCallChunks({ graph, stepKey, toolCallChunks: chunk.tool_call_chunks });
     }
 
     if (isEmptyContent) {

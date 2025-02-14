@@ -10,7 +10,7 @@ import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@/types';
-import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback } from '@/common';
+import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import {
@@ -56,10 +56,13 @@ export abstract class Graph<
   abstract dispatchRunStep(stepKey: string, stepDetails: t.StepDetails): string;
   abstract dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void;
   abstract dispatchMessageDelta(id: string, delta: t.MessageDelta): void;
+  abstract dispatchReasoningDelta(stepId: string, delta: t.ReasoningDelta): void;
   abstract handleToolCallCompleted(data: t.ToolEndData, metadata?: Record<string, unknown>): void;
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T>;
+  reasoningKey: 'reasoning_content' | 'reasoning' = 'reasoning_content';
+  currentTokenType: ContentTypes.TEXT | ContentTypes.THINK = ContentTypes.TEXT;
   messageStepHasToolCalls: Map<string, boolean> = new Map();
   messageIdsByStepKey: Map<string, string> = new Map();
   prelimMessageIdsByStepKey: Map<string, string> = new Map();
@@ -152,6 +155,8 @@ export class StandardGraph extends Graph<
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.messageStepHasToolCalls = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
+    this.reasoningKey = resetIfNotEmpty(this.reasoningKey, 'reasoning_content');
+    this.currentTokenType = resetIfNotEmpty(this.currentTokenType, ContentTypes.TEXT);
   }
 
   /* Run Step Processing */
@@ -512,4 +517,15 @@ export class StandardGraph extends Graph<
     };
     dispatchCustomEvent(GraphEvents.ON_MESSAGE_DELTA, messageDelta, this.config);
   }
+
+  dispatchReasoningDelta = (stepId: string, delta: t.ReasoningDelta): void => {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+    const reasoningDelta: t.ReasoningDeltaEvent = {
+      id: stepId,
+      delta,
+    };
+    dispatchCustomEvent(GraphEvents.ON_REASONING_DELTA, reasoningDelta, this.config);
+  };
 }
