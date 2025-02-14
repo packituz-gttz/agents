@@ -103,7 +103,7 @@
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-typescript": "^12.1.2",
     "@swc/core": "^1.6.13",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.14.11",
