@@ -20,6 +20,7 @@ import {
   formatAnthropicArtifactContent,
 } from '@/messages';
 import { resetIfNotEmpty, isOpenAILike, isGoogleLike, joinKeys, sleep } from '@/utils';
+import { createFakeStreamingLLM } from '@/llm/fake';
 import { HandlerRegistry } from '@/events';
 
 const { AGENT, TOOLS } = GraphNodeKeys;
@@ -61,6 +62,8 @@ export abstract class Graph<
 
   abstract createCallModel(): (state: T, config?: RunnableConfig) => Promise<Partial<T>>;
   abstract createWorkflow(): t.CompiledWorkflow<T>;
+  lastToken?: string;
+  tokenTypeSwitch?: 'reasoning' | 'content';
   reasoningKey: 'reasoning_content' | 'reasoning' = 'reasoning_content';
   currentTokenType: ContentTypes.TEXT | ContentTypes.THINK = ContentTypes.TEXT;
   messageStepHasToolCalls: Map<string, boolean> = new Map();
@@ -157,6 +160,8 @@ export class StandardGraph extends Graph<
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
     this.reasoningKey = resetIfNotEmpty(this.reasoningKey, 'reasoning_content');
     this.currentTokenType = resetIfNotEmpty(this.currentTokenType, ContentTypes.TEXT);
+    this.lastToken = resetIfNotEmpty(this.lastToken, undefined);
+    this.tokenTypeSwitch = resetIfNotEmpty(this.tokenTypeSwitch, undefined);
   }
 
   /* Run Step Processing */
@@ -297,6 +302,9 @@ export class StandardGraph extends Graph<
     }
 
     return (model as t.ModelWithTools).bindTools(this.tools);
+  }
+  overrideTestModel(responses: string[], sleep?: number): void {
+    this.boundModel = createFakeStreamingLLM(responses, sleep);
   }
 
   getNewModel({

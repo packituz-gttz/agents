@@ -47,7 +47,7 @@
     "code_exec_simple": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec_simple.ts --provider 'vertexai' --name 'Jo' --location 'New York, NY'",
     "simple": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/simple.ts --provider 'deepseek' --name 'Jo' --location 'New York, NY'",
     "memory": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/memory.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
-    "tool-test": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tools.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
+    "tool-test": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tools.ts --provider 'alibaba' --name 'Jo' --location 'New York, NY'",
     "abort": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/abort.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "script2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_test.ts",

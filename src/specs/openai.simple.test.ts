@@ -10,13 +10,10 @@ import type * as t from '@/types';
 import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ContentTypes, GraphEvents, Providers } from '@/common';
+import { capitalizeFirstLetter } from './spec.utils';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
 import { Run } from '@/run';
-
-function capitalizeFirstLetter(string: string): string {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
 
 const provider = Providers.OPENAI;
 describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {

@@ -12,10 +12,12 @@ import { GraphEvents } from '@/common';
 import { Run } from '@/run';
 
 const conversationHistory: BaseMessage[] = [];
+let _contentParts: t.MessageContentComplex[] = [];
 
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
   const { contentParts, aggregateContent } = createContentAggregator();
+  _contentParts = contentParts as t.MessageContentComplex[];
   const customHandlers = {
     [GraphEvents.TOOL_END]: new ToolEndHandler(),
     [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
@@ -48,6 +50,13 @@ async function testStandardStreaming(): Promise<void> {
         aggregateContent({ event, data: data as t.MessageDeltaEvent });
       }
     },
+    [GraphEvents.ON_REASONING_DELTA]: {
+      handle: (event: GraphEvents.ON_REASONING_DELTA, data: t.StreamEventData): void => {
+        console.log('====== ON_REASONING_DELTA ======');
+        console.dir(data, { depth: null });
+        aggregateContent({ event, data: data as t.ReasoningDeltaEvent });
+      }
+    },
     [GraphEvents.TOOL_START]: {
       handle: (_event: string, data: t.StreamEventData, metadata?: Record<string, unknown>): void => {
         console.log('====== TOOL_START ======');
@@ -63,7 +72,7 @@ async function testStandardStreaming(): Promise<void> {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      tools: [new TavilySearchResults()],
+      // tools: [new TavilySearchResults()],
       instructions: 'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
@@ -81,7 +90,7 @@ async function testStandardStreaming(): Promise<void> {
 
   console.log('Test 1: Simple message test');
 
-  const userMessage = `hi tell me a long story`;
+  const userMessage = `hi`;
 
   conversationHistory.push(new HumanMessage(userMessage));
 
@@ -97,23 +106,26 @@ async function testStandardStreaming(): Promise<void> {
   // console.dir(finalContentParts, { depth: null });
   console.log('\n\n====================\n\n');
   console.dir(contentParts, { depth: null });
-  const { handleLLMEnd, collected } = createMetadataAggregator();
-  const titleResult = await run.generateTitle({
-    inputText: userMessage,
-    contentParts,
-    chainOptions: {
-      callbacks: [{
-        handleLLMEnd,
-      }],
-    },
-  });
-  console.log('Generated Title:', titleResult);
-  console.log('Collected metadata:', collected);
+  // const { handleLLMEnd, collected } = createMetadataAggregator();
+  // const titleResult = await run.generateTitle({
+  //   inputText: userMessage,
+  //   contentParts,
+  //   chainOptions: {
+  //     callbacks: [{
+  //       handleLLMEnd,
+  //     }],
+  //   },
+  // });
+  // console.log('Generated Title:', titleResult);
+  // console.log('Collected metadata:', collected);
 }
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   console.log('Conversation history:');
+  console.dir(conversationHistory, { depth: null });
+  console.log('Content parts:');
+  console.dir(_contentParts, { depth: null });
   process.exit(1);
 });
 
@@ -125,5 +137,7 @@ testStandardStreaming().catch((err) => {
   console.error(err);
   console.log('Conversation history:');
   console.dir(conversationHistory, { depth: null });
+  console.log('Content parts:');
+  console.dir(_contentParts, { depth: null });
   process.exit(1);
 });

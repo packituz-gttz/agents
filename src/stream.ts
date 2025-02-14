@@ -103,69 +103,6 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
 };
 
 export class ChatModelStreamHandler implements t.EventHandler {
-  handleToolCallChunks = ({
-    graph,
-    stepKey,
-    toolCallChunks,
-  }: {
-    graph: Graph;
-    stepKey: string;
-    toolCallChunks: ToolCallChunk[],
-  }): void => {
-    const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
-    const prevRunStep = graph.getRunStep(prevStepId);
-    const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
-    /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
-    const tool_calls: ToolCall[] | undefined =
-    prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
-      ? []
-      : undefined;
-    /** Edge Case: `id` and `name` fields cannot be empty strings */
-    for (const toolCallChunk of toolCallChunks) {
-      if (toolCallChunk.name === '') {
-        toolCallChunk.name = undefined;
-      }
-      if (toolCallChunk.id === '') {
-        toolCallChunk.id = undefined;
-      } else if (tool_calls != null && toolCallChunk.id != null && toolCallChunk.name != null) {
-        tool_calls.push({
-          args: {},
-          id: toolCallChunk.id,
-          name: toolCallChunk.name,
-          type: ToolCallTypes.TOOL_CALL,
-        });
-      }
-    }
-
-    let stepId: string = _stepId;
-    const alreadyDispatched = prevRunStep?.type === StepTypes.MESSAGE_CREATION && graph.messageStepHasToolCalls.has(prevStepId);
-    if (!alreadyDispatched && tool_calls?.length === toolCallChunks.length) {
-      graph.dispatchMessageDelta(prevStepId, {
-        content: [{
-          type: ContentTypes.TEXT,
-          text: '',
-          tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
-        }],
-      });
-      graph.messageStepHasToolCalls.set(prevStepId, true);
-      stepId = graph.dispatchRunStep(stepKey, {
-        type: StepTypes.TOOL_CALLS,
-        tool_calls,
-      });
-    }
-    graph.dispatchRunStepDelta(stepId, {
-      type: StepTypes.TOOL_CALLS,
-      tool_calls: toolCallChunks,
-    });
-  };
-  handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
-    const reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
-    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '')) {
-      graph.currentTokenType = ContentTypes.THINK;
-    } else if (graph.currentTokenType !== ContentTypes.TEXT && chunk.content != null && chunk.content !== '') {
-      graph.currentTokenType = ContentTypes.TEXT;
-    }
-  }
   handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
     if (!graph) {
       throw new Error('Graph not found');
@@ -277,6 +214,82 @@ hasToolCallChunks: ${hasToolCallChunks}
         content,
       });
     }
+  }
+  handleToolCallChunks = ({
+    graph,
+    stepKey,
+    toolCallChunks,
+  }: {
+    graph: Graph;
+    stepKey: string;
+    toolCallChunks: ToolCallChunk[],
+  }): void => {
+    const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
+    const prevRunStep = graph.getRunStep(prevStepId);
+    const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
+    /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
+    const tool_calls: ToolCall[] | undefined =
+    prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
+      ? []
+      : undefined;
+    /** Edge Case: `id` and `name` fields cannot be empty strings */
+    for (const toolCallChunk of toolCallChunks) {
+      if (toolCallChunk.name === '') {
+        toolCallChunk.name = undefined;
+      }
+      if (toolCallChunk.id === '') {
+        toolCallChunk.id = undefined;
+      } else if (tool_calls != null && toolCallChunk.id != null && toolCallChunk.name != null) {
+        tool_calls.push({
+          args: {},
+          id: toolCallChunk.id,
+          name: toolCallChunk.name,
+          type: ToolCallTypes.TOOL_CALL,
+        });
+      }
+    }
+
+    let stepId: string = _stepId;
+    const alreadyDispatched = prevRunStep?.type === StepTypes.MESSAGE_CREATION && graph.messageStepHasToolCalls.has(prevStepId);
+    if (!alreadyDispatched && tool_calls?.length === toolCallChunks.length) {
+      graph.dispatchMessageDelta(prevStepId, {
+        content: [{
+          type: ContentTypes.TEXT,
+          text: '',
+          tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
+        }],
+      });
+      graph.messageStepHasToolCalls.set(prevStepId, true);
+      stepId = graph.dispatchRunStep(stepKey, {
+        type: StepTypes.TOOL_CALLS,
+        tool_calls,
+      });
+    }
+    graph.dispatchRunStepDelta(stepId, {
+      type: StepTypes.TOOL_CALLS,
+      tool_calls: toolCallChunks,
+    });
+  };
+  handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
+    const reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
+    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '')) {
+      graph.currentTokenType = ContentTypes.THINK;
+      graph.tokenTypeSwitch = 'reasoning';
+      return;
+    } else if (graph.tokenTypeSwitch === 'reasoning' && graph.currentTokenType !== ContentTypes.TEXT && chunk.content != null && chunk.content !== '') {
+      graph.currentTokenType = ContentTypes.TEXT;
+      graph.tokenTypeSwitch = 'content';
+    } else if (chunk.content != null && typeof chunk.content === 'string' && chunk.content.includes('<think>')) {
+      graph.currentTokenType = ContentTypes.THINK;
+      graph.tokenTypeSwitch = 'content';
+    } else if (graph.lastToken != null && graph.lastToken.includes('</think>')) {
+      graph.currentTokenType = ContentTypes.TEXT;
+      graph.tokenTypeSwitch = 'content';
+    }
+    if (typeof chunk.content !== 'string') {
+      return;
+    }
+    graph.lastToken = chunk.content;
   }
 }
 
@@ -404,7 +417,7 @@ export function createContentAggregator(): t.ContentAggregatorResult {
       const reasoningDelta = data as t.ReasoningDeltaEvent;
       const runStep = stepMap.get(reasoningDelta.id);
       if (!runStep) {
-        console.warn('No run step or runId found for message delta event');
+        console.warn('No run step or runId found for reasoning delta event');
         return;
       }
 
