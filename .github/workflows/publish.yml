@@ -25,6 +25,9 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Prune development dependencies
+        run: npm prune --production
+
       - name: Set up npm authentication
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
