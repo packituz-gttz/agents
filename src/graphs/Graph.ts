@@ -102,37 +102,30 @@ export class StandardGraph extends Graph<
   constructor({
     runId,
     tools,
+    signal,
     toolMap,
     provider,
-    clientOptions,
-    instructions,
-    signal,
-    additional_instructions = '',
     streamBuffer,
+    instructions,
+    reasoningKey,
+    clientOptions,
     toolEnd = false,
-  } : {
-    runId?: string;
-    signal?: AbortSignal;
-    provider: Providers;
-    tools?: t.GenericTool[];
-    toolMap?: t.ToolMap;
-    clientOptions: Record<string, unknown>;
-    instructions?: string;
-    additional_instructions?: string;
-    streamBuffer?: number;
-    toolEnd?: boolean;
-  }) {
+    additional_instructions = '',
+  } : t.StandardGraphInput) {
     super();
     this.runId = runId;
     this.tools = tools;
+    this.signal = signal;
+    this.toolEnd = toolEnd;
     this.toolMap = toolMap;
     this.provider = provider;
-    this.signal = signal;
-    this.clientOptions = clientOptions;
     this.streamBuffer = streamBuffer;
+    this.clientOptions = clientOptions;
     this.graphState = this.createGraphState();
     this.boundModel = this.initializeModel();
-    this.toolEnd = toolEnd;
+    if (reasoningKey) {
+      this.reasoningKey = reasoningKey;
+    }
 
     let finalInstructions = instructions ?? '';
     if (additional_instructions) {

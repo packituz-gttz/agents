@@ -6,26 +6,18 @@ import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/cor
 import type * as graph from '@/graphs/Graph';
 import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
-import type * as t from '@/types/tools';
 import type * as l from '@/types/llm';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ZodObjectAny = z.ZodObject<any, any, any, any>;
-
-export type StandardGraphConfig = {
-  runId?: string;
+export type BaseGraphConfig = {
   type?: 'standard';
-  provider?: e.Providers;
-  instructions?: string;
   llmConfig: l.LLMConfig;
-  tools?: t.GenericTool[];
-  toolMap?: t.ToolMap;
-  additional_instructions?: string;
-  streamBuffer?: number;
-  signal?: AbortSignal;
-  clientOptions?: Record<string, unknown>;
-  toolEnd?: boolean;
+  provider?: e.Providers;
+  clientOptions?: l.ClientOptions;
 };
+export type StandardGraphConfig = BaseGraphConfig &
+  Omit<g.StandardGraphInput, 'provider' | 'clientOptions'>;
 
 export interface AgentStateChannels {
   messages: BaseMessage[];

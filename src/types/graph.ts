@@ -3,6 +3,9 @@ import type { StateGraphArgs, StateGraph, CompiledStateGraph } from '@langchain/
 import type { BaseMessage, AIMessageChunk } from '@langchain/core/messages';
 import type { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import type { ToolMap, GenericTool } from '@/types/tools';
+import type { ClientOptions } from '@/types/llm';
+import type { Providers } from '@/common';
 import type { Graph } from '@/graphs';
 // import type { RunnableConfig } from '@langchain/core/runnables';
 
@@ -136,3 +139,17 @@ export type PartMetadata = {
 };
 
 export type ModelEndData = StreamEventData & { output: AIMessageChunk | undefined } | undefined;
+
+export type StandardGraphInput = {
+  runId?: string;
+  toolEnd?: boolean;
+  toolMap?: ToolMap;
+  provider: Providers;
+  signal?: AbortSignal;
+  instructions?: string;
+  streamBuffer?: number;
+  tools?: GenericTool[];
+  clientOptions: ClientOptions;
+  additional_instructions?: string;
+  reasoningKey?: 'reasoning_content' | 'reasoning';
+};
