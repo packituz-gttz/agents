@@ -79,6 +79,7 @@ export enum Providers {
   GOOGLE = 'google',
   AZURE = 'azureOpenAI',
   DEEPSEEK = 'deepseek',
+  OPENROUTER = 'openrouter',
 }
 
 export enum GraphNodeKeys {

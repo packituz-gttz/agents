@@ -21,6 +21,8 @@ import type { AnthropicInput } from '@langchain/anthropic';
 import type { Runnable } from '@langchain/core/runnables';
 import type { ChatOllamaInput } from '@langchain/ollama';
 import type { OpenAI as OpenAIClient } from 'openai';
+import type { ChatOpenRouterCallOptions } from '@/llm/openrouter/llm';
+import { ChatOpenRouter } from '@/llm/openrouter/llm';
 import { Providers } from '@/common';
 
 export type AzureClientOptions = (Partial<OpenAIChatInput> & Partial<AzureOpenAIInput> & {
@@ -60,6 +62,7 @@ export type ProviderOptionsMap = {
   [Providers.DEEPSEEK]: DeepSeekClientOptions;
   [Providers.ANTHROPIC]: AnthropicClientOptions;
   [Providers.MISTRALAI]: MistralAIClientOptions;
+  [Providers.OPENROUTER]: ChatOpenRouterCallOptions;
   [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
   [Providers.BEDROCK]: BedrockConverseClientOptions;
 };
@@ -72,6 +75,7 @@ export type ChatModelMap = {
   [Providers.VERTEXAI]: ChatVertexAI;
   [Providers.ANTHROPIC]: ChatAnthropic;
   [Providers.MISTRALAI]: ChatMistralAI;
+  [Providers.OPENROUTER]: ChatOpenRouter;
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
   [Providers.GOOGLE]: ChatGoogleGenerativeAI;

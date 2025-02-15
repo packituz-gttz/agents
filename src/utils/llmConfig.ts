@@ -1,5 +1,6 @@
 // src/utils/llmConfig.ts
 import { Providers } from '@/common';
+import type * as or from '@/llm/openrouter/llm';
 import type * as t from '@/types';
 
 export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
@@ -21,6 +22,21 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
       baseURL: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
     },
   },
+  [Providers.OPENROUTER]: {
+    provider: Providers.OPENROUTER,
+    streaming: true,
+    streamUsage: true,
+    model: 'deepseek/deepseek-r1',
+    openAIApiKey: process.env.OPENROUTER_API_KEY,
+    configuration: {
+      baseURL: process.env.OPENROUTER_BASE_URL,
+      defaultHeaders: {
+        'HTTP-Referer': 'https://librechat.ai',
+        'X-Title': 'LibreChat',
+      },
+    },
+    include_reasoning: true,
+  } as or.ChatOpenRouterCallOptions & t.LLMConfig,
   [Providers.AZURE]: {
     provider: Providers.AZURE,
     temperature: 0.7,

@@ -151,7 +151,6 @@ export class StandardGraph extends Graph<
     this.messageIdsByStepKey = resetIfNotEmpty(this.messageIdsByStepKey, new Map());
     this.messageStepHasToolCalls = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
     this.prelimMessageIdsByStepKey = resetIfNotEmpty(this.prelimMessageIdsByStepKey, new Map());
-    this.reasoningKey = resetIfNotEmpty(this.reasoningKey, 'reasoning_content');
     this.currentTokenType = resetIfNotEmpty(this.currentTokenType, ContentTypes.TEXT);
     this.lastToken = resetIfNotEmpty(this.lastToken, undefined);
     this.tokenTypeSwitch = resetIfNotEmpty(this.tokenTypeSwitch, undefined);
