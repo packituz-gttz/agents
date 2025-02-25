@@ -46,6 +46,7 @@
     "image": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/image.ts --provider 'vertexai' --name 'Jo' --location 'New York, NY'",
     "code_exec_simple": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec_simple.ts --provider 'vertexai' --name 'Jo' --location 'New York, NY'",
     "simple": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/simple.ts --provider 'openrouter' --name 'Jo' --location 'New York, NY'",
+    "caching": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/caching.ts --name 'Jo' --location 'New York, NY'",
     "memory": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/memory.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "tool-test": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tools.ts --provider 'alibaba' --name 'Jo' --location 'New York, NY'",
     "abort": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/abort.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
