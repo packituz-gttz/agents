@@ -21,15 +21,6 @@ async function testPromptCaching(): Promise<void> {
   const { userName } = await getArgs();
   const instructions = `You are a pirate AI assistant for ${userName}. Always respond in pirate dialect. Use the following as context when answering questions:
 ${CACHED_TEXT}`;
-conversationHistory.push(new SystemMessage({
-    content: [
-      {
-        type: "text",
-        text: instructions,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-  }));
   const { contentParts, aggregateContent } = createContentAggregator();
   _contentParts = contentParts as t.MessageContentComplex[];
   
@@ -70,6 +61,7 @@ conversationHistory.push(new SystemMessage({
   const run = await Run.create<t.IState>({
     runId: 'test-prompt-caching-id',
     graphConfig: {
+      instructions,
       type: 'standard',
       llmConfig,
     },

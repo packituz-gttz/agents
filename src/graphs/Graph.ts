@@ -8,7 +8,7 @@ import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
-import type { BaseMessage } from '@langchain/core/messages';
+import type { BaseMessage, BaseMessageFields } from '@langchain/core/messages';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
@@ -127,9 +127,21 @@ export class StandardGraph extends Graph<
       this.reasoningKey = reasoningKey;
     }
 
-    let finalInstructions = instructions ?? '';
+    let finalInstructions: string | BaseMessageFields = instructions ?? '';
     if (additional_instructions) {
       finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
+    }
+
+    if (finalInstructions && provider === Providers.ANTHROPIC && (clientOptions as t.AnthropicClientOptions)?.clientOptions?.defaultHeaders?.['anthropic-beta']?.includes('prompt-caching')) {
+      finalInstructions = {
+        content: [
+          {
+            type: "text",
+            text: instructions,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+      };
     }
 
     if (finalInstructions) {
