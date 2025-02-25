@@ -141,14 +141,19 @@ export class SplitStreamHandler {
       });
     }
   };
+  getDeltaContent(chunk: t.CustomChunk): string {
+    return chunk.choices?.[0]?.delta.content ?? '';
+  }
+  getReasoningDelta(chunk: t.CustomChunk): string {
+    return chunk.choices?.[0]?.delta[this.reasoningKey] ?? '';
+  }
   handle(chunk?: t.CustomChunk): void {
     if (!chunk) {
       return;
     }
 
-    const content = chunk.choices?.[0]?.delta.content ?? '';
-    const reasoning_content = chunk.choices?.[0]?.delta[this.reasoningKey] ?? '';
-
+    const content = this.getDeltaContent(chunk);
+    const reasoning_content = this.getReasoningDelta(chunk);
     if (!content.length && !reasoning_content.length) {
       return;
     }
