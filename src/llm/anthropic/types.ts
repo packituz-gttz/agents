@@ -38,6 +38,10 @@ export type AnthropicImageBlockParam = Anthropic.Messages.ImageBlockParam;
 export type AnthropicToolUseBlockParam = Anthropic.Messages.ToolUseBlockParam;
 export type AnthropicToolResultBlockParam =
   Anthropic.Messages.ToolResultBlockParam;
+  export type AnthropicDocumentBlockParam = Anthropic.Messages.DocumentBlockParam;
+  export type AnthropicThinkingBlockParam = Anthropic.Messages.ThinkingBlockParam;
+  export type AnthropicRedactedThinkingBlockParam =
+    Anthropic.Messages.RedactedThinkingBlockParam;
 
 /**
  * Stream usage information for Anthropic API calls
