@@ -76,19 +76,21 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     if (!outputUsage) {
       return;
     }
-    const totalUsage = {
-      total_tokens: (inputUsage?.input_tokens ?? 0)
-      + (inputUsage?.output_tokens ?? 0)
-      + (inputUsage?.cache_creation_input_tokens ?? 0)
-      + (inputUsage?.cache_read_input_tokens ?? 0)
-      + (outputUsage.input_tokens ?? 0)
-      + (outputUsage.output_tokens ?? 0)
-      + (outputUsage.cache_creation_input_tokens ?? 0)
-      + (outputUsage.cache_read_input_tokens ?? 0),
+    const totalUsage: AnthropicStreamUsage = {
+      input_tokens: inputUsage?.input_tokens ?? 0,
+      output_tokens: outputUsage?.output_tokens ?? 0,
+      total_tokens: (inputUsage?.input_tokens ?? 0) + (outputUsage?.output_tokens ?? 0),
     };
 
+    if (inputUsage?.cache_creation_input_tokens != null || inputUsage?.cache_read_input_tokens != null) {
+      totalUsage.input_token_details = {
+        cache_creation: inputUsage.cache_creation_input_tokens ?? 0,
+        cache_read: inputUsage.cache_read_input_tokens ?? 0,
+      };
+    }
+
     this.emitted_usage = true;
-    return Object.assign(totalUsage, inputUsage, outputUsage);
+    return totalUsage;
   }
 
   resetTokenEvents(): void {

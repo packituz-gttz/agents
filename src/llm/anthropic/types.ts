@@ -57,12 +57,10 @@ export interface AnthropicStreamUsage {
    * The number of cache creation input tokens used (write operations)
    */
   cache_creation_input_tokens?: number;
-
   /**
    * The number of cache input tokens used (read operations)
    */
   cache_read_input_tokens?: number;
-
   /**
    * The number of output tokens generated in the response
    */
@@ -71,4 +69,11 @@ export interface AnthropicStreamUsage {
    * The total number of tokens generated in the response
    */
   total_tokens: number;
+  /**
+   * Details about input token usage
+   */
+  input_token_details?: {
+    cache_creation: number;
+    cache_read: number;
+  };
 }

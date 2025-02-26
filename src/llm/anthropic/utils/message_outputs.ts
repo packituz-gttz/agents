@@ -47,16 +47,28 @@ export function _makeMessageChunkFromAnthropicEvent(
         filteredAdditionalKwargs[key] = value;
       }
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { input_tokens, output_tokens, ...rest }: Record<string, any> =
+      usage ?? {};
     const usageMetadata: UsageMetadata = {
-      input_tokens: usage.input_tokens,
-      output_tokens: usage.output_tokens,
-      total_tokens: usage.input_tokens + usage.output_tokens,
+      input_tokens,
+      output_tokens,
+      total_tokens: input_tokens + output_tokens,
+      input_token_details: {
+        cache_creation: rest.cache_creation_input_tokens,
+        cache_read: rest.cache_read_input_tokens,
+      },
     };
     return {
       chunk: new AIMessageChunk({
         content: fields.coerceContentToString ? '' : [],
         additional_kwargs: filteredAdditionalKwargs,
         usage_metadata: fields.streamUsage ? usageMetadata : undefined,
+        response_metadata: {
+          usage: {
+            ...rest,
+          },
+        },
         id: data.message.id,
       }),
     };
@@ -65,6 +77,12 @@ export function _makeMessageChunkFromAnthropicEvent(
       input_tokens: 0,
       output_tokens: data.usage.output_tokens,
       total_tokens: data.usage.output_tokens,
+      input_token_details: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cache_creation: (data.usage as any).cache_creation_input_tokens,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cache_read: (data.usage as any).cache_read_input_tokens,
+      },
     };
     return {
       chunk: new AIMessageChunk({
@@ -200,13 +218,17 @@ export function anthropicResponseToChatMessages(
 ): ChatGeneration[] {
   const usage: Record<string, number> | null | undefined =
     additionalKwargs.usage as Record<string, number> | null | undefined;
-  const usageMetadata =
+    const usageMetadata =
     usage != null
       ? {
-        input_tokens: usage.input_tokens ?? 0,
-        output_tokens: usage.output_tokens ?? 0,
-        total_tokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
-      }
+          input_tokens: usage.input_tokens ?? 0,
+          output_tokens: usage.output_tokens ?? 0,
+          total_tokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+          input_token_details: {
+            cache_creation: usage.cache_creation_input_tokens,
+            cache_read: usage.cache_read_input_tokens,
+          },
+        }
       : undefined;
   if (messages.length === 1 && messages[0].type === 'text') {
     return [
