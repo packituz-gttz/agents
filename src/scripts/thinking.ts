@@ -57,11 +57,6 @@ async function testThinking(): Promise<void> {
 
   const baseLlmConfig: t.LLMConfig = getLLMConfig(Providers.ANTHROPIC);
   
-  if (baseLlmConfig.provider !== 'anthropic') {
-    console.error('This test requires Anthropic as the LLM provider. Please specify provider=anthropic');
-    process.exit(1);
-  }
-  
   // Enable thinking with token budget
   const llmConfig = {
     ...baseLlmConfig,
