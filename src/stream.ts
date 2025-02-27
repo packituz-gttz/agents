@@ -227,14 +227,31 @@ hasToolCallChunks: ${hasToolCallChunks}
     stepKey: string;
     toolCallChunks: ToolCallChunk[],
   }): void => {
-    const prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
-    const prevRunStep = graph.getRunStep(prevStepId);
+    let prevStepId: string;
+    let prevRunStep: t.RunStep | undefined;
+    try {
+      prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
+      prevRunStep = graph.getRunStep(prevStepId);
+    } catch (e) {
+      /** Edge Case: If no previous step exists, create a new message creation step */
+      const message_id = getMessageId(stepKey, graph, true) ?? '';
+      prevStepId = graph.dispatchRunStep(stepKey, {
+        type: StepTypes.MESSAGE_CREATION,
+        message_creation: {
+          message_id,
+        },
+      });
+      prevRunStep = graph.getRunStep(prevStepId);
+    }
+
     const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
+    
     /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
     const tool_calls: ToolCall[] | undefined =
-    prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
-      ? []
-      : undefined;
+      prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
+        ? []
+        : undefined;
+    
     /** Edge Case: `id` and `name` fields cannot be empty strings */
     for (const toolCallChunk of toolCallChunks) {
       if (toolCallChunk.name === '') {
