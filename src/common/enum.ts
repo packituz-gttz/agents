@@ -107,6 +107,7 @@ export enum StepTypes {
 export enum ContentTypes {
   TEXT = 'text',
   THINK = 'think',
+  THINKING = 'thinking',
   TOOL_CALL = 'tool_call',
   IMAGE_FILE = 'image_file',
   IMAGE_URL = 'image_url',

@@ -213,6 +213,12 @@ hasToolCallChunks: ${hasToolCallChunks}
       graph.dispatchMessageDelta(stepId, {
         content,
       });
+    } else if (content.every((c) => c.type?.startsWith(ContentTypes.THINKING))) {
+      graph.dispatchReasoningDelta(stepId, {
+        content: content.map((c) => ({
+          type: ContentTypes.THINK,
+          think: (c as t.ThinkingContentText).thinking,
+      }))});
     }
   }
   handleToolCallChunks = ({
@@ -271,8 +277,11 @@ hasToolCallChunks: ${hasToolCallChunks}
     });
   };
   handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
-    const reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
-    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '')) {
+    let reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
+    if (Array.isArray(chunk.content) && chunk.content[0]?.type === 'thinking') {
+      reasoning_content = 'valid';
+    }
+    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '' || reasoning_content === 'valid')) {
       graph.currentTokenType = ContentTypes.THINK;
       graph.tokenTypeSwitch = 'reasoning';
       return;

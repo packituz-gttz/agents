@@ -216,9 +216,16 @@ export type ReasoningContentText = {
   think: string;
 };
 
+/** Anthropic's Reasoning Content Block Format */
+export type ThinkingContentText = {
+  type: ContentTypes.THINKING;
+  index?: number;
+  thinking: string;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MessageContentComplex = (ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
-  type?: 'text' | 'image_url' | 'think' | string;
+export type MessageContentComplex = (ThinkingContentText | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
+  type?: 'text' | 'image_url' | 'think' | 'thinking' | string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) | (Record<string, any> & {
   type?: never;
