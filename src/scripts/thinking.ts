@@ -5,6 +5,7 @@ import { HumanMessage, SystemMessage, BaseMessage } from '@langchain/core/messag
 import type { UsageMetadata } from '@langchain/core/messages';
 import * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
+import { createCodeExecutionTool } from '@/tools/CodeExecutor';
 import { ToolEndHandler, ModelEndHandler } from '@/events';
 import { GraphEvents, Providers } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
@@ -73,6 +74,7 @@ async function testThinking(): Promise<void> {
     graphConfig: {
       instructions,
       type: 'standard',
+      tools: [createCodeExecutionTool()],
       llmConfig,
     },
     returnContent: true,
@@ -89,7 +91,8 @@ async function testThinking(): Promise<void> {
 
   // Test 1: Regular thinking mode
   console.log('\n\nTest 1: Regular thinking mode');
-  const userMessage1 = `What would be the environmental and economic impacts if all cars globally were replaced by electric vehicles overnight?`;
+  // const userMessage1 = `What would be the environmental and economic impacts if all cars globally were replaced by electric vehicles overnight?`;
+  const userMessage1 = `Please print 'hello world' in python`;
   conversationHistory.push(new HumanMessage(userMessage1));
 
   console.log('Running first query with thinking enabled...');
