@@ -220,6 +220,7 @@ export type ReasoningContentText = {
 export type ThinkingContentText = {
   type: ContentTypes.THINKING;
   index?: number;
+  signature?: string;
   thinking: string;
 };
 
