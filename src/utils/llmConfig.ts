@@ -75,7 +75,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   },
   [Providers.VERTEXAI]: {
     provider: Providers.VERTEXAI,
-    modelName: 'gemini-2.0-flash-exp',
+    modelName: 'gemini-2.0-flash-001',
     streaming: true,
     streamUsage: true,
     keyFile: process.env.VERTEXAI_KEY_FILE,
