@@ -207,6 +207,29 @@ export function _makeMessageChunkFromAnthropicEvent(
         }),
       };
     }
+  } else if (
+    data.type === "content_block_start" &&
+    data.content_block.type === "redacted_thinking"
+  ) {
+    return {
+      chunk: new AIMessageChunk({
+        content: fields.coerceContentToString
+          ? ""
+          : [{ index: data.index, ...data.content_block }],
+      }),
+    };
+  } else if (
+    data.type === "content_block_start" &&
+    data.content_block.type === "thinking"
+  ) {
+    const content = data.content_block.thinking;
+    return {
+      chunk: new AIMessageChunk({
+        content: fields.coerceContentToString
+          ? content
+          : [{ index: data.index, ...data.content_block }],
+      }),
+    };
   }
 
   return null;

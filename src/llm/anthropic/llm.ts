@@ -1,17 +1,48 @@
 import { AIMessageChunk } from '@langchain/core/messages';
 import { ChatAnthropicMessages } from '@langchain/anthropic';
 import { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { BaseChatModelParams } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
 import type { AnthropicInput } from '@langchain/anthropic';
-import type { AnthropicMessageCreateParams, AnthropicStreamUsage, AnthropicMessageStartEvent, AnthropicMessageDeltaEvent } from '@/llm/anthropic/types';
+import type { AnthropicMessageCreateParams, AnthropicStreamingMessageCreateParams, AnthropicStreamUsage, AnthropicMessageStartEvent, AnthropicMessageDeltaEvent } from '@/llm/anthropic/types';
 import { _makeMessageChunkFromAnthropicEvent } from './utils/message_outputs';
 import { _convertMessagesToAnthropicPayload } from './utils/message_inputs';
 import { TextStream } from '@/llm/text';
 
-function _toolsInParams(params: AnthropicMessageCreateParams): boolean {
+function _toolsInParams(
+  params: AnthropicMessageCreateParams | AnthropicStreamingMessageCreateParams
+): boolean {
   return !!(params.tools && params.tools.length > 0);
 }
+function _documentsInParams(
+  params: AnthropicMessageCreateParams | AnthropicStreamingMessageCreateParams
+): boolean {
+  for (const message of params.messages ?? []) {
+    if (typeof message.content === "string") {
+      continue;
+    }
+    for (const block of message.content ?? []) {
+      if (
+        typeof block === "object" &&
+        block != null &&
+        block.type === "document" &&
+        typeof block.citations === "object" &&
+        block.citations.enabled
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function _thinkingInParams(
+  params: AnthropicMessageCreateParams | AnthropicStreamingMessageCreateParams
+): boolean {
+  return !!(params.thinking && params.thinking.type === "enabled");
+}
+
 
 function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'content'] | [undefined] {
   if (typeof chunk.content === 'string') {
@@ -30,6 +61,12 @@ function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'con
     'text' in chunk.content[0]
   ) {
     return [chunk.content[0].text, 'content'];
+  } else if (
+    Array.isArray(chunk.content) &&
+    chunk.content.length >= 1 &&
+    'thinking' in chunk.content[0]
+  ) {
+    return [chunk.content[0].thinking, 'content'];
   }
   return [undefined];
 }
@@ -45,12 +82,14 @@ function cloneChunk(text: string, tokenType: string, chunk: AIMessageChunk): AIM
     return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
   } else if (tokenType === 'content' && content.type === 'text_delta') {
     return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
+  } else if (tokenType === 'content' && content.type?.startsWith('thinking')) {
+    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { thinking: text })] }));
   }
 
   return chunk;
 }
 
-export type CustomAnthropicInput = AnthropicInput & { _lc_stream_delay?: number };
+export type CustomAnthropicInput = AnthropicInput & { _lc_stream_delay?: number } & BaseChatModelParams;
 
 export class CustomAnthropic extends ChatAnthropicMessages {
   _lc_stream_delay: number;
@@ -58,9 +97,9 @@ export class CustomAnthropic extends ChatAnthropicMessages {
   private message_delta: AnthropicMessageDeltaEvent | undefined;
   private tools_in_params?: boolean;
   private emitted_usage?: boolean;
-  constructor(fields: CustomAnthropicInput) {
+  constructor(fields?: CustomAnthropicInput) {
     super(fields);
-    this._lc_stream_delay = fields._lc_stream_delay ?? 25;
+    this._lc_stream_delay = fields?._lc_stream_delay ?? 25;
   }
 
   /**
@@ -133,12 +172,15 @@ export class CustomAnthropic extends ChatAnthropicMessages {
   ): AsyncGenerator<ChatGenerationChunk> {
     const params = this.invocationParams(options);
     const formattedMessages = _convertMessagesToAnthropicPayload(messages);
-    this.tools_in_params = _toolsInParams({
+    const payload = {
       ...params,
       ...formattedMessages,
-      stream: false,
-    });
-    const coerceContentToString = !this.tools_in_params;
+      stream: true,
+    } as const;
+    const coerceContentToString =
+      !_toolsInParams(payload) &&
+      !_documentsInParams(payload) &&
+      !_thinkingInParams(payload);
 
     const stream = await this.createStreamWithRetry(
       {
@@ -159,10 +201,9 @@ export class CustomAnthropic extends ChatAnthropicMessages {
         throw new Error('AbortError: User aborted the request.');
       }
 
-      const type = data.type ?? '';
-      if (type === 'message_start') {
+      if (data.type === 'message_start') {
         this.message_start = data as AnthropicMessageStartEvent;
-      } else if (type === 'message_delta') {
+      } else if (data.type === 'message_delta') {
         this.message_delta = data as AnthropicMessageDeltaEvent;
       }
 
