@@ -83,8 +83,9 @@ async function testCodeExecution(): Promise<void> {
 
   console.log('Test 1: Simple Code Execution');
 
-  const userMessage1 = `how much memory is this (its in bytes) in MB? 31192000`;
+  // const userMessage1 = `how much memory is this (its in bytes) in MB? 31192000`;
   // const userMessage1 = `can you show me a good use case for rscript by running some code`;
+  const userMessage1 = `Run hello world in french and in english, using python. please run 2 parallel code executions.`;
 
   conversationHistory.push(new HumanMessage(userMessage1));
 
