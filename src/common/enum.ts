@@ -106,12 +106,15 @@ export enum StepTypes {
 
 export enum ContentTypes {
   TEXT = 'text',
-  THINK = 'think',
-  THINKING = 'thinking',
-  TOOL_CALL = 'tool_call',
-  IMAGE_FILE = 'image_file',
-  IMAGE_URL = 'image_url',
   ERROR = 'error',
+  THINK = 'think',
+  TOOL_CALL = 'tool_call',
+  IMAGE_URL = 'image_url',
+  IMAGE_FILE = 'image_file',
+  /** Anthropic */
+  THINKING = 'thinking',
+  /** Bedrock */
+  REASONING_CONTENT = 'reasoning_content',
 }
 
 export enum ToolCallTypes {

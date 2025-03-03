@@ -221,7 +221,15 @@ export type ThinkingContentText = {
   type: ContentTypes.THINKING;
   index?: number;
   signature?: string;
-  thinking: string;
+  thinking?: string;
+};
+
+/** Bedrock's Reasoning Content Block Format */
+export type BedrockReasoningContentText = {
+  type: ContentTypes.REASONING_CONTENT;
+  index?: number;
+  signature?: string;
+  reasoningText?: { text?: string }
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
