@@ -384,19 +384,7 @@ export class StandardGraph extends Graph<
           }
         }
 
-        finalChunk = modifyDeltaProperties(finalChunk);
-        if (this.provider === Providers.ANTHROPIC && Array.isArray(finalChunk?.content)) {
-          finalChunk.content = finalChunk.content.map((block) => {
-            if ((block as t.ThinkingContentText | undefined)?.['thinking'] && block.type !== ContentTypes.THINKING) {
-              return {
-                ...block,
-                type: ContentTypes.THINKING,
-                thinking: (block as t.ThinkingContentText).thinking ?? '',
-              } as t.ThinkingContentText;
-            }
-            return block;
-          })
-        }
+        finalChunk = modifyDeltaProperties(this.provider, finalChunk);
         return { messages: [finalChunk as AIMessageChunk] };
       }
 

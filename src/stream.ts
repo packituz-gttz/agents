@@ -210,11 +210,11 @@ hasToolCallChunks: ${hasToolCallChunks}
       graph.dispatchMessageDelta(stepId, {
         content,
       });
-    } else if (content.every((c) => c.type?.startsWith(ContentTypes.THINKING))) {
+    } else if (content.every((c) => c.type?.startsWith(ContentTypes.THINKING) || c.type?.startsWith(ContentTypes.REASONING_CONTENT))) {
       graph.dispatchReasoningDelta(stepId, {
         content: content.map((c) => ({
           type: ContentTypes.THINK,
-          think: (c as t.ThinkingContentText).thinking,
+          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText?.text ?? '',
       }))});
     }
   }
@@ -292,7 +292,7 @@ hasToolCallChunks: ${hasToolCallChunks}
   };
   handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
     let reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
-    if (Array.isArray(chunk.content) && chunk.content[0]?.type === 'thinking') {
+    if (Array.isArray(chunk.content) && (chunk.content[0]?.type === 'thinking' || chunk.content[0]?.type === 'reasoning_content')) {
       reasoning_content = 'valid';
     }
     if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '' || reasoning_content === 'valid')) {

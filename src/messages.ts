@@ -2,6 +2,7 @@
 import { AIMessageChunk, HumanMessage, ToolMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type * as t from '@/types';
+import { Providers } from '@/common';
 
 export function getConverseOverrideMessage({
   userMessage,
@@ -31,14 +32,28 @@ User: ${userMessage[1]}
   return new HumanMessage(content);
 }
 
-const modifyContent = (messageType: string, content: t.ExtendedMessageContent[]): t.ExtendedMessageContent[] => {
+const _allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
+const allowedTypesByProvider: Record<string, string[]> = {
+  default: _allowedTypes,
+  [Providers.ANTHROPIC]: [..._allowedTypes, 'thinking'],
+  [Providers.BEDROCK]: [..._allowedTypes, 'reasoning_content'],
+  [Providers.OPENAI]: _allowedTypes,
+};
+
+const modifyContent = ({
+  provider,
+  messageType,
+  content
+}: {
+  provider: Providers, messageType: string, content: t.ExtendedMessageContent[]
+}): t.ExtendedMessageContent[] => {
+  const allowedTypes = allowedTypesByProvider[provider] ?? allowedTypesByProvider.default;
   return content.map(item => {
     if (item && typeof item === 'object' && 'type' in item && item.type != null && item.type) {
       let newType = item.type;
       if (newType.endsWith('_delta')) {
         newType = newType.replace('_delta', '');
       }
-      const allowedTypes = ['image_url', 'text', 'tool_use', 'tool_result'];
       if (!allowedTypes.includes(newType)) {
         newType = 'text';
       }
@@ -54,16 +69,52 @@ const modifyContent = (messageType: string, content: t.ExtendedMessageContent[])
   });
 };
 
-export function modifyDeltaProperties(obj?: AIMessageChunk): AIMessageChunk | undefined {
+type ContentBlock = t.BedrockReasoningContentText | t.MessageDeltaUpdate;
+
+function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
+  const reduced: ContentBlock[] = [];
+
+  for (const block of blocks) {
+    const lastBlock = reduced[reduced.length - 1];
+
+    // Merge consecutive 'reasoning_content'
+    if (block.type === 'reasoning_content' && lastBlock?.type === 'reasoning_content') {
+      // append text if exists
+      if (block.reasoningText?.text) {
+        lastBlock.reasoningText.text = (lastBlock.reasoningText.text || '') + block.reasoningText.text;
+      }
+      // preserve the signature if exists
+      if (block.reasoningText?.signature) {
+        lastBlock.reasoningText.signature = block.reasoningText.signature;
+      }
+    }
+    // Merge consecutive 'text'
+    else if (block.type === 'text' && lastBlock?.type === 'text') {
+      lastBlock.text += block.text;
+    } 
+    // add a new block as it's a different type or first element
+    else {
+      // deep copy to avoid mutation of original
+      reduced.push(JSON.parse(JSON.stringify(block)));
+    }
+  }
+
+  return reduced;
+}
+
+export function modifyDeltaProperties(provider: Providers, obj?: AIMessageChunk): AIMessageChunk | undefined {
   if (!obj || typeof obj !== 'object') return obj;
 
   const messageType = obj._getType ? obj._getType() : '';
 
+  if (provider === Providers.BEDROCK && Array.isArray(obj.content)) {
+    obj.content = reduceBlocks(obj.content as ContentBlock[]);
+  }
   if (Array.isArray(obj.content)) {
-    obj.content = modifyContent(messageType, obj.content);
+    obj.content = modifyContent({ provider, messageType, content: obj.content });
   }
   if (obj.lc_kwargs && Array.isArray(obj.lc_kwargs.content)) {
-    obj.lc_kwargs.content = modifyContent(messageType, obj.lc_kwargs.content);
+    obj.lc_kwargs.content = modifyContent({ provider, messageType, content: obj.lc_kwargs.content });
   }
   return obj;
 }
