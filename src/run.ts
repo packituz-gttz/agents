@@ -178,7 +178,7 @@ export class Run<T extends t.BaseGraphState> {
     const convo = (await convoTemplate.invoke({ input: inputText, output: response })).value;
     const model = this.Graph?.getNewModel({
       clientOptions,
-      omitOriginalOptions: ['streaming', 'thinking', 'maxTokens', 'maxOutputTokens'],
+      omitOriginalOptions: ['streaming', 'stream', 'thinking', 'maxTokens', 'maxOutputTokens'],
     });
     if (!model) {
       return { language: '', title: '' };
