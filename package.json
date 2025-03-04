@@ -83,6 +83,7 @@
     "@langchain/mistralai": "^0.0.26",
     "@langchain/ollama": "^0.1.5",
     "@langchain/openai": "^0.4.2",
+    "@langchain/xai": "^0.0.2",
     "@smithy/eventstream-codec": "^2.2.0",
     "@smithy/protocol-http": "^3.0.6",
     "@smithy/signature-v4": "^2.0.10",

@@ -80,6 +80,7 @@ export enum Providers {
   AZURE = 'azureOpenAI',
   DEEPSEEK = 'deepseek',
   OPENROUTER = 'openrouter',
+  XAI = 'xai',
 }
 
 export enum GraphNodeKeys {

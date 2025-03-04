@@ -12,6 +12,12 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     // disableStreaming: true,
   },
+  [Providers.XAI]: {
+    provider: Providers.XAI,
+    model: 'grok-2-latest',
+    streaming: true,
+    streamUsage: true,
+  },
   alibaba: {
     provider: Providers.OPENAI,
     streaming: true,

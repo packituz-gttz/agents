@@ -1,4 +1,5 @@
 // src/types/llm.ts
+import { ChatXAI } from '@langchain/xai';
 import { ChatOllama } from '@langchain/ollama';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatAnthropic } from '@langchain/anthropic';
@@ -21,6 +22,7 @@ import type { AnthropicInput } from '@langchain/anthropic';
 import type { Runnable } from '@langchain/core/runnables';
 import type { ChatOllamaInput } from '@langchain/ollama';
 import type { OpenAI as OpenAIClient } from 'openai';
+import type { ChatXAIInput } from '@langchain/xai';
 import type { ChatOpenRouterCallOptions } from '@/llm/openrouter/llm';
 import { ChatOpenRouter } from '@/llm/openrouter/llm';
 import { Providers } from '@/common';
@@ -46,8 +48,20 @@ export type BedrockClientOptions = BedrockChatFields;
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 export type GoogleClientOptions = GoogleGenerativeAIChatInput;
 export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
+export type XAIClientOptions = ChatXAIInput;
 
-export type ClientOptions = OpenAIClientOptions | AzureClientOptions | OllamaClientOptions | AnthropicClientOptions | MistralAIClientOptions | VertexAIClientOptions | BedrockClientOptions | BedrockConverseClientOptions | GoogleClientOptions | DeepSeekClientOptions;
+export type ClientOptions =
+| OpenAIClientOptions
+| AzureClientOptions
+| OllamaClientOptions
+| AnthropicClientOptions
+| MistralAIClientOptions
+| VertexAIClientOptions
+| BedrockClientOptions
+| BedrockConverseClientOptions
+| GoogleClientOptions
+| DeepSeekClientOptions
+| XAIClientOptions;
 
 export type LLMConfig = {
   provider: Providers;
@@ -65,6 +79,7 @@ export type ProviderOptionsMap = {
   [Providers.OPENROUTER]: ChatOpenRouterCallOptions;
   [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
   [Providers.BEDROCK]: BedrockConverseClientOptions;
+  [Providers.XAI]: XAIClientOptions;
 };
 
 export type ChatModelMap = {
@@ -79,6 +94,7 @@ export type ChatModelMap = {
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
   [Providers.GOOGLE]: ChatGoogleGenerativeAI;
+  [Providers.XAI]: ChatXAI;
 };
 
 export type ChatModelConstructorMap = {

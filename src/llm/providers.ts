@@ -1,4 +1,5 @@
 // src/llm/providers.ts
+import { ChatXAI } from '@langchain/xai';
 import { ChatOllama } from '@langchain/ollama';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatMistralAI } from '@langchain/mistralai';
@@ -14,6 +15,7 @@ import { ChatOpenRouter } from '@/llm/openrouter/llm';
 import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {
+  [Providers.XAI]: ChatXAI,
   [Providers.OPENAI]: ChatOpenAI,
   [Providers.OLLAMA]: ChatOllama,
   [Providers.AZURE]: AzureChatOpenAI,
