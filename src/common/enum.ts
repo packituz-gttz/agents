@@ -7,6 +7,8 @@
 export enum GraphEvents {
   /* Custom Events */
 
+  /** [Custom] Agent update event in multi-agent graph/workflow */
+  ON_AGENT_UPDATE = 'on_agent_update',
   /** [Custom] Delta event for run steps (message creation and tool calls) */
   ON_RUN_STEP = 'on_run_step',
   /** [Custom] Delta event for run steps (tool calls) */
@@ -116,6 +118,8 @@ export enum ContentTypes {
   THINKING = 'thinking',
   /** Bedrock */
   REASONING_CONTENT = 'reasoning_content',
+  /** Multi-Agent Switch */
+  AGENT_UPDATE = 'agent_update',
 }
 
 export enum ToolCallTypes {

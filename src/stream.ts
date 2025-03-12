@@ -368,6 +368,17 @@ export function createContentAggregator(): t.ContentAggregatorResult {
         think: (currentContent.think || '') + contentPart.think,
       };
       contentParts[index] = update;
+    } else if (
+      partType.startsWith(ContentTypes.AGENT_UPDATE) &&
+      ContentTypes.AGENT_UPDATE in contentPart &&
+      contentPart.agent_update
+    ) {
+      const update: t.AgentUpdate = {
+        type: ContentTypes.AGENT_UPDATE,
+        agent_update: contentPart.agent_update,
+      };
+
+      contentParts[index] = update;
     } else if (partType === ContentTypes.IMAGE_URL && 'image_url' in contentPart) {
       const currentContent = contentParts[index] as { type: 'image_url'; image_url: string };
       contentParts[index] = {
@@ -405,7 +416,7 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
   const aggregateContent = ({ event, data }: {
     event: GraphEvents;
-    data: t.RunStep | t.MessageDeltaEvent | t.RunStepDeltaEvent | { result: t.ToolEndEvent };
+    data: t.RunStep | t.AgentUpdate | t.MessageDeltaEvent | t.RunStepDeltaEvent | { result: t.ToolEndEvent };
   }): void => {
 
     if (event === GraphEvents.ON_RUN_STEP) {
@@ -436,6 +447,9 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
         updateContent(runStep.index, contentPart);
       }
+    } else if (event === GraphEvents.ON_AGENT_UPDATE && (data as t.AgentUpdate | undefined)?.agent_update) {
+      const contentPart = data as t.AgentUpdate;
+      updateContent(contentPart.agent_update.index, contentPart);
     } else if (event === GraphEvents.ON_REASONING_DELTA) {
       const reasoningDelta = data as t.ReasoningDeltaEvent;
       const runStep = stepMap.get(reasoningDelta.id);

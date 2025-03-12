@@ -150,6 +150,15 @@ export interface ExtendedMessageContent {
   name?: string;
 }
 
+export type AgentUpdate = {
+  type: ContentTypes.AGENT_UPDATE;
+  agent_update: {
+    index: number;
+    runId: string;
+    agentId: string;
+  }
+};
+
 /**
  * Represents a message delta i.e. any changed fields on a message during
  * streaming.
@@ -232,7 +241,7 @@ export type BedrockReasoningContentText = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MessageContentComplex = (ThinkingContentText | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
+export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
   type?: 'text' | 'image_url' | 'think' | 'thinking' | string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) | (Record<string, any> & {
