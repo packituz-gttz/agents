@@ -1,59 +1,111 @@
-import { ToolMessage } from '@langchain/core/messages';
+import { ToolMessage, BaseMessage } from '@langchain/core/messages';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import { MessageContentImageUrl } from '@langchain/core/messages';
+import type { ToolCall } from '@langchain/core/messages/tool';
+import type { MessageContentComplex } from '@/types';
 import { Providers, ContentTypes } from '@/common';
+
+interface VisionMessageParams {
+  message: {
+    role: string;
+    content: string;
+    name?: string;
+    [key: string]: any;
+  };
+  image_urls: MessageContentImageUrl[];
+  endpoint?: Providers;
+}
 
 /**
  * Formats a message to OpenAI Vision API payload format.
  *
- * @param {Object} params - The parameters for formatting.
- * @param {Object} params.message - The message object to format.
- * @param {string} [params.message.role] - The role of the message sender (must be 'user').
- * @param {string} [params.message.content] - The text content of the message.
- * @param {Providers} [params.endpoint] - Identifier for specific endpoint handling
- * @param {Array<string>} [params.image_urls] - The image_urls to attach to the message.
- * @returns {(Object)} - The formatted message.
+ * @param {VisionMessageParams} params - The parameters for formatting.
+ * @returns {Object} - The formatted message.
  */
-export const formatVisionMessage = ({ message, image_urls, endpoint }) => {
+export const formatVisionMessage = ({ message, image_urls, endpoint }: VisionMessageParams): {
+  role: string;
+  content: MessageContentComplex[];
+  name?: string;
+  [key: string]: any;
+} => {
+  // Create a new object to avoid mutating the input
+  const result: {
+    role: string;
+    content: MessageContentComplex[];
+    name?: string;
+    [key: string]: any;
+  } = {
+    ...message,
+    content: [] as MessageContentComplex[]
+  };
+  
   if (endpoint === Providers.ANTHROPIC) {
-    message.content = [...image_urls, { type: ContentTypes.TEXT, text: message.content }];
-    return message;
+    result.content = [
+      ...image_urls, 
+      { type: ContentTypes.TEXT, text: message.content }
+    ] as MessageContentComplex[];
+    return result;
   }
 
-  message.content = [{ type: ContentTypes.TEXT, text: message.content }, ...image_urls];
+  result.content = [
+    { type: ContentTypes.TEXT, text: message.content }, 
+    ...image_urls
+  ] as MessageContentComplex[];
 
-  return message;
+  return result;
 };
+
+interface MessageInput {
+  role?: string;
+  _name?: string;
+  sender?: string;
+  text?: string;
+  content?: string | MessageContentComplex[];
+  image_urls?: MessageContentImageUrl[];
+  lc_id?: string[];
+  [key: string]: any;
+}
+
+interface FormatMessageParams {
+  message: MessageInput;
+  userName?: string;
+  assistantName?: string;
+  endpoint?: Providers;
+  langChain?: boolean;
+}
+
+interface FormattedMessage {
+  role: string;
+  content: string | MessageContentComplex[];
+  name?: string;
+  [key: string]: any;
+}
 
 /**
  * Formats a message to OpenAI payload format based on the provided options.
  *
- * @param {Object} params - The parameters for formatting.
- * @param {Object} params.message - The message object to format.
- * @param {string} [params.message.role] - The role of the message sender (e.g., 'user', 'assistant').
- * @param {string} [params.message._name] - The name associated with the message.
- * @param {string} [params.message.sender] - The sender of the message.
- * @param {string} [params.message.text] - The text content of the message.
- * @param {string} [params.message.content] - The content of the message.
- * @param {Array<string>} [params.message.image_urls] - The image_urls attached to the message for Vision API.
- * @param {string} [params.userName] - The name of the user.
- * @param {string} [params.assistantName] - The name of the assistant.
- * @param {string} [params.endpoint] - Identifier for specific endpoint handling
- * @param {boolean} [params.langChain=false] - Whether to return a LangChain message object.
- * @returns {(Object|HumanMessage|AIMessage|SystemMessage)} - The formatted message.
+ * @param {FormatMessageParams} params - The parameters for formatting.
+ * @returns {FormattedMessage | HumanMessage | AIMessage | SystemMessage} - The formatted message.
  */
-const formatMessage = ({ message, userName, assistantName, endpoint, langChain = false }) => {
+export const formatMessage = ({ 
+  message, 
+  userName, 
+  assistantName, 
+  endpoint, 
+  langChain = false 
+}: FormatMessageParams): FormattedMessage | HumanMessage | AIMessage | SystemMessage => {
   let { role: _role, _name, sender, text, content: _content, lc_id } = message;
   if (lc_id && lc_id[2] && !langChain) {
-    const roleMapping = {
+    const roleMapping: Record<string, string> = {
       SystemMessage: 'system',
       HumanMessage: 'user',
       AIMessage: 'assistant',
     };
-    _role = roleMapping[lc_id[2]];
+    _role = roleMapping[lc_id[2]] || _role;
   }
   const role = _role ?? (sender && sender?.toLowerCase() === 'user' ? 'user' : 'assistant');
   const content = _content ?? text ?? '';
-  const formattedMessage = {
+  const formattedMessage: FormattedMessage = {
     role,
     content,
   };
@@ -61,8 +113,11 @@ const formatMessage = ({ message, userName, assistantName, endpoint, langChain =
   const { image_urls } = message;
   if (Array.isArray(image_urls) && image_urls.length > 0 && role === 'user') {
     return formatVisionMessage({
-      message: formattedMessage,
-      image_urls: message.image_urls,
+      message: {
+        ...formattedMessage,
+        content: typeof formattedMessage.content === 'string' ? formattedMessage.content : ''
+      },
+      image_urls,
       endpoint,
     });
   }
@@ -105,131 +160,180 @@ const formatMessage = ({ message, userName, assistantName, endpoint, langChain =
 /**
  * Formats an array of messages for LangChain.
  *
- * @param {Array<Object>} messages - The array of messages to format.
- * @param {Object} formatOptions - The options for formatting each message.
- * @param {string} [formatOptions.userName] - The name of the user.
- * @param {string} [formatOptions.assistantName] - The name of the assistant.
- * @returns {Array<(HumanMessage|AIMessage|SystemMessage)>} - The array of formatted LangChain messages.
+ * @param {Array<MessageInput>} messages - The array of messages to format.
+ * @param {Omit<FormatMessageParams, 'message' | 'langChain'>} formatOptions - The options for formatting each message.
+ * @returns {Array<HumanMessage | AIMessage | SystemMessage>} - The array of formatted LangChain messages.
  */
-export const formatLangChainMessages = (messages, formatOptions) =>
-  messages.map((msg) => formatMessage({ ...formatOptions, message: msg, langChain: true }));
+export const formatLangChainMessages = (
+  messages: Array<MessageInput>, 
+  formatOptions: Omit<FormatMessageParams, 'message' | 'langChain'>
+): Array<HumanMessage | AIMessage | SystemMessage> => {
+  return messages.map((msg) => {
+    const formatted = formatMessage({ ...formatOptions, message: msg, langChain: true });
+    return formatted as HumanMessage | AIMessage | SystemMessage;
+  });
+};
+
+interface LangChainMessage {
+  lc_kwargs?: {
+    additional_kwargs?: Record<string, any>;
+    [key: string]: any;
+  };
+  kwargs?: {
+    additional_kwargs?: Record<string, any>;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
 
 /**
  * Formats a LangChain message object by merging properties from `lc_kwargs` or `kwargs` and `additional_kwargs`.
  *
- * @param {Object} message - The message object to format.
- * @param {Object} [message.lc_kwargs] - Contains properties to be merged. Either this or `message.kwargs` should be provided.
- * @param {Object} [message.kwargs] - Contains properties to be merged. Either this or `message.lc_kwargs` should be provided.
- * @param {Object} [message.kwargs.additional_kwargs] - Additional properties to be merged.
- *
- * @returns {Object} The formatted LangChain message.
+ * @param {LangChainMessage} message - The message object to format.
+ * @returns {Record<string, any>} The formatted LangChain message.
  */
-export const formatFromLangChain = (message) => {
-  const { additional_kwargs, ...message_kwargs } = message.lc_kwargs ?? message.kwargs;
+export const formatFromLangChain = (message: LangChainMessage): Record<string, any> => {
+  const kwargs = message.lc_kwargs ?? message.kwargs ?? {};
+  const { additional_kwargs = {}, ...message_kwargs } = kwargs;
   return {
     ...message_kwargs,
     ...additional_kwargs,
   };
 };
 
+interface TMessage {
+  role?: string;
+  content?: string | Array<{
+    type: ContentTypes;
+    [ContentTypes.TEXT]?: string;
+    text?: string;
+    tool_call_ids?: string[];
+    [key: string]: any;
+  }>;
+  [key: string]: any;
+}
+
+interface ToolCallPart {
+  type: ContentTypes.TOOL_CALL;
+  tool_call: {
+    id: string;
+    name: string;
+    args: string | Record<string, unknown>;
+    output?: string;
+    [key: string]: any;
+  };
+}
+
 /**
  * Formats an array of messages for LangChain, handling tool calls and creating ToolMessage instances.
  *
  * @param {Array<Partial<TMessage>>} payload - The array of messages to format.
- * @returns {Array<(HumanMessage|AIMessage|SystemMessage|ToolMessage)>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
+ * @returns {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
  */
-export const formatAgentMessages = (payload) => {
-  const messages = [];
+export const formatAgentMessages = (payload: Array<Partial<TMessage>>): Array<HumanMessage | AIMessage | SystemMessage | ToolMessage> => {
+  const messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage> = [];
 
   for (const message of payload) {
     if (typeof message.content === 'string') {
       message.content = [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: message.content }];
     }
     if (message.role !== 'assistant') {
-      messages.push(formatMessage({ message, langChain: true }));
+      messages.push(formatMessage({ 
+        message: message as MessageInput, 
+        langChain: true 
+      }) as HumanMessage | AIMessage | SystemMessage);
       continue;
     }
 
-    let currentContent = [];
-    let lastAIMessage = null;
+    let currentContent: any[] = [];
+    let lastAIMessage: AIMessage | null = null;
 
     let hasReasoning = false;
-    for (const part of message.content) {
-      if (part.type === ContentTypes.TEXT && part.tool_call_ids) {
-        /*
-        If there's pending content, it needs to be aggregated as a single string to prepare for tool calls.
-        For Anthropic models, the "tool_calls" field on a message is only respected if content is a string.
-         */
-        if (currentContent.length > 0) {
-          let content = currentContent.reduce((acc, curr) => {
-            if (curr.type === ContentTypes.TEXT) {
-              return `${acc}${curr[ContentTypes.TEXT]}\n`;
-            }
-            return acc;
-          }, '');
-          content = `${content}\n${part[ContentTypes.TEXT] ?? ''}`.trim();
-          lastAIMessage = new AIMessage({ content });
-          messages.push(lastAIMessage);
-          currentContent = [];
-          continue;
-        }
-
-        // Create a new AIMessage with this text and prepare for tool calls
-        lastAIMessage = new AIMessage({
-          content: part.text || '',
-        });
-
-        messages.push(lastAIMessage);
-      } else if (part.type === ContentTypes.TOOL_CALL) {
-        if (!lastAIMessage) {
-          throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
-        }
-
-        // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
-        const { output, args: _args, ...tool_call } = part.tool_call;
-        // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
-        let args = _args;
-        try {
-          args = JSON.parse(_args);
-        } catch (e) {
-          if (typeof _args === 'string') {
-            args = { input: _args };
+    if (Array.isArray(message.content)) {
+      for (const part of message.content) {
+        if (part.type === ContentTypes.TEXT && part.tool_call_ids) {
+          /*
+          If there's pending content, it needs to be aggregated as a single string to prepare for tool calls.
+          For Anthropic models, the "tool_calls" field on a message is only respected if content is a string.
+          */
+          if (currentContent.length > 0) {
+            let content = currentContent.reduce((acc, curr) => {
+              if (curr.type === ContentTypes.TEXT) {
+                return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
+              }
+              return acc;
+            }, '');
+            content = `${content}\n${part[ContentTypes.TEXT] ?? part.text ?? ''}`.trim();
+            lastAIMessage = new AIMessage({ content });
+            messages.push(lastAIMessage);
+            currentContent = [];
+            continue;
           }
+
+          // Create a new AIMessage with this text and prepare for tool calls
+          lastAIMessage = new AIMessage({
+            content: part.text || '',
+          });
+
+          messages.push(lastAIMessage);
+        } else if (part.type === ContentTypes.TOOL_CALL) {
+          if (!lastAIMessage) {
+            throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
+          }
+
+          // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
+          const { output, args: _args, ...tool_call } = (part.tool_call as any);
+          // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
+          let args: any = _args;
+          try {
+            if (typeof _args === 'string') {
+              args = JSON.parse(_args);
+            }
+          } catch (e) {
+            if (typeof _args === 'string') {
+              args = { input: _args };
+            }
+          }
+
+          tool_call.args = args;
+          if (!lastAIMessage.tool_calls) {
+            lastAIMessage.tool_calls = [];
+          }
+          lastAIMessage.tool_calls.push(tool_call as ToolCall);
+
+          // Add the corresponding ToolMessage
+          messages.push(
+            new ToolMessage({
+              tool_call_id: tool_call.id,
+              name: tool_call.name,
+              content: output || '',
+            }),
+          );
+        } else if (part.type === ContentTypes.THINK) {
+          hasReasoning = true;
+          continue;
+        } else if (part.type === ContentTypes.ERROR || part.type === ContentTypes.AGENT_UPDATE) {
+          continue;
+        } else {
+          currentContent.push(part);
         }
-
-        tool_call.args = args;
-        lastAIMessage.tool_calls.push(tool_call);
-
-        // Add the corresponding ToolMessage
-        messages.push(
-          new ToolMessage({
-            tool_call_id: tool_call.id,
-            name: tool_call.name,
-            content: output || '',
-          }),
-        );
-      } else if (part.type === ContentTypes.THINK) {
-        hasReasoning = true;
-        continue;
-      } else if (part.type === ContentTypes.ERROR || part.type === ContentTypes.AGENT_UPDATE) {
-        continue;
-      } else {
-        currentContent.push(part);
       }
     }
 
-    if (hasReasoning) {
-      currentContent = currentContent
+    if (hasReasoning && currentContent.length > 0) {
+      const content = currentContent
         .reduce((acc, curr) => {
           if (curr.type === ContentTypes.TEXT) {
-            return `${acc}${curr[ContentTypes.TEXT]}\n`;
+            return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
           }
           return acc;
         }, '')
         .trim();
-    }
-
-    if (currentContent.length > 0) {
+      
+      if (content) {
+        messages.push(new AIMessage({ content }));
+      }
+    } else if (currentContent.length > 0) {
       messages.push(new AIMessage({ content: currentContent }));
     }
   }
@@ -239,13 +343,14 @@ export const formatAgentMessages = (payload) => {
 
 /**
  * Formats an array of messages for LangChain, making sure all content fields are strings
- * @param {Array<(HumanMessage|AIMessage|SystemMessage|ToolMessage)>} payload - The array of messages to format.
- * @returns {Array<(HumanMessage|AIMessage|SystemMessage|ToolMessage)>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
+ * @param {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} payload - The array of messages to format.
+ * @returns {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
  */
-export const formatContentStrings = (payload) => {
-  const messages = [];
+export const formatContentStrings = (payload: Array<BaseMessage>): Array<BaseMessage> => {
+  // Create a copy of the payload to avoid modifying the original
+  const result = [...payload];
 
-  for (const message of payload) {
+  for (const message of result) {
     if (typeof message.content === 'string') {
       continue;
     }
@@ -257,7 +362,7 @@ export const formatContentStrings = (payload) => {
     // Reduce text types to a single string, ignore all other types
     const content = message.content.reduce((acc, curr) => {
       if (curr.type === ContentTypes.TEXT) {
-        return `${acc}${curr[ContentTypes.TEXT]}\n`;
+        return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
       }
       return acc;
     }, '');
@@ -265,5 +370,5 @@ export const formatContentStrings = (payload) => {
     message.content = content.trim();
   }
 
-  return messages;
+  return result;
 };
