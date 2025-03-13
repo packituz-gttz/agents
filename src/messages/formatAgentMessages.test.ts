@@ -417,4 +417,212 @@ describe('formatAgentMessages', () => {
     
     expect(totalAssistantTokens).toBe(50); // Should match the original token count
   });
+
+  it('should handle one-to-many message expansion with tool calls', () => {
+    // One message with multiple tool calls expands to multiple messages
+    const payload = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'First tool call:',
+            tool_call_ids: ['tool_1'],
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_1',
+              name: 'search',
+              args: '{"query":"test"}',
+              output: 'Search result',
+            },
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Second tool call:',
+            tool_call_ids: ['tool_2'],
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_2',
+              name: 'calculate',
+              args: '{"expression":"1+1"}',
+              output: '2',
+            },
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Final response',
+          },
+        ],
+      },
+    ];
+    
+    const indexTokenCountMap = {
+      0: 100,  // 100 tokens for the complex assistant message
+    };
+    
+    const result = formatAgentMessages(payload, indexTokenCountMap);
+    
+    // One message expands to 5 messages (2 tool calls + text before, between, and after)
+    expect(result.messages).toHaveLength(5);
+    expect(result.indexTokenCountMap).toBeDefined();
+    
+    // The sum of all token counts should equal the original
+    const totalTokens = Object.values(result.indexTokenCountMap || {})
+      .reduce((sum, count) => sum + count, 0);
+    
+    expect(totalTokens).toBe(100);
+    
+    // Check that each resulting message has a token count
+    for (let i = 0; i < result.messages.length; i++) {
+      expect(result.indexTokenCountMap?.[i]).toBeDefined();
+    }
+  });
+
+  it('should handle content filtering that reduces message count', () => {
+    // Message with THINK and ERROR parts that get filtered out
+    const payload = [
+      {
+        role: 'assistant',
+        content: [
+          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Thinking...' },
+          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Visible response' },
+          { type: ContentTypes.ERROR, [ContentTypes.ERROR]: 'Error occurred' },
+        ],
+      },
+    ];
+    
+    const indexTokenCountMap = {
+      0: 60,  // 60 tokens for the message with filtered content
+    };
+    
+    const result = formatAgentMessages(payload, indexTokenCountMap);
+    
+    // Only one message should remain after filtering
+    expect(result.messages).toHaveLength(1);
+    expect(result.indexTokenCountMap).toBeDefined();
+    
+    // All tokens should be assigned to the remaining message
+    expect(result.indexTokenCountMap?.[0]).toBe(60);
+  });
+
+  it('should handle empty result after content filtering', () => {
+    // Message with only THINK and ERROR parts that all get filtered out
+    const payload = [
+      {
+        role: 'assistant',
+        content: [
+          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Thinking...' },
+          { type: ContentTypes.ERROR, [ContentTypes.ERROR]: 'Error occurred' },
+          { type: ContentTypes.AGENT_UPDATE, update: 'Processing...' },
+        ],
+      },
+    ];
+    
+    const indexTokenCountMap = {
+      0: 40,  // 40 tokens for the message with filtered content
+    };
+    
+    const result = formatAgentMessages(payload, indexTokenCountMap);
+    
+    // No messages should remain after filtering
+    expect(result.messages).toHaveLength(0);
+    expect(result.indexTokenCountMap).toBeDefined();
+    
+    // The token count map should be empty since there are no messages
+    expect(Object.keys(result.indexTokenCountMap || {})).toHaveLength(0);
+  });
+
+  it('should demonstrate how 2 input messages can become more than 2 output messages', () => {
+    // Two input messages where one contains tool calls
+    const payload = [
+      { role: 'user', content: 'Can you help me with something?' },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'I\'ll help you with that.',
+            tool_call_ids: ['tool_1'],
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_1',
+              name: 'search',
+              args: '{"query":"help topics"}',
+              output: 'Found several help topics.',
+            },
+          },
+        ],
+      },
+    ];
+    
+    const indexTokenCountMap = {
+      0: 15,  // 15 tokens for the user message
+      1: 45,  // 45 tokens for the assistant message with tool call
+    };
+    
+    const result = formatAgentMessages(payload, indexTokenCountMap);
+    
+    // 2 input messages become 3 output messages (user + assistant + tool)
+    expect(payload).toHaveLength(2);
+    expect(result.messages).toHaveLength(3);
+    expect(result.indexTokenCountMap).toBeDefined();
+    expect(Object.keys(result.indexTokenCountMap ?? {}).length).toBe(3);
+    
+    // Check message types
+    expect(result.messages[0]).toBeInstanceOf(HumanMessage);
+    expect(result.messages[1]).toBeInstanceOf(AIMessage);
+    expect(result.messages[2]).toBeInstanceOf(ToolMessage);
+    
+    // The sum of all token counts should equal the original total
+    const totalTokens = Object.values(result.indexTokenCountMap || {})
+      .reduce((sum, count) => sum + count, 0);
+    
+    expect(totalTokens).toBe(60); // 15 + 45
+  });
+
+  it('should demonstrate how messages can be filtered out, reducing count', () => {
+    // Two input messages where one gets completely filtered out
+    const payload = [
+      { role: 'user', content: 'Hello there' },
+      {
+        role: 'assistant',
+        content: [
+          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Thinking about response...' },
+          { type: ContentTypes.ERROR, [ContentTypes.ERROR]: 'Error in processing' },
+          { type: ContentTypes.AGENT_UPDATE, update: 'Working on it...' },
+        ],
+      },
+    ];
+    
+    const indexTokenCountMap = {
+      0: 10,  // 10 tokens for the user message
+      1: 30,  // 30 tokens for the assistant message that will be filtered out
+    };
+    
+    const result = formatAgentMessages(payload, indexTokenCountMap);
+    
+    // 2 input messages become 1 output message (only the user message remains)
+    expect(payload).toHaveLength(2);
+    expect(result.messages).toHaveLength(1);
+    expect(result.indexTokenCountMap).toBeDefined();
+    expect(Object.keys(result.indexTokenCountMap ?? {}).length).toBe(1);
+    
+    // Check message type
+    expect(result.messages[0]).toBeInstanceOf(HumanMessage);
+    
+    // Only the user message tokens should remain
+    expect(result.indexTokenCountMap?.[0]).toBe(10);
+    
+    // The total tokens should be just the user message tokens
+    const totalTokens = Object.values(result.indexTokenCountMap || {})
+      .reduce((sum, count) => sum + count, 0);
+    
+    expect(totalTokens).toBe(10);
+  });
 });
