@@ -228,12 +228,26 @@ interface ToolCallPart {
  * Formats an array of messages for LangChain, handling tool calls and creating ToolMessage instances.
  *
  * @param {Array<Partial<TMessage>>} payload - The array of messages to format.
- * @returns {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
+ * @param {Record<number, number>} [indexTokenCountMap] - Optional map of message indices to token counts.
+ * @returns {Object} - Object containing formatted messages and updated indexTokenCountMap if provided.
  */
-export const formatAgentMessages = (payload: Array<Partial<TMessage>>): Array<HumanMessage | AIMessage | SystemMessage | ToolMessage> => {
+export const formatAgentMessages = (
+  payload: Array<Partial<TMessage>>, 
+  indexTokenCountMap?: Record<number, number>
+): {
+  messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>;
+  indexTokenCountMap?: Record<number, number>;
+} => {
   const messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage> = [];
+  // If indexTokenCountMap is provided, create a new map to track the updated indices
+  const updatedIndexTokenCountMap: Record<number, number> = {};
+  // Keep track of the mapping from original payload indices to result indices
+  const indexMapping: Record<number, number[]> = {};
 
-  for (const message of payload) {
+  for (let i = 0; i < payload.length; i++) {
+    const message = payload[i];
+    // Q: Store the current length of messages to track where this payload message starts in the result?
+    // const startIndex = messages.length;
     if (typeof message.content === 'string') {
       message.content = [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: message.content }];
     }
@@ -242,8 +256,14 @@ export const formatAgentMessages = (payload: Array<Partial<TMessage>>): Array<Hu
         message: message as MessageInput, 
         langChain: true 
       }) as HumanMessage | AIMessage | SystemMessage);
+      
+      // Update the index mapping for this message
+      indexMapping[i] = [messages.length - 1];
       continue;
     }
+
+    // For assistant messages, track the starting index before processing
+    const startMessageIndex = messages.length;
 
     let currentContent: any[] = [];
     let lastAIMessage: AIMessage | null = null;
@@ -336,9 +356,48 @@ export const formatAgentMessages = (payload: Array<Partial<TMessage>>): Array<Hu
     } else if (currentContent.length > 0) {
       messages.push(new AIMessage({ content: currentContent }));
     }
+    
+    // Update the index mapping for this assistant message
+    // Store all indices that were created from this original message
+    const endMessageIndex = messages.length;
+    const resultIndices = [];
+    for (let j = startMessageIndex; j < endMessageIndex; j++) {
+      resultIndices.push(j);
+    }
+    indexMapping[i] = resultIndices;
   }
 
-  return messages;
+  // Update the token count map if it was provided
+  if (indexTokenCountMap) {
+    for (let originalIndex = 0; originalIndex < payload.length; originalIndex++) {
+      const resultIndices = indexMapping[originalIndex] || [];
+      const tokenCount = indexTokenCountMap[originalIndex];
+      
+      if (tokenCount !== undefined) {
+        if (resultIndices.length === 1) {
+          // Simple 1:1 mapping
+          updatedIndexTokenCountMap[resultIndices[0]] = tokenCount;
+        } else if (resultIndices.length > 1) {
+          // If one message was split into multiple, distribute the token count
+          // This is a simplification - in reality, you might want a more sophisticated distribution
+          const countPerMessage = Math.floor(tokenCount / resultIndices.length);
+          resultIndices.forEach((resultIndex, idx) => {
+            if (idx === resultIndices.length - 1) {
+              // Give any remainder to the last message
+              updatedIndexTokenCountMap[resultIndex] = tokenCount - (countPerMessage * (resultIndices.length - 1));
+            } else {
+              updatedIndexTokenCountMap[resultIndex] = countPerMessage;
+            }
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    messages,
+    indexTokenCountMap: indexTokenCountMap ? updatedIndexTokenCountMap : undefined
+  };
 };
 
 /**
