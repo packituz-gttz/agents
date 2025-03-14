@@ -1,0 +1,167 @@
+import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { TokenCounter } from '@/types/run';
+export type PruneMessagesFactoryParams = {
+  maxTokens: number;
+  startIndex: number;
+  tokenCounter: TokenCounter;
+  indexTokenCountMap: Record<string, number>;
+};
+export type PruneMessagesParams = {
+  messages: BaseMessage[];
+  usageMetadata?: Partial<UsageMetadata>;
+}
+
+/**
+ * Calculates the total tokens from a single usage object
+ * 
+ * @param usage The usage metadata object containing token information
+ * @returns An object containing the total input and output tokens
+ */
+function calculateTotalTokens(usage: Partial<UsageMetadata>): UsageMetadata {
+  const baseInputTokens = Number(usage.input_tokens) || 0;
+  const cacheCreation = Number(usage.input_token_details?.cache_creation) || 0;
+  const cacheRead = Number(usage.input_token_details?.cache_read) || 0;
+  
+  const totalInputTokens = baseInputTokens + cacheCreation + cacheRead;
+  const totalOutputTokens = Number(usage.output_tokens) || 0;
+
+  return {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+    total_tokens: totalInputTokens + totalOutputTokens
+  };
+}
+
+/**
+ * Processes an array of messages and returns a context of messages that fit within a specified token limit.
+ * It iterates over the messages from newest to oldest, adding them to the context until the token limit is reached.
+ * 
+ * @param options Configuration options for processing messages
+ * @returns Object containing the message context, remaining tokens, messages not included, and summary index
+ */
+function getMessagesWithinTokenLimit({
+  messages: _messages,
+  maxContextTokens,
+  indexTokenCountMap,
+}: {
+  messages: BaseMessage[];
+  maxContextTokens: number;
+  indexTokenCountMap: Record<string, number>;
+}): {
+  context: BaseMessage[];
+  remainingContextTokens: number;
+  messagesToRefine: BaseMessage[];
+  summaryIndex: number;
+} {
+  // Every reply is primed with <|start|>assistant<|message|>, so we
+  // start with 3 tokens for the label after all messages have been counted.
+  let summaryIndex = -1;
+  let currentTokenCount = 3;
+  const instructions = _messages?.[0]?.getType() === 'system' ? _messages[0] : undefined;
+  const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
+  let remainingContextTokens = maxContextTokens - instructionsTokenCount;
+  const messages = [..._messages];
+  const context: BaseMessage[] = [];
+
+  if (currentTokenCount < remainingContextTokens) {
+    let currentIndex = messages.length;
+    while (messages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > 1) {
+      currentIndex--;
+      if (messages.length === 1 && instructions) {
+        break;
+      }
+      const poppedMessage = messages.pop();
+      if (!poppedMessage) continue;
+      
+      const tokenCount = indexTokenCountMap[currentIndex] || 0;
+
+      if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
+        context.push(poppedMessage);
+        currentTokenCount += tokenCount;
+      } else {
+        messages.push(poppedMessage);
+        break;
+      }
+    }
+  }
+
+  if (instructions && _messages.length > 0) {
+    context.push(_messages[0] as BaseMessage);
+    messages.shift();
+  }
+
+  const prunedMemory = messages;
+  summaryIndex = prunedMemory.length - 1;
+  remainingContextTokens -= currentTokenCount;
+
+  return {
+    summaryIndex,
+    remainingContextTokens,
+    context: context.reverse(),
+    messagesToRefine: prunedMemory,
+  };
+}
+
+function checkValidNumber(value: unknown): value is number {
+  return typeof value === 'number' && !isNaN(value) && value > 0;
+}
+
+export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
+  const indexTokenCountMap = { ...factoryParams.indexTokenCountMap };
+  let lastTurnStartIndex = factoryParams.startIndex;
+  let totalTokens = (Object.values(indexTokenCountMap)).reduce((a, b) => a + b, 0);
+  return function pruneMessages(params: PruneMessagesParams): {
+    context: BaseMessage[];
+    indexTokenCountMap: Record<string, number>;
+  } {
+    let currentUsage: UsageMetadata | undefined;
+    if (params.usageMetadata && (
+      checkValidNumber(params.usageMetadata.input_tokens)
+      || (
+        checkValidNumber(params.usageMetadata.input_token_details)
+        && (
+          checkValidNumber(params.usageMetadata.input_token_details.cache_creation)
+          || checkValidNumber(params.usageMetadata.input_token_details.cache_read)
+        )
+      )
+    ) && checkValidNumber(params.usageMetadata.output_tokens)) {
+      currentUsage = calculateTotalTokens(params.usageMetadata);
+      totalTokens = currentUsage.total_tokens;
+    }
+
+    for (let i = lastTurnStartIndex; i < params.messages.length; i++) {
+      const message = params.messages[i];
+      if (i === lastTurnStartIndex && indexTokenCountMap[i] === undefined && currentUsage) {
+        indexTokenCountMap[i] = currentUsage.output_tokens;
+      } else if (indexTokenCountMap[i] === undefined) {
+        indexTokenCountMap[i] = factoryParams.tokenCounter(message);
+        totalTokens += indexTokenCountMap[i];
+      }
+    }
+
+    // If `currentUsage` is defined, we need to distribute the current total tokensto our `indexTokenCountMap`,
+    // for all message index keys before `lastTurnStartIndex`, as it has the most accurate count for those messages.
+    // We must distribute it in a weighted manner, so that the total token count is equal to `currentUsage.total_tokens`,
+    // relative the manually counted tokens in `indexTokenCountMap`.
+    if (currentUsage) {
+      const totalIndexTokens = Object.values(indexTokenCountMap).reduce((a, b) => a + b, 0);
+      const ratio = currentUsage.total_tokens / totalIndexTokens;
+      for (const key in indexTokenCountMap) {
+        indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+      }
+    }
+
+    lastTurnStartIndex = params.messages.length;
+    if (totalTokens <= factoryParams.maxTokens) {
+      return { context: params.messages, indexTokenCountMap };
+    }
+
+    const { context } = getMessagesWithinTokenLimit({
+      maxContextTokens: factoryParams.maxTokens,
+      messages: params.messages,
+      indexTokenCountMap,
+    });
+
+    return { context, indexTokenCountMap };
+  }
+}

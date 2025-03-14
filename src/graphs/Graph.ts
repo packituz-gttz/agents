@@ -14,6 +14,7 @@ import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentType
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import {
+  createPruneMessages,
   modifyDeltaProperties,
   formatArtifactPayload,
   convertMessagesToContent,
@@ -77,6 +78,7 @@ export abstract class Graph<
   currentUsage: Partial<UsageMetadata> | undefined;
   indexTokenCountMap: Record<string, number> = {};
   maxContextTokens: number | undefined;
+  pruneMessages?: ReturnType<typeof createPruneMessages>;
   /** The amount of time that should pass before another consecutive API call */
   streamBuffer: number | undefined;
   tokenCounter?: t.TokenCounter;
@@ -353,6 +355,22 @@ export class StandardGraph extends Graph<
       const { messages } = state;
 
       let messagesToUse = messages;
+      if (!this.pruneMessages && this.tokenCounter && this.maxContextTokens) {
+        this.pruneMessages = createPruneMessages({
+          indexTokenCountMap: this.indexTokenCountMap,
+          maxTokens: this.maxContextTokens,
+          tokenCounter: this.tokenCounter,
+          startIndex: this.startIndex,
+        });
+      }
+      if (this.pruneMessages) {
+        const { context, indexTokenCountMap } = this.pruneMessages({
+          messages,
+          usageMetadata: this.currentUsage,
+        });
+        this.indexTokenCountMap = indexTokenCountMap;
+        messagesToUse = context;
+      }
 
       const finalMessages = messagesToUse;
       const lastMessageX = finalMessages.length >= 2 ? finalMessages[finalMessages.length - 2] : null;
