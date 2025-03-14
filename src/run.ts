@@ -106,6 +106,10 @@ export class Run<T extends t.BaseGraphState> {
       throw new Error('Run ID not provided');
     }
 
+    this.Graph.indexTokenCountMap = streamOptions?.indexTokenCountMap ?? {};
+    this.Graph.maxContextTokens = streamOptions?.maxContextTokens;
+    this.Graph.tokenCounter = streamOptions?.tokenCounter;
+
     config.run_id = this.id;
     config.configurable = Object.assign(config.configurable ?? {}, { run_id: this.id, provider: this.provider });
 

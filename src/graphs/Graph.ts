@@ -78,6 +78,7 @@ export abstract class Graph<
   tokenCounter?: TrimMessagesFields['tokenCounter'];
   currentUsage: Partial<UsageMetadata> | undefined;
   indexTokenCountMap: Record<string, number> = {};
+  maxContextTokens: number | undefined;
   /** The amount of time that should pass before another consecutive API call */
   streamBuffer: number | undefined;
   signal?: AbortSignal;
@@ -173,6 +174,7 @@ export class StandardGraph extends Graph<
     this.indexTokenCountMap = resetIfNotEmpty(this.indexTokenCountMap, {});
     this.currentUsage = resetIfNotEmpty(this.currentUsage, undefined);
     this.tokenCounter = resetIfNotEmpty(this.tokenCounter, undefined);
+    this.maxContextTokens = resetIfNotEmpty(this.maxContextTokens, undefined);
   }
 
   /* Run Step Processing */
