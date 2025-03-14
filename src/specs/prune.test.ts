@@ -194,6 +194,8 @@ describe('Prune Messages Tests', () => {
       });
       
       expect(result.context.length).toBe(3);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[0].getType()).toBe('system'); // System message
       expect(result.remainingContextTokens).toBe(100 - 17 - 5 - 8 - 3); // -3 for the assistant label tokens
       expect(result.messagesToRefine.length).toBe(0);
     });
@@ -225,6 +227,7 @@ describe('Prune Messages Tests', () => {
       // Should include system message and the last two messages
       expect(result.context.length).toBe(3);
       expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[0].getType()).toBe('system'); // System message
       expect(result.context[1]).toBe(messages[3]); // Message 2
       expect(result.context[2]).toBe(messages[4]); // Response 2
       
