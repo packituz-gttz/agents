@@ -9,12 +9,10 @@ import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage, BaseMessageFields, UsageMetadata } from '@langchain/core/messages';
-import type { TrimMessagesFields } from '@/messages/transformers'
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
-import { createTrimMessagesFunction } from '@/messages/trimMessagesFactory';
 import {
   modifyDeltaProperties,
   formatArtifactPayload,
@@ -76,12 +74,12 @@ export abstract class Graph<
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
-  tokenCounter?: TrimMessagesFields['tokenCounter'];
   currentUsage: Partial<UsageMetadata> | undefined;
   indexTokenCountMap: Record<string, number> = {};
   maxContextTokens: number | undefined;
   /** The amount of time that should pass before another consecutive API call */
   streamBuffer: number | undefined;
+  tokenCounter?: t.TokenCounter;
   signal?: AbortSignal;
 }
 
@@ -355,27 +353,6 @@ export class StandardGraph extends Graph<
       const { messages } = state;
 
       let messagesToUse = messages;
-      if (this.maxContextTokens && this.tokenCounter) {
-        const trimmer = createTrimMessagesFunction({
-          trimOptions: {
-            maxTokens: this.maxContextTokens,
-            tokenCounter: this.tokenCounter,
-            strategy: "last",
-            includeSystem: true
-          }
-        });
-        
-        const usageMetadata = this.currentUsage;
-        
-        const { messages: trimmedMessages, indexTokenCountMap } = await trimmer({
-          messages,
-          usageMetadata,
-          turnStartIndex: this.startIndex
-        });
-        
-        this.indexTokenCountMap = indexTokenCountMap;
-        messagesToUse = trimmedMessages;
-      }
 
       const finalMessages = messagesToUse;
       const lastMessageX = finalMessages.length >= 2 ? finalMessages[finalMessages.length - 2] : null;

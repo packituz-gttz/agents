@@ -3,7 +3,6 @@ import type * as z from 'zod';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
-import type { TrimMessagesFields } from '@/messages/transformers'
 import type * as graph from '@/graphs/Graph';
 import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
@@ -56,11 +55,12 @@ export type RunConfig = {
 
 export type ProvidedCallbacks = (BaseCallbackHandler | CallbackHandlerMethods)[] | undefined;
 
+export type TokenCounter = (message: BaseMessage) => number;
 export type EventStreamOptions = {
   callbacks?: graph.ClientCallbacks;
   keepContent?: boolean;
   /* Context Management */
   maxContextTokens?: number;
   indexTokenCountMap?: Record<string, number>;
-  tokenCounter?: TrimMessagesFields['tokenCounter'];
+  tokenCounter?: TokenCounter;
 }
