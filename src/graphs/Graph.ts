@@ -14,6 +14,7 @@ import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
+import { createTrimMessagesFunction } from '@/messages/trimMessagesFactory';
 import {
   modifyDeltaProperties,
   formatArtifactPayload,
@@ -335,6 +336,12 @@ export class StandardGraph extends Graph<
     return new ChatModelClass(options);
   }
 
+  storeUsageMetadata(finalMessage?: BaseMessage): void {
+    if (finalMessage && 'usage_metadata' in finalMessage && finalMessage.usage_metadata) {
+      this.currentUsage = finalMessage.usage_metadata as Partial<UsageMetadata>;
+    }
+  }
+
   createCallModel() {
     return async (state: t.BaseGraphState, config?: RunnableConfig): Promise<Partial<t.BaseGraphState>> => {
       const { provider = '' } = (config?.configurable as t.GraphConfig | undefined) ?? {} ;
@@ -347,9 +354,32 @@ export class StandardGraph extends Graph<
       this.config = config;
       const { messages } = state;
 
-      const finalMessages = messages;
-      const lastMessageX = finalMessages[finalMessages.length - 2];
-      const lastMessageY = finalMessages[finalMessages.length - 1];
+      let messagesToUse = messages;
+      if (this.maxContextTokens && this.tokenCounter) {
+        const trimmer = createTrimMessagesFunction({
+          trimOptions: {
+            maxTokens: this.maxContextTokens,
+            tokenCounter: this.tokenCounter,
+            strategy: "last",
+            includeSystem: true
+          }
+        });
+        
+        const usageMetadata = this.currentUsage;
+        
+        const { messages: trimmedMessages, indexTokenCountMap } = await trimmer({
+          messages,
+          usageMetadata,
+          turnStartIndex: this.startIndex
+        });
+        
+        this.indexTokenCountMap = indexTokenCountMap;
+        messagesToUse = trimmedMessages;
+      }
+
+      const finalMessages = messagesToUse;
+      const lastMessageX = finalMessages.length >= 2 ? finalMessages[finalMessages.length - 2] : null;
+      const lastMessageY = finalMessages.length >= 1 ? finalMessages[finalMessages.length - 1] : null;
 
       if (
         provider === Providers.BEDROCK
@@ -381,6 +411,7 @@ export class StandardGraph extends Graph<
 
       this.lastStreamCall = Date.now();
 
+      let result: Partial<t.BaseGraphState>;
       if ((this.tools?.length ?? 0) > 0 && manualToolStreamProviders.has(provider)) {
         const stream = await this.boundModel.stream(finalMessages, config);
         let finalChunk: AIMessageChunk | undefined;
@@ -394,19 +425,22 @@ export class StandardGraph extends Graph<
         }
 
         finalChunk = modifyDeltaProperties(this.provider, finalChunk);
-        return { messages: [finalChunk as AIMessageChunk] };
+        result = { messages: [finalChunk as AIMessageChunk] };
+      } else {
+        const finalMessage = (await this.boundModel.invoke(finalMessages, config)) as AIMessageChunk;
+        if ((finalMessage.tool_calls?.length ?? 0) > 0) {
+          finalMessage.tool_calls = finalMessage.tool_calls?.filter((tool_call) => {
+            if (!tool_call.name) {
+              return false;
+            }
+            return true;
+          });
+        }
+        result = { messages: [finalMessage] };
       }
-
-      const finalMessage = (await this.boundModel.invoke(finalMessages, config)) as AIMessageChunk;
-      if ((finalMessage.tool_calls?.length ?? 0) > 0) {
-        finalMessage.tool_calls = finalMessage.tool_calls?.filter((tool_call) => {
-          if (!tool_call.name) {
-            return false;
-          }
-          return true;
-        });
-      }
-      return { messages: [finalMessage] };
+      
+      this.storeUsageMetadata(result?.messages?.[0]);
+      return result;
     };
   }
 
