@@ -355,7 +355,7 @@ export class StandardGraph extends Graph<
       const { messages } = state;
 
       let messagesToUse = messages;
-      if (!this.pruneMessages && this.tokenCounter && this.maxContextTokens) {
+      if (!this.pruneMessages && this.tokenCounter && this.maxContextTokens && this.indexTokenCountMap[0] != null) {
         this.pruneMessages = createPruneMessages({
           indexTokenCountMap: this.indexTokenCountMap,
           maxTokens: this.maxContextTokens,

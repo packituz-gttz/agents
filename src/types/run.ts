@@ -61,6 +61,6 @@ export type EventStreamOptions = {
   keepContent?: boolean;
   /* Context Management */
   maxContextTokens?: number;
-  indexTokenCountMap?: Record<string, number>;
   tokenCounter?: TokenCounter;
+  indexTokenCountMap?: Record<string, number>;
 }

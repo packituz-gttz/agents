@@ -1,12 +1,13 @@
 // src/scripts/cli.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
+import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
-import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
 import { createCodeExecutionTool } from '@/tools/CodeExecutor';
+import { ToolEndHandler, ModelEndHandler } from '@/events';
+import { createTokenCounter } from '@/utils/tokens';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
 import { GraphEvents } from '@/common';
@@ -58,19 +59,22 @@ async function testCodeExecution(): Promise<void> {
   };
 
   const llmConfig = getLLMConfig(provider);
+  const instructions = 'You are a friendly AI assistant with coding capabilities. Always address the user by their name.';
+  const additional_instructions = `The user's name is ${userName} and they are located in ${location}.`;
 
-  const run = await Run.create<t.IState>({
+  const runConfig: t.RunConfig = {
     runId: 'message-num-1',
     graphConfig: {
       type: 'standard',
       llmConfig,
       tools: [new TavilySearchResults(), createCodeExecutionTool()],
-      instructions: 'You are a friendly AI assistant with coding capabilities. Always address the user by their name.',
-      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
+      instructions,
+      additional_instructions,
     },
     returnContent: true,
     customHandlers,
-  });
+  };
+  const run = await Run.create<t.IState>(runConfig);
 
   const config = {
     configurable: {
@@ -86,13 +90,22 @@ async function testCodeExecution(): Promise<void> {
   // const userMessage1 = `how much memory is this (its in bytes) in MB? 31192000`;
   // const userMessage1 = `can you show me a good use case for rscript by running some code`;
   const userMessage1 = `Run hello world in french and in english, using python. please run 2 parallel code executions.`;
+  const humanMessage = new HumanMessage(userMessage1);
+  const tokenCounter = await createTokenCounter();
+  const indexTokenCountMap = {
+    0: tokenCounter(humanMessage),
+  };
 
-  conversationHistory.push(new HumanMessage(userMessage1));
+  conversationHistory.push(humanMessage);
 
   let inputs = {
     messages: conversationHistory,
   };
-  const finalContentParts1 = await run.processStream(inputs, config);
+  const finalContentParts1 = await run.processStream(inputs, config, {
+    maxContextTokens: 8000,
+    indexTokenCountMap,
+    tokenCounter,
+  });
   const finalMessages1 = run.getRunMessages();
   if (finalMessages1) {
     conversationHistory.push(...finalMessages1);

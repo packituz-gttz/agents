@@ -1,13 +1,17 @@
 // src/run.ts
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { PromptTemplate } from '@langchain/core/prompts';
 import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
+import { SystemMessage } from '@langchain/core/messages';
 import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
 import { GraphEvents, Providers, Callback } from '@/common';
 import { manualToolStreamProviders } from '@/llm/providers';
+import { shiftIndexTokenCountMap } from '@/messages/format';
 import { createTitleRunnable } from '@/utils/title';
+import { createTokenCounter } from '@/utils/tokens';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 import { isOpenAILike } from '@/utils/llm';
@@ -106,9 +110,27 @@ export class Run<T extends t.BaseGraphState> {
       throw new Error('Run ID not provided');
     }
 
-    this.Graph.indexTokenCountMap = streamOptions?.indexTokenCountMap ?? {};
+    const tokenCounter = streamOptions?.tokenCounter ?? (streamOptions?.indexTokenCountMap ? await createTokenCounter() : undefined);
+    const toolTokens = tokenCounter ? (this.Graph.tools?.reduce((acc, tool) => {
+      if (!tool.schema) {
+        return acc;
+      }
+  
+      const jsonSchema = zodToJsonSchema(tool.schema.describe(tool.description ?? ''), tool.name);
+      return acc + tokenCounter(new SystemMessage(JSON.stringify(jsonSchema)));
+    }, 0) ?? 0) : 0;
+    let instructionTokens = toolTokens;
+    if (this.Graph.systemMessage && tokenCounter) {
+      instructionTokens += tokenCounter(this.Graph.systemMessage);
+    }
+    if (instructionTokens > 0) {
+      this.Graph.indexTokenCountMap = shiftIndexTokenCountMap(streamOptions?.indexTokenCountMap ?? {}, instructionTokens);
+    } else {
+      this.Graph.indexTokenCountMap = streamOptions?.indexTokenCountMap ?? {};
+    }
+
     this.Graph.maxContextTokens = streamOptions?.maxContextTokens;
-    this.Graph.tokenCounter = streamOptions?.tokenCounter;
+    this.Graph.tokenCounter = tokenCounter;
 
     config.run_id = this.id;
     config.configurable = Object.assign(config.configurable ?? {}, { run_id: this.id, provider: this.provider });

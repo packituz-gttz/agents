@@ -431,3 +431,30 @@ export const formatContentStrings = (payload: Array<BaseMessage>): Array<BaseMes
 
   return result;
 };
+
+/**
+ * Adds a value at key 0 for system messages and shifts all key indices by one in an indexTokenCountMap.
+ * This is useful when adding a system message at the beginning of a conversation.
+ * 
+ * @param indexTokenCountMap - The original map of message indices to token counts
+ * @param instructionsTokenCount - The token count for the system message to add at index 0
+ * @returns A new map with the system message at index 0 and all other indices shifted by 1
+ */
+export function shiftIndexTokenCountMap(
+  indexTokenCountMap: Record<number, number>,
+  instructionsTokenCount: number
+): Record<number, number> {
+  // Create a new map to avoid modifying the original
+  const shiftedMap: Record<number, number> = {};
+  
+  // Add the system message token count at index 0
+  shiftedMap[0] = instructionsTokenCount;
+  
+  // Shift all existing indices by 1
+  for (const [indexStr, tokenCount] of Object.entries(indexTokenCountMap)) {
+    const index = Number(indexStr);
+    shiftedMap[index + 1] = tokenCount;
+  }
+  
+  return shiftedMap;
+}
