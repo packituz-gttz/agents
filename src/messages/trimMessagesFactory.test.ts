@@ -29,7 +29,7 @@ describe("createTrimMessagesFunction", () => {
       new AIMessage("Second AI response that is quite long and should be trimmed")
     ];
 
-    const result = await trimmer(messages);
+    const result = await trimmer({ messages });
     
     expect(result.messages.length).toBeLessThan(messages.length);
     expect(result.indexTokenCountMap).toBeDefined();
@@ -54,7 +54,7 @@ describe("createTrimMessagesFunction", () => {
     ];
 
     // First call should count all messages
-    const firstResult = await trimmer(initialMessages);
+    const firstResult = await trimmer({ messages: initialMessages });
     expect(firstResult.messages.length).toBe(3);
     expect(Object.keys(firstResult.indexTokenCountMap).length).toBe(3);
 
@@ -65,7 +65,7 @@ describe("createTrimMessagesFunction", () => {
     ];
 
     // Second call should only count the new message
-    const secondResult = await trimmer(updatedMessages);
+    const secondResult = await trimmer({ messages: updatedMessages });
     expect(secondResult.messages.length).toBe(4);
     expect(Object.keys(secondResult.indexTokenCountMap).length).toBe(4);
 
@@ -96,7 +96,7 @@ describe("createTrimMessagesFunction", () => {
       new AIMessage("Second AI response that is quite long and should be trimmed")
     ];
 
-    const firstResult = await firstTrimmer(messages);
+    const firstResult = await firstTrimmer({ messages });
     expect(firstResult.messages.length).toBeLessThan(messages.length);
     
     // Test with "last" strategy
@@ -109,7 +109,7 @@ describe("createTrimMessagesFunction", () => {
       }
     });
 
-    const lastResult = await lastTrimmer(messages);
+    const lastResult = await lastTrimmer({ messages });
     expect(lastResult.messages.length).toBeLessThan(messages.length);
     
     // The system message should be included in the "last" strategy result
@@ -149,7 +149,7 @@ describe("createTrimMessagesFunction", () => {
     ];
 
     // First call
-    const firstResult = await trimmer(currentMessages);
+    const firstResult = await trimmer({ messages: currentMessages });
     
     // Add more messages one by one and verify token counting efficiency
     for (let i = 0; i < 5; i++) {
@@ -161,7 +161,7 @@ describe("createTrimMessagesFunction", () => {
       ];
       
       // Get trimmed messages
-      const result = await trimmer(currentMessages);
+      const result = await trimmer({ messages: currentMessages });
       
       // Verify that all messages have token counts
       expect(Object.keys(result.indexTokenCountMap).length).toBe(currentMessages.length);
@@ -217,7 +217,7 @@ describe("createTrimMessagesFunction", () => {
       new AIMessage("Second AI response with answer")
     ];
 
-    const result = await trimmer(messages);
+    const result = await trimmer({ messages });
     expect(result.messages.length).toBeLessThan(messages.length);
     expect(Object.keys(result.indexTokenCountMap).length).toBeGreaterThan(0);
     
@@ -271,7 +271,7 @@ describe("createTrimMessagesFunction", () => {
     processedMessages.clear();
     
     console.log("First call with 2 messages");
-    await trimmer(initialMessages);
+    await trimmer({ messages: initialMessages });
     expect(processedMessages.size).toBe(2);
     
     // Add more messages
@@ -285,7 +285,7 @@ describe("createTrimMessagesFunction", () => {
     processedMessages.clear();
     
     console.log("Second call with 4 messages");
-    await trimmer(moreMessages);
+    await trimmer({ messages: moreMessages });
     // Only the new messages should be processed
     expect(processedMessages.size).toBe(2);
     
@@ -306,7 +306,7 @@ describe("createTrimMessagesFunction", () => {
     processedMessages.clear();
     
     console.log("Third call with 7 messages");
-    const finalResult = await trimmer(evenMoreMessages);
+    const finalResult = await trimmer({ messages: evenMoreMessages });
     // Only the new messages should be processed
     expect(processedMessages.size).toBe(3);
     
