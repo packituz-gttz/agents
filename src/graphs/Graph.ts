@@ -8,7 +8,8 @@ import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/messages';
-import type { BaseMessage, BaseMessageFields } from '@langchain/core/messages';
+import type { BaseMessage, BaseMessageFields, UsageMetadata } from '@langchain/core/messages';
+import type { TrimMessagesFields } from '@/messages/transformers'
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
@@ -74,6 +75,9 @@ export abstract class Graph<
   stepKeyIds: Map<string, string[]> = new Map<string, string[]>();
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
+  tokenCounter?: TrimMessagesFields['tokenCounter'];
+  currentUsage: Partial<UsageMetadata> | undefined;
+  indexTokenCountMap: Record<string, number> = {};
   /** The amount of time that should pass before another consecutive API call */
   streamBuffer: number | undefined;
   signal?: AbortSignal;
@@ -166,6 +170,9 @@ export class StandardGraph extends Graph<
     this.currentTokenType = resetIfNotEmpty(this.currentTokenType, ContentTypes.TEXT);
     this.lastToken = resetIfNotEmpty(this.lastToken, undefined);
     this.tokenTypeSwitch = resetIfNotEmpty(this.tokenTypeSwitch, undefined);
+    this.indexTokenCountMap = resetIfNotEmpty(this.indexTokenCountMap, {});
+    this.currentUsage = resetIfNotEmpty(this.currentUsage, undefined);
+    this.tokenCounter = resetIfNotEmpty(this.tokenCounter, undefined);
   }
 
   /* Run Step Processing */
