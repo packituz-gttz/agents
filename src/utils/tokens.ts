@@ -2,7 +2,7 @@ import { Tiktoken } from "js-tiktoken/lite";
 import type { BaseMessage } from "@langchain/core/messages";
 import { ContentTypes } from "@/common/enum";
 
-function getTokenCountForMessage(message: BaseMessage, getTokenCount: (text: string) => number): number {
+export function getTokenCountForMessage(message: BaseMessage, getTokenCount: (text: string) => number): number {
   let tokensPerMessage = 3;
 
   const processValue = (value: unknown) => {
