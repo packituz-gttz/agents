@@ -2,7 +2,7 @@ import { ToolMessage, BaseMessage } from '@langchain/core/messages';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import type { MessageContentComplex } from '@/types';
+import type { MessageContentComplex, ToolCallPart } from '@/types';
 import { Providers, ContentTypes } from '@/common';
 
 interface VisionMessageParams {
@@ -203,25 +203,8 @@ export const formatFromLangChain = (message: LangChainMessage): Record<string, a
 
 interface TMessage {
   role?: string;
-  content?: string | Array<{
-    type: ContentTypes;
-    [ContentTypes.TEXT]?: string;
-    text?: string;
-    tool_call_ids?: string[];
-    [key: string]: any;
-  }>;
+  content?: MessageContentComplex[];
   [key: string]: any;
-}
-
-interface ToolCallPart {
-  type: ContentTypes.TOOL_CALL;
-  tool_call: {
-    id: string;
-    name: string;
-    args: string | Record<string, unknown>;
-    output?: string;
-    [key: string]: any;
-  };
 }
 
 /**
@@ -265,7 +248,7 @@ export const formatAgentMessages = (
     // For assistant messages, track the starting index before processing
     const startMessageIndex = messages.length;
 
-    let currentContent: any[] = [];
+    let currentContent: MessageContentComplex[] = [];
     let lastAIMessage: AIMessage | null = null;
 
     let hasReasoning = false;
@@ -302,7 +285,8 @@ export const formatAgentMessages = (
           }
 
           // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
-          const { output, args: _args, ...tool_call } = (part.tool_call as any);
+          const { output, args: _args, ..._tool_call } = (part.tool_call as ToolCallPart);
+          const tool_call: ToolCallPart = _tool_call;
           // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
           let args: any = _args;
           try {
@@ -324,7 +308,7 @@ export const formatAgentMessages = (
           // Add the corresponding ToolMessage
           messages.push(
             new ToolMessage({
-              tool_call_id: tool_call.id,
+              tool_call_id: tool_call.id ?? '',
               name: tool_call.name,
               content: output || '',
             }),

@@ -240,8 +240,35 @@ export type BedrockReasoningContentText = {
   reasoningText: { text?: string; signature?: string; }
 };
 
+/**
+ * A call to a tool.
+ */
+export type ToolCallPart = {
+  /** Type ("tool_call") according to Assistants Tool Call Structure */
+  type: ContentTypes.TOOL_CALL;
+  /** The name of the tool to be called */
+  name: string;
+  /** The arguments to the tool call */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args?: string | Record<string, any>;
+
+  /** If provided, an identifier associated with the tool call */
+  id?: string;
+  /** If provided, the output of the tool call */
+  output?: string;
+  /** Auth URL */
+  auth?: string;
+  /** Expiration time */
+  expires_at?: number;
+};
+
+export type ToolCallContent = {
+  type: ContentTypes.TOOL_CALL;
+  tool_call?: ToolCallPart;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
+export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ToolCallContent | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
   type?: 'text' | 'image_url' | 'think' | 'thinking' | string;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }) | (Record<string, any> & {
