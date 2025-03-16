@@ -276,7 +276,14 @@ export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ToolCal
 })) & {
   tool_call_ids?: string[];
 };
-// #new
+
+export interface TMessage {
+  role?: string;
+  content?: MessageContentComplex[] | string;
+  [key: string]: any;
+}
+
+export type TPayload = Array<Partial<TMessage>>;
 
 export type CustomChunk = Partial<OpenAITypes.ChatCompletionChunk> & {
   choices?: Partial<Array<Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice> & {

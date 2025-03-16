@@ -2,7 +2,7 @@ import { ToolMessage, BaseMessage } from '@langchain/core/messages';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import type { MessageContentComplex, ToolCallPart } from '@/types';
+import type { MessageContentComplex, ToolCallPart, TPayload } from '@/types';
 import { Providers, ContentTypes } from '@/common';
 
 interface VisionMessageParams {
@@ -210,12 +210,12 @@ interface TMessage {
 /**
  * Formats an array of messages for LangChain, handling tool calls and creating ToolMessage instances.
  *
- * @param {Array<Partial<TMessage>>} payload - The array of messages to format.
+ * @param {TPayload} payload - The array of messages to format.
  * @param {Record<number, number>} [indexTokenCountMap] - Optional map of message indices to token counts.
  * @returns {Object} - Object containing formatted messages and updated indexTokenCountMap if provided.
  */
 export const formatAgentMessages = (
-  payload: Array<Partial<TMessage>>, 
+  payload: TPayload, 
   indexTokenCountMap?: Record<number, number>
 ): {
   messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>;

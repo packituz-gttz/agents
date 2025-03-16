@@ -1,10 +1,11 @@
 import { HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import type { TPayload } from '@/types';
 import { formatAgentMessages } from './format';
 import { ContentTypes } from '@/common';
 
 describe('formatAgentMessages', () => {
   it('should format simple user and AI messages', () => {
-    const payload = [
+    const payload: TPayload = [
       { role: 'user', content: 'Hello' },
       { role: 'assistant', content: 'Hi there!' },
     ];
