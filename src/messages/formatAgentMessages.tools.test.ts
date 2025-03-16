@@ -74,9 +74,7 @@ describe('formatAgentMessages with tools parameter', () => {
     
     // The content should be a string representation of both messages
     expect(typeof result.messages[1].content).toBe('string');
-    expect(result.messages[1].content).toContain('Let me check the weather for you.');
-    expect(result.messages[1].content).toContain('check_weather');
-    expect(result.messages[1].content).toContain('Sunny, 75°F');
+    expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
   });
 
   it('should not convert tool messages when tool is in the allowed set', () => {
