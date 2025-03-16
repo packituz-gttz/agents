@@ -9,6 +9,7 @@ export type PruneMessagesFactoryParams = {
 export type PruneMessagesParams = {
   messages: BaseMessage[];
   usageMetadata?: Partial<UsageMetadata>;
+  startOnMessageType?: ReturnType<BaseMessage['getType']>;
 }
 
 /**
@@ -43,10 +44,12 @@ function getMessagesWithinTokenLimit({
   messages: _messages,
   maxContextTokens,
   indexTokenCountMap,
+  startOnMessageType,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
+  startOnMessageType?: string;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -61,7 +64,7 @@ function getMessagesWithinTokenLimit({
   const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
   let remainingContextTokens = maxContextTokens - instructionsTokenCount;
   const messages = [..._messages];
-  const context: BaseMessage[] = [];
+  let context: BaseMessage[] = [];
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
@@ -81,6 +84,14 @@ function getMessagesWithinTokenLimit({
       } else {
         messages.push(poppedMessage);
         break;
+      }
+    }
+    
+    if (startOnMessageType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+      
+      if (requiredTypeIndex > 0) {
+        context = context.slice(requiredTypeIndex);
       }
     }
   }
@@ -160,6 +171,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       maxContextTokens: factoryParams.maxTokens,
       messages: params.messages,
       indexTokenCountMap,
+      startOnMessageType: params.startOnMessageType,
     });
 
     return { context, indexTokenCountMap };

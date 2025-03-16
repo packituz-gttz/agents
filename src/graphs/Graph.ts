@@ -367,6 +367,7 @@ export class StandardGraph extends Graph<
         const { context, indexTokenCountMap } = this.pruneMessages({
           messages,
           usageMetadata: this.currentUsage,
+          startOnMessageType: 'human',
         });
         this.indexTokenCountMap = indexTokenCountMap;
         messagesToUse = context;

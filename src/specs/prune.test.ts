@@ -65,10 +65,12 @@ function getMessagesWithinTokenLimit({
   messages: _messages,
   maxContextTokens,
   indexTokenCountMap,
+  startOnMessageType,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
+  startOnMessageType?: string;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -103,6 +105,18 @@ function getMessagesWithinTokenLimit({
       } else {
         messages.push(poppedMessage);
         break;
+      }
+    }
+    
+    // If startOnMessageType is specified, discard messages until we find one of the required type
+    if (startOnMessageType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+      
+      if (requiredTypeIndex > 0) {
+        // If we found a message of the required type, discard all messages before it
+        const remainingMessages = context.slice(requiredTypeIndex);
+        context.length = 0; // Clear the array
+        context.push(...remainingMessages);
       }
     }
   }
@@ -262,6 +276,73 @@ describe('Prune Messages Tests', () => {
       
       expect(result.messagesToRefine.length).toBe(2);
     });
+
+    it('should start context with a specific message type when startOnMessageType is specified', () => {
+      const messages = [
+        new SystemMessage('System instruction'),
+        new AIMessage('AI message 1'),
+        new HumanMessage('Human message 1'),
+        new AIMessage('AI message 2'),
+        new HumanMessage('Human message 2')
+      ];
+      
+      const indexTokenCountMap = {
+        0: 17, // "System instruction"
+        1: 12, // "AI message 1"
+        2: 15, // "Human message 1"
+        3: 12, // "AI message 2"
+        4: 15  // "Human message 2"
+      };
+      
+      // Set a limit that can fit all messages
+      const result = getMessagesWithinTokenLimit({
+        messages,
+        maxContextTokens: 100,
+        indexTokenCountMap,
+        startOnMessageType: 'human'
+      });
+      
+      // All messages should be included since we're under the token limit
+      expect(result.context.length).toBe(5);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[1]); // AI message 1
+      expect(result.context[2]).toBe(messages[2]); // Human message 1
+      expect(result.context[3]).toBe(messages[3]); // AI message 2
+      expect(result.context[4]).toBe(messages[4]); // Human message 2
+      
+      // All messages should be included since we're under the token limit
+      expect(result.messagesToRefine.length).toBe(0);
+    });
+
+    it('should keep all messages if no message of required type is found', () => {
+      const messages = [
+        new SystemMessage('System instruction'),
+        new AIMessage('AI message 1'),
+        new AIMessage('AI message 2')
+      ];
+      
+      const indexTokenCountMap = {
+        0: 17, // "System instruction"
+        1: 12, // "AI message 1"
+        2: 12  // "AI message 2"
+      };
+      
+      // Set a limit that can fit all messages
+      const result = getMessagesWithinTokenLimit({
+        messages,
+        maxContextTokens: 100,
+        indexTokenCountMap,
+        startOnMessageType: 'human'
+      });
+      
+      // Should include all messages since no human messages exist to start from
+      expect(result.context.length).toBe(3);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[1]); // AI message 1
+      expect(result.context[2]).toBe(messages[2]); // AI message 2
+      
+      expect(result.messagesToRefine.length).toBe(0);
+    });
   });
   
   describe('checkValidNumber', () => {
@@ -347,6 +428,46 @@ describe('Prune Messages Tests', () => {
       expect(result.context[0]).toBe(messages[0]); // System message
       expect(result.context[1]).toBe(messages[3]); // Message 2
       expect(result.context[2]).toBe(messages[4]); // Response 2
+    });
+
+    it('should respect startOnMessageType parameter', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new AIMessage('AI message 1'),
+        new HumanMessage('Human message 1'),
+        new AIMessage('AI message 2'),
+        new HumanMessage('Human message 2')
+      ];
+      
+      const indexTokenCountMap = {
+        0: tokenCounter(messages[0]),
+        1: tokenCounter(messages[1]),
+        2: tokenCounter(messages[2]),
+        3: tokenCounter(messages[3]),
+        4: tokenCounter(messages[4])
+      };
+      
+      // Set a limit that can fit all messages
+      const pruneMessages = createPruneMessages({
+        maxTokens: 100,
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+      
+      const result = pruneMessages({ 
+        messages,
+        startOnMessageType: 'human'
+      });
+      
+      // All messages should be included since we're under the token limit
+      expect(result.context.length).toBe(5);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[1]); // AI message 1
+      expect(result.context[2]).toBe(messages[2]); // Human message 1
+      expect(result.context[3]).toBe(messages[3]); // AI message 2
+      expect(result.context[4]).toBe(messages[4]); // Human message 2
     });
     
     it('should update token counts when usage metadata is provided', () => {
