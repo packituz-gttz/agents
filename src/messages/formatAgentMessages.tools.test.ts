@@ -38,6 +38,45 @@ describe('formatAgentMessages with tools parameter', () => {
     expect((result.messages[2] as ToolMessage).tool_call_id).toBe('123');
   });
 
+  it('should treat an empty tools set the same as disallowing all tools', () => {
+    const payload: TPayload = [
+      { role: 'user', content: 'What\'s the weather?' },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Let me check the weather for you.',
+            tool_call_ids: ['weather_1'],
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'weather_1',
+              name: 'check_weather',
+              args: '{"location":"New York"}',
+              output: 'Sunny, 75°F',
+            },
+          },
+        ],
+      },
+    ];
+    
+    // Provide an empty set of allowed tools
+    const allowedTools = new Set<string>();
+    
+    const result = formatAgentMessages(payload, undefined, allowedTools);
+    
+    // Should convert to a single AIMessage with string content
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]).toBeInstanceOf(HumanMessage);
+    expect(result.messages[1]).toBeInstanceOf(AIMessage);
+    
+    // The content should be a string representation of both messages
+    expect(typeof result.messages[1].content).toBe('string');
+    expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
+  });
+
   it('should convert tool messages to string when tool is not in the allowed set', () => {
     const payload: TPayload = [
       { role: 'user', content: 'What\'s the weather?' },
