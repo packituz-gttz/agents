@@ -357,6 +357,10 @@ export const formatAgentMessages = (
         for (const part of content) {
           if (part?.type === ContentTypes.TOOL_CALL) {
             hasToolCalls = true;
+            if (tools.size === 0) {
+              hasInvalidTool = true;
+              break;
+            }
             const toolName = part.tool_call.name;
             toolNames.push(toolName);
             if (!tools.has(toolName)) {
