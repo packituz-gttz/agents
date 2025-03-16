@@ -42,11 +42,6 @@ export type ToolEndEvent = {
   index: number;
 };
 
-export type ToolCallContent = {
-  type: ContentTypes.TOOL_CALL;
-  tool_call: ToolCall;
-};
-
 export type CodeEnvFile = {
   id: string;
   name: string;
