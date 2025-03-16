@@ -1,8 +1,8 @@
 import { ToolMessage, BaseMessage } from '@langchain/core/messages';
-import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
-import { MessageContentImageUrl } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, SystemMessage, getBufferString } from '@langchain/core/messages';
+import type { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import type { MessageContentComplex, ToolCallPart, TPayload } from '@/types';
+import type { MessageContentComplex, ToolCallPart, TPayload, TMessage } from '@/types';
 import { Providers, ContentTypes } from '@/common';
 
 interface VisionMessageParams {
@@ -201,10 +201,104 @@ export const formatFromLangChain = (message: LangChainMessage): Record<string, a
   };
 };
 
-interface TMessage {
-  role?: string;
-  content?: MessageContentComplex[];
-  [key: string]: any;
+/**
+ * Helper function to format an assistant message
+ * @param message The message to format
+ * @returns Array of formatted messages
+ */
+function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | ToolMessage> {
+  const formattedMessages: Array<AIMessage | ToolMessage> = [];
+  let currentContent: MessageContentComplex[] = [];
+  let lastAIMessage: AIMessage | null = null;
+  let hasReasoning = false;
+
+  if (Array.isArray(message.content)) {
+    for (const part of message.content) {
+      if (part.type === ContentTypes.TEXT && part.tool_call_ids) {
+        /*
+        If there's pending content, it needs to be aggregated as a single string to prepare for tool calls.
+        For Anthropic models, the "tool_calls" field on a message is only respected if content is a string.
+        */
+        if (currentContent.length > 0) {
+          let content = currentContent.reduce((acc, curr) => {
+            if (curr.type === ContentTypes.TEXT) {
+              return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
+            }
+            return acc;
+          }, '');
+          content = `${content}\n${part[ContentTypes.TEXT] ?? part.text ?? ''}`.trim();
+          lastAIMessage = new AIMessage({ content });
+          formattedMessages.push(lastAIMessage);
+          currentContent = [];
+          continue;
+        }
+        // Create a new AIMessage with this text and prepare for tool calls
+        lastAIMessage = new AIMessage({
+          content: part.text || '',
+        });
+        formattedMessages.push(lastAIMessage);
+      } else if (part?.type === ContentTypes.TOOL_CALL) {
+        if (!lastAIMessage) {
+          throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
+        }
+
+        // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
+        const { output, args: _args, ..._tool_call } = (part.tool_call as ToolCallPart);
+        const tool_call: ToolCallPart = _tool_call;
+        // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
+        let args: any = _args;
+        try {
+          if (typeof _args === 'string') {
+            args = JSON.parse(_args);
+          }
+        } catch (e) {
+          if (typeof _args === 'string') {
+            args = { input: _args };
+          }
+        }
+
+        tool_call.args = args;
+        if (!lastAIMessage.tool_calls) {
+          lastAIMessage.tool_calls = [];
+        }
+        lastAIMessage.tool_calls.push(tool_call as ToolCall);
+
+        formattedMessages.push(
+          new ToolMessage({
+            tool_call_id: tool_call.id ?? '',
+            name: tool_call.name,
+            content: output || '',
+          }),
+        );
+      } else if (part.type === ContentTypes.THINK) {
+        hasReasoning = true;
+        continue;
+      } else if (part.type === ContentTypes.ERROR || part.type === ContentTypes.AGENT_UPDATE) {
+        continue;
+      } else {
+        currentContent.push(part);
+      }
+    }
+  }
+
+  if (hasReasoning && currentContent.length > 0) {
+    const content = currentContent
+      .reduce((acc, curr) => {
+        if (curr.type === ContentTypes.TEXT) {
+          return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
+        }
+        return acc;
+      }, '')
+      .trim();
+    
+    if (content) {
+      formattedMessages.push(new AIMessage({ content }));
+    }
+  } else if (currentContent.length > 0) {
+    formattedMessages.push(new AIMessage({ content: currentContent }));
+  }
+
+  return formattedMessages;
 }
 
 /**
@@ -212,11 +306,13 @@ interface TMessage {
  *
  * @param {TPayload} payload - The array of messages to format.
  * @param {Record<number, number>} [indexTokenCountMap] - Optional map of message indices to token counts.
+ * @param {Set<string>} [tools] - Optional set of tool names that are allowed in the request.
  * @returns {Object} - Object containing formatted messages and updated indexTokenCountMap if provided.
  */
 export const formatAgentMessages = (
   payload: TPayload, 
-  indexTokenCountMap?: Record<number, number>
+  indexTokenCountMap?: Record<number, number>,
+  tools?: Set<string>
 ): {
   messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>;
   indexTokenCountMap?: Record<number, number>;
@@ -227,6 +323,7 @@ export const formatAgentMessages = (
   // Keep track of the mapping from original payload indices to result indices
   const indexMapping: Record<number, number[]> = {};
 
+  // Process messages with tool conversion if tools set is provided
   for (let i = 0; i < payload.length; i++) {
     const message = payload[i];
     // Q: Store the current length of messages to track where this payload message starts in the result?
@@ -248,98 +345,84 @@ export const formatAgentMessages = (
     // For assistant messages, track the starting index before processing
     const startMessageIndex = messages.length;
 
-    let currentContent: MessageContentComplex[] = [];
-    let lastAIMessage: AIMessage | null = null;
-
-    let hasReasoning = false;
-    if (Array.isArray(message.content)) {
-      for (const part of message.content) {
-        if (part.type === ContentTypes.TEXT && part.tool_call_ids) {
-          /*
-          If there's pending content, it needs to be aggregated as a single string to prepare for tool calls.
-          For Anthropic models, the "tool_calls" field on a message is only respected if content is a string.
-          */
-          if (currentContent.length > 0) {
-            let content = currentContent.reduce((acc, curr) => {
-              if (curr.type === ContentTypes.TEXT) {
-                return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
-              }
-              return acc;
-            }, '');
-            content = `${content}\n${part[ContentTypes.TEXT] ?? part.text ?? ''}`.trim();
-            lastAIMessage = new AIMessage({ content });
-            messages.push(lastAIMessage);
-            currentContent = [];
-            continue;
-          }
-
-          // Create a new AIMessage with this text and prepare for tool calls
-          lastAIMessage = new AIMessage({
-            content: part.text || '',
-          });
-
-          messages.push(lastAIMessage);
-        } else if (part.type === ContentTypes.TOOL_CALL) {
-          if (!lastAIMessage) {
-            throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
-          }
-
-          // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
-          const { output, args: _args, ..._tool_call } = (part.tool_call as ToolCallPart);
-          const tool_call: ToolCallPart = _tool_call;
-          // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
-          let args: any = _args;
-          try {
-            if (typeof _args === 'string') {
-              args = JSON.parse(_args);
-            }
-          } catch (e) {
-            if (typeof _args === 'string') {
-              args = { input: _args };
+    // If tools set is provided, we need to check if we need to convert tool messages to a string
+    if (tools) {
+      // First, check if this message contains tool calls
+      let hasToolCalls = false;
+      let hasInvalidTool = false;
+      let toolNames: string[] = [];
+      
+      const content = message.content;
+      if (content && Array.isArray(content)) {
+        for (const part of content) {
+          if (part?.type === ContentTypes.TOOL_CALL) {
+            hasToolCalls = true;
+            const toolName = part.tool_call.name;
+            toolNames.push(toolName);
+            if (!tools.has(toolName)) {
+              hasInvalidTool = true;
             }
           }
-
-          tool_call.args = args;
-          if (!lastAIMessage.tool_calls) {
-            lastAIMessage.tool_calls = [];
-          }
-          lastAIMessage.tool_calls.push(tool_call as ToolCall);
-
-          // Add the corresponding ToolMessage
-          messages.push(
-            new ToolMessage({
-              tool_call_id: tool_call.id ?? '',
-              name: tool_call.name,
-              content: output || '',
-            }),
-          );
-        } else if (part.type === ContentTypes.THINK) {
-          hasReasoning = true;
-          continue;
-        } else if (part.type === ContentTypes.ERROR || part.type === ContentTypes.AGENT_UPDATE) {
-          continue;
-        } else {
-          currentContent.push(part);
         }
       }
+      
+      // If this message has tool calls and at least one is invalid, we need to convert it
+      if (hasToolCalls && hasInvalidTool) {
+        // We need to collect all related messages (this message and any subsequent tool messages)
+        const toolSequence: BaseMessage[] = [];
+        let sequenceEndIndex = i;
+        
+        // Process the current assistant message to get the AIMessage with tool calls
+        const formattedMessages = formatAssistantMessage(message);
+        toolSequence.push(...formattedMessages);
+        
+        // Look ahead for any subsequent assistant messages that might be part of this tool sequence
+        let j = i + 1;
+        while (j < payload.length && payload[j].role === 'assistant') {
+          // Check if this is a continuation of the tool sequence
+          let isToolResponse = false;
+          const content = payload[j].content;
+          if (content && Array.isArray(content)) {
+            for (const part of content) {
+              if (part?.type === ContentTypes.TOOL_CALL) {
+                isToolResponse = true;
+                break;
+              }
+            }
+          }
+          
+          if (isToolResponse) {
+            // This is part of the tool sequence, add it
+            const nextMessages = formatAssistantMessage(payload[j]);
+            toolSequence.push(...nextMessages);
+            sequenceEndIndex = j;
+            j++;
+          } else {
+            // This is not part of the tool sequence, stop looking
+            break;
+          }
+        }
+        
+        // Convert the sequence to a string
+        const bufferString = getBufferString(toolSequence);
+        messages.push(new AIMessage({ content: bufferString }));
+        
+        // Skip the messages we've already processed
+        i = sequenceEndIndex;
+        
+        // Update the index mapping for this sequence
+        const resultIndices = [messages.length - 1];
+        for (let k = i; k >= i && k <= sequenceEndIndex; k++) {
+          indexMapping[k] = resultIndices;
+        }
+        
+        continue;
+      }
     }
 
-    if (hasReasoning && currentContent.length > 0) {
-      const content = currentContent
-        .reduce((acc, curr) => {
-          if (curr.type === ContentTypes.TEXT) {
-            return `${acc}${curr[ContentTypes.TEXT] || ''}\n`;
-          }
-          return acc;
-        }, '')
-        .trim();
-      
-      if (content) {
-        messages.push(new AIMessage({ content }));
-      }
-    } else if (currentContent.length > 0) {
-      messages.push(new AIMessage({ content: currentContent }));
-    }
+    // Process the assistant message using the helper function
+    const formattedMessages = formatAssistantMessage(message);
+    messages.push(...formattedMessages);
     
     // Update the index mapping for this assistant message
     // Store all indices that were created from this original message
@@ -430,8 +513,6 @@ export function shiftIndexTokenCountMap(
 ): Record<number, number> {
   // Create a new map to avoid modifying the original
   const shiftedMap: Record<number, number> = {};
-  
-  // Add the system message token count at index 0
   shiftedMap[0] = instructionsTokenCount;
   
   // Shift all existing indices by 1
