@@ -288,6 +288,7 @@ export class StandardGraph extends Graph<
       tools: this.tools || [],
       toolMap: this.toolMap,
       toolCallStepIds: this.toolCallStepIds,
+      errorHandler: this.handleToolCallError.bind(this),
     });
   }
 
@@ -533,6 +534,50 @@ export class StandardGraph extends Graph<
       output: typeof output.content === 'string'
         ? output.content
         : JSON.stringify(output.content),
+      progress: 1,
+    };
+
+    this.handlerRegistry?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(
+      GraphEvents.ON_RUN_STEP_COMPLETED,
+      { result: {
+        id: stepId,
+        index: runStep.index,
+        type: 'tool_call',
+        tool_call
+      } as t.ToolCompleteEvent,
+      },
+      metadata,
+      this,
+    );
+  }
+  handleToolCallError(data: t.ToolErrorData, metadata?: Record<string, unknown>): void {
+    if (!this.config) {
+      throw new Error('No config provided');
+    }
+
+    if (!data.id) {
+      console.warn('No Tool ID provided for Tool Error');
+      return;
+    }
+
+    const stepId = this.toolCallStepIds.get(data.id) ?? '';
+    if (!stepId) {
+      throw new Error(`No stepId found for tool_call_id ${data.id}`);
+    }
+
+    const { name, input, error } = data;
+
+    const runStep = this.getRunStep(stepId);
+    if (!runStep) {
+      throw new Error(`No run step found for stepId ${stepId}`);
+    }
+
+    const args = typeof input === 'string' ? input : input.input;
+    const tool_call = {
+      id: data.id,
+      name: name ?? '',
+      args: typeof args === 'string' ? args : JSON.stringify(args),
+      output: `Error processing tool${error?.message ? `: ${error.message}` : ''}`,
       progress: 1,
     };
 

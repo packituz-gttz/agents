@@ -2,7 +2,8 @@
 import type { RunnableToolLike } from '@langchain/core/runnables';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import { ContentTypes, EnvVar } from '@/common';
+import type { ToolErrorData } from './stream';
+import { EnvVar } from '@/common';
 
 /** Replacement type for `import type { ToolCall } from '@langchain/core/messages/tool'` in order to have stringified args typed */
 export type CustomToolCall = {
@@ -29,6 +30,7 @@ export type ToolNodeOptions = {
   handleToolErrors?: boolean;
   loadRuntimeTools?: ToolRefGenerator;
   toolCallStepIds?: Map<string, string>;
+  errorHandler?: (data: ToolErrorData, metadata?: Record<string, unknown>) => void
 };
 
 export type ToolNodeConstructorParams = ToolRefs & ToolNodeOptions;

@@ -14,12 +14,14 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
   private loadRuntimeTools?: t.ToolRefGenerator;
   handleToolErrors = true;
   toolCallStepIds?: Map<string, string>;
+  errorHandler?: t.ToolNodeConstructorParams['errorHandler'];
 
   constructor({
     tools,
     toolMap,
     name,
     tags,
+    errorHandler,
     toolCallStepIds,
     handleToolErrors,
     loadRuntimeTools,
@@ -30,6 +32,7 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
     this.toolCallStepIds = toolCallStepIds;
     this.handleToolErrors = handleToolErrors ?? this.handleToolErrors;
     this.loadRuntimeTools = loadRuntimeTools;
+    this.errorHandler = errorHandler;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +86,12 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (isGraphInterrupt(e)) {
             throw e;
           }
+          this.errorHandler?.({
+            error: e,
+            id: call.id!,
+            name: call.name,
+            input: call.args,
+          }, config?.metadata);
           return new ToolMessage({
             content: `Error: ${e.message}\n Please fix your mistakes.`,
             name: call.name,

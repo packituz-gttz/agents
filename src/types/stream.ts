@@ -93,6 +93,11 @@ export type MessageCreationDetails = {
 };
 
 export type ToolEndData = { input: string | Record<string, unknown>, output?: ToolMessage };
+export type ToolErrorData = {
+  id: string,
+  name: string,
+  error?: Error,
+} & Pick<ToolEndData, 'input'>;
 export type ToolEndCallback = (data: ToolEndData, metadata?: Record<string, unknown>) => void;
 
 export type ProcessedToolCall = {
