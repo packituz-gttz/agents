@@ -38,6 +38,10 @@ export class ModelEndHandler implements t.EventHandler {
       this.collectedUsage.push(usage);
     }
 
+    if (metadata.ls_provider === 'FakeListChatModel') {
+      return handleToolCalls(data?.output?.tool_calls, metadata, graph);
+    }
+
     console.log(`====== ${event.toUpperCase()} ======`);
     console.dir({
       usage,

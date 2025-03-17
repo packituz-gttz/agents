@@ -11,6 +11,7 @@ import { AIMessageChunk, ToolMessage, SystemMessage } from '@langchain/core/mess
 import type { BaseMessage, BaseMessageFields, UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
 import { Providers, GraphEvents, GraphNodeKeys, StepTypes, Callback, ContentTypes } from '@/common';
+import type { ToolCall } from '@langchain/core/messages/tool';
 import { getChatModelClass, manualToolStreamProviders } from '@/llm/providers';
 import { ToolNode as CustomToolNode, toolsCondition } from '@/tools/ToolNode';
 import {
@@ -318,8 +319,12 @@ export class StandardGraph extends Graph<
 
     return (model as t.ModelWithTools).bindTools(this.tools);
   }
-  overrideTestModel(responses: string[], sleep?: number): void {
-    this.boundModel = createFakeStreamingLLM(responses, sleep);
+  overrideTestModel(responses: string[], sleep?: number, toolCalls?: ToolCall[]): void {
+    this.boundModel = createFakeStreamingLLM({
+      responses,
+      sleep,
+      toolCalls,
+    });
   }
 
   getNewModel({
