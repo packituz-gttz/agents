@@ -570,15 +570,14 @@ export class StandardGraph extends Graph<
       throw new Error(`No stepId found for tool_call_id ${data.id}`);
     }
 
-    const { name, input, error } = data;
+    const { name, input: args, error } = data;
 
     const runStep = this.getRunStep(stepId);
     if (!runStep) {
       throw new Error(`No run step found for stepId ${stepId}`);
     }
 
-    const args = typeof input === 'string' ? input : input.input;
-    const tool_call = {
+    const tool_call: t.ProcessedToolCall = {
       id: data.id,
       name: name ?? '',
       args: typeof args === 'string' ? args : JSON.stringify(args),

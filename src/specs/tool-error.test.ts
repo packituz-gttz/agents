@@ -150,6 +150,7 @@ describe('Tool Error Handling Tests', () => {
     
     // Verify the error message in contentParts
     expect(toolCallPart).toBeDefined();
+    expect(toolCallPart?.tool_call?.args).toEqual(JSON.stringify(toolCalls[0].args));
     expect(toolCallPart?.tool_call?.output).toContain('Error processing tool');
     expect(toolCallPart?.tool_call?.output).toContain('this is a test error I threw on purpose');
   });
