@@ -65,8 +65,8 @@ async function testCodeExecution(): Promise<void> {
     graphConfig: {
       type: 'standard',
       llmConfig,
-      // tools: [fetchRandomImageTool],
-      tools: [fetchRandomImageURL],
+      tools: [fetchRandomImageTool],
+      // tools: [fetchRandomImageURL],
       instructions: 'You are a friendly AI assistant with internet capabilities. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
