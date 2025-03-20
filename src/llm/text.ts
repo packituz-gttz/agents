@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+
 export interface TextStreamOptions {
   minChunkSize?: number;
   maxChunkSize?: number;

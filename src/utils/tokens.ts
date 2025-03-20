@@ -1,13 +1,13 @@
-import { Tiktoken } from "js-tiktoken/lite";
-import type { BaseMessage } from "@langchain/core/messages";
-import { ContentTypes } from "@/common/enum";
+import { Tiktoken } from 'js-tiktoken/lite';
+import type { BaseMessage } from '@langchain/core/messages';
+import { ContentTypes } from '@/common/enum';
 
 export function getTokenCountForMessage(message: BaseMessage, getTokenCount: (text: string) => number): number {
-  let tokensPerMessage = 3;
+  const tokensPerMessage = 3;
 
   const processValue = (value: unknown) => {
     if (Array.isArray(value)) {
-      for (let item of value) {
+      for (const item of value) {
         if (
           !item ||
           !item.type ||
@@ -58,13 +58,13 @@ export function getTokenCountForMessage(message: BaseMessage, getTokenCount: (te
 }
 
 export const createTokenCounter = async () => {
-  const res = await fetch(`https://tiktoken.pages.dev/js/o200k_base.json`);
+  const res = await fetch('https://tiktoken.pages.dev/js/o200k_base.json');
   const o200k_base = await res.json();
 
   const countTokens = (text: string) => {
     const enc = new Tiktoken(o200k_base);
     return enc.encode(text).length;
-  }
-  
+  };
+
   return (message: BaseMessage) => getTokenCountForMessage(message, countTokens);
-}
+};

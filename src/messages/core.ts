@@ -78,20 +78,20 @@ function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
     const lastBlock = reduced[reduced.length - 1];
 
     // Merge consecutive 'reasoning_content'
-    if (block.type === 'reasoning_content' && lastBlock?.type === 'reasoning_content') {
+    if (block.type === 'reasoning_content' && lastBlock.type === 'reasoning_content') {
       // append text if exists
-      if (block.reasoningText?.text) {
+      if (block.reasoningText.text) {
         lastBlock.reasoningText.text = (lastBlock.reasoningText.text || '') + block.reasoningText.text;
       }
       // preserve the signature if exists
-      if (block.reasoningText?.signature) {
+      if (block.reasoningText.signature) {
         lastBlock.reasoningText.signature = block.reasoningText.signature;
       }
     }
     // Merge consecutive 'text'
-    else if (block.type === 'text' && lastBlock?.type === 'text') {
+    else if (block.type === 'text' && lastBlock.type === 'text') {
       lastBlock.text += block.text;
-    } 
+    }
     // add a new block as it's a different type or first element
     else {
       // deep copy to avoid mutation of original

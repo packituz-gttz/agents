@@ -91,7 +91,7 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
             id: call.id!,
             name: call.name,
             input: call.args,
-          }, config?.metadata);
+          }, config.metadata);
           return new ToolMessage({
             content: `Error: ${e.message}\n Please fix your mistakes.`,
             name: call.name,

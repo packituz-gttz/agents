@@ -362,14 +362,14 @@ describe('formatAgentMessages', () => {
       { role: 'user', content: 'Hello' },
       { role: 'assistant', content: 'Hi there!' },
     ];
-    
+
     const indexTokenCountMap = {
       0: 5,  // 5 tokens for "Hello"
       1: 10, // 10 tokens for "Hi there!"
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     expect(result.messages).toHaveLength(2);
     expect(result.indexTokenCountMap).toBeDefined();
     expect(result.indexTokenCountMap?.[0]).toBe(5);
@@ -399,23 +399,23 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 10,  // 10 tokens for "What's the weather?"
       1: 50,  // 50 tokens for the assistant message with tool call
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // The original message at index 1 should be split into two messages
     expect(result.messages).toHaveLength(3);
     expect(result.indexTokenCountMap).toBeDefined();
     expect(result.indexTokenCountMap?.[0]).toBe(10);  // User message stays the same
-    
+
     // The assistant message tokens should be distributed across the resulting messages
     const totalAssistantTokens = Object.values(result.indexTokenCountMap || {})
       .reduce((sum, count) => sum + count, 0) - 10; // Subtract user message tokens
-    
+
     expect(totalAssistantTokens).toBe(50); // Should match the original token count
   });
 
@@ -460,23 +460,23 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 100,  // 100 tokens for the complex assistant message
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // One message expands to 5 messages (2 tool calls + text before, between, and after)
     expect(result.messages).toHaveLength(5);
     expect(result.indexTokenCountMap).toBeDefined();
-    
+
     // The sum of all token counts should equal the original
     const totalTokens = Object.values(result.indexTokenCountMap || {})
       .reduce((sum, count) => sum + count, 0);
-    
+
     expect(totalTokens).toBe(100);
-    
+
     // Check that each resulting message has a token count
     for (let i = 0; i < result.messages.length; i++) {
       expect(result.indexTokenCountMap?.[i]).toBeDefined();
@@ -495,17 +495,17 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 60,  // 60 tokens for the message with filtered content
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // Only one message should remain after filtering
     expect(result.messages).toHaveLength(1);
     expect(result.indexTokenCountMap).toBeDefined();
-    
+
     // All tokens should be assigned to the remaining message
     expect(result.indexTokenCountMap?.[0]).toBe(60);
   });
@@ -522,17 +522,17 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 40,  // 40 tokens for the message with filtered content
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // No messages should remain after filtering
     expect(result.messages).toHaveLength(0);
     expect(result.indexTokenCountMap).toBeDefined();
-    
+
     // The token count map should be empty since there are no messages
     expect(Object.keys(result.indexTokenCountMap || {})).toHaveLength(0);
   });
@@ -561,29 +561,29 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 15,  // 15 tokens for the user message
       1: 45,  // 45 tokens for the assistant message with tool call
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // 2 input messages become 3 output messages (user + assistant + tool)
     expect(payload).toHaveLength(2);
     expect(result.messages).toHaveLength(3);
     expect(result.indexTokenCountMap).toBeDefined();
     expect(Object.keys(result.indexTokenCountMap ?? {}).length).toBe(3);
-    
+
     // Check message types
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);
     expect(result.messages[2]).toBeInstanceOf(ToolMessage);
-    
+
     // The sum of all token counts should equal the original total
     const totalTokens = Object.values(result.indexTokenCountMap || {})
       .reduce((sum, count) => sum + count, 0);
-    
+
     expect(totalTokens).toBe(60); // 15 + 45
   });
 
@@ -600,30 +600,30 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 10,  // 10 tokens for the user message
       1: 30,  // 30 tokens for the assistant message that will be filtered out
     };
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap);
-    
+
     // 2 input messages become 1 output message (only the user message remains)
     expect(payload).toHaveLength(2);
     expect(result.messages).toHaveLength(1);
     expect(result.indexTokenCountMap).toBeDefined();
     expect(Object.keys(result.indexTokenCountMap ?? {}).length).toBe(1);
-    
+
     // Check message type
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
-    
+
     // Only the user message tokens should remain
     expect(result.indexTokenCountMap?.[0]).toBe(10);
-    
+
     // The total tokens should be just the user message tokens
     const totalTokens = Object.values(result.indexTokenCountMap || {})
       .reduce((sum, count) => sum + count, 0);
-    
+
     expect(totalTokens).toBe(10);
   });
 });

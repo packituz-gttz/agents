@@ -63,7 +63,7 @@ export class FakeChatModel extends FakeListChatModel {
             },
           })),
         } : undefined,
-    })});
+      })});
   }
 
   async *_streamResponseChunks(
@@ -102,7 +102,7 @@ export class FakeChatModel extends FakeListChatModel {
           args: JSON.stringify(toolCall.args),
           id: toolCall.id,
           type: 'tool_call_chunk',
-          } as ToolCallChunk
+        } as ToolCallChunk;
       });
       const responseChunk = this._createResponseChunk('', toolCallChunks);
       yield responseChunk;

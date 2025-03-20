@@ -1,5 +1,4 @@
-import { ToolMessage, BaseMessage } from '@langchain/core/messages';
-import { HumanMessage, AIMessage, SystemMessage, getBufferString } from '@langchain/core/messages';
+import { ToolMessage, BaseMessage , HumanMessage, AIMessage, SystemMessage, getBufferString } from '@langchain/core/messages';
 import type { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { MessageContentComplex, ToolCallPart, TPayload, TMessage } from '@/types';
@@ -38,17 +37,17 @@ export const formatVisionMessage = ({ message, image_urls, endpoint }: VisionMes
     ...message,
     content: [] as MessageContentComplex[]
   };
-  
+
   if (endpoint === Providers.ANTHROPIC) {
     result.content = [
-      ...image_urls, 
+      ...image_urls,
       { type: ContentTypes.TEXT, text: message.content }
     ] as MessageContentComplex[];
     return result;
   }
 
   result.content = [
-    { type: ContentTypes.TEXT, text: message.content }, 
+    { type: ContentTypes.TEXT, text: message.content },
     ...image_urls
   ] as MessageContentComplex[];
 
@@ -87,12 +86,12 @@ interface FormattedMessage {
  * @param {FormatMessageParams} params - The parameters for formatting.
  * @returns {FormattedMessage | HumanMessage | AIMessage | SystemMessage} - The formatted message.
  */
-export const formatMessage = ({ 
-  message, 
-  userName, 
-  assistantName, 
-  endpoint, 
-  langChain = false 
+export const formatMessage = ({
+  message,
+  userName,
+  assistantName,
+  endpoint,
+  langChain = false
 }: FormatMessageParams): FormattedMessage | HumanMessage | AIMessage | SystemMessage => {
   let { role: _role, _name, sender, text, content: _content, lc_id } = message;
   if (lc_id && lc_id[2] && !langChain) {
@@ -103,7 +102,7 @@ export const formatMessage = ({
     };
     _role = roleMapping[lc_id[2]] || _role;
   }
-  const role = _role ?? (sender && sender?.toLowerCase() === 'user' ? 'user' : 'assistant');
+  const role = _role ?? (sender && sender.toLowerCase() === 'user' ? 'user' : 'assistant');
   const content = _content ?? text ?? '';
   const formattedMessage: FormattedMessage = {
     role,
@@ -165,7 +164,7 @@ export const formatMessage = ({
  * @returns {Array<HumanMessage | AIMessage | SystemMessage>} - The array of formatted LangChain messages.
  */
 export const formatLangChainMessages = (
-  messages: Array<MessageInput>, 
+  messages: Array<MessageInput>,
   formatOptions: Omit<FormatMessageParams, 'message' | 'langChain'>
 ): Array<HumanMessage | AIMessage | SystemMessage> => {
   return messages.map((msg) => {
@@ -237,7 +236,7 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
           content: part.text || '',
         });
         formattedMessages.push(lastAIMessage);
-      } else if (part?.type === ContentTypes.TOOL_CALL) {
+      } else if (part.type === ContentTypes.TOOL_CALL) {
         if (!lastAIMessage) {
           throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
         }
@@ -290,7 +289,7 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
         return acc;
       }, '')
       .trim();
-    
+
     if (content) {
       formattedMessages.push(new AIMessage({ content }));
     }
@@ -310,7 +309,7 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
  * @returns {Object} - Object containing formatted messages and updated indexTokenCountMap if provided.
  */
 export const formatAgentMessages = (
-  payload: TPayload, 
+  payload: TPayload,
   indexTokenCountMap?: Record<number, number>,
   tools?: Set<string>
 ): {
@@ -332,11 +331,11 @@ export const formatAgentMessages = (
       message.content = [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: message.content }];
     }
     if (message.role !== 'assistant') {
-      messages.push(formatMessage({ 
-        message: message as MessageInput, 
-        langChain: true 
+      messages.push(formatMessage({
+        message: message as MessageInput,
+        langChain: true
       }) as HumanMessage | AIMessage | SystemMessage);
-      
+
       // Update the index mapping for this message
       indexMapping[i] = [messages.length - 1];
       continue;
@@ -350,12 +349,12 @@ export const formatAgentMessages = (
       // First, check if this message contains tool calls
       let hasToolCalls = false;
       let hasInvalidTool = false;
-      let toolNames: string[] = [];
-      
+      const toolNames: string[] = [];
+
       const content = message.content;
       if (content && Array.isArray(content)) {
         for (const part of content) {
-          if (part?.type === ContentTypes.TOOL_CALL) {
+          if (part.type === ContentTypes.TOOL_CALL) {
             hasToolCalls = true;
             if (tools.size === 0) {
               hasInvalidTool = true;
@@ -369,17 +368,17 @@ export const formatAgentMessages = (
           }
         }
       }
-      
+
       // If this message has tool calls and at least one is invalid, we need to convert it
       if (hasToolCalls && hasInvalidTool) {
         // We need to collect all related messages (this message and any subsequent tool messages)
         const toolSequence: BaseMessage[] = [];
         let sequenceEndIndex = i;
-        
+
         // Process the current assistant message to get the AIMessage with tool calls
         const formattedMessages = formatAssistantMessage(message);
         toolSequence.push(...formattedMessages);
-        
+
         // Look ahead for any subsequent assistant messages that might be part of this tool sequence
         let j = i + 1;
         while (j < payload.length && payload[j].role === 'assistant') {
@@ -388,13 +387,13 @@ export const formatAgentMessages = (
           const content = payload[j].content;
           if (content && Array.isArray(content)) {
             for (const part of content) {
-              if (part?.type === ContentTypes.TOOL_CALL) {
+              if (part.type === ContentTypes.TOOL_CALL) {
                 isToolResponse = true;
                 break;
               }
             }
           }
-          
+
           if (isToolResponse) {
             // This is part of the tool sequence, add it
             const nextMessages = formatAssistantMessage(payload[j]);
@@ -406,20 +405,20 @@ export const formatAgentMessages = (
             break;
           }
         }
-        
+
         // Convert the sequence to a string
         const bufferString = getBufferString(toolSequence);
         messages.push(new AIMessage({ content: bufferString }));
-        
+
         // Skip the messages we've already processed
         i = sequenceEndIndex;
-        
+
         // Update the index mapping for this sequence
         const resultIndices = [messages.length - 1];
         for (let k = i; k >= i && k <= sequenceEndIndex; k++) {
           indexMapping[k] = resultIndices;
         }
-        
+
         continue;
       }
     }
@@ -427,7 +426,7 @@ export const formatAgentMessages = (
     // Process the assistant message using the helper function
     const formattedMessages = formatAssistantMessage(message);
     messages.push(...formattedMessages);
-    
+
     // Update the index mapping for this assistant message
     // Store all indices that were created from this original message
     const endMessageIndex = messages.length;
@@ -443,7 +442,7 @@ export const formatAgentMessages = (
     for (let originalIndex = 0; originalIndex < payload.length; originalIndex++) {
       const resultIndices = indexMapping[originalIndex] || [];
       const tokenCount = indexTokenCountMap[originalIndex];
-      
+
       if (tokenCount !== undefined) {
         if (resultIndices.length === 1) {
           // Simple 1:1 mapping
@@ -506,7 +505,7 @@ export const formatContentStrings = (payload: Array<BaseMessage>): Array<BaseMes
 /**
  * Adds a value at key 0 for system messages and shifts all key indices by one in an indexTokenCountMap.
  * This is useful when adding a system message at the beginning of a conversation.
- * 
+ *
  * @param indexTokenCountMap - The original map of message indices to token counts
  * @param instructionsTokenCount - The token count for the system message to add at index 0
  * @returns A new map with the system message at index 0 and all other indices shifted by 1
@@ -518,12 +517,12 @@ export function shiftIndexTokenCountMap(
   // Create a new map to avoid modifying the original
   const shiftedMap: Record<number, number> = {};
   shiftedMap[0] = instructionsTokenCount;
-  
+
   // Shift all existing indices by 1
   for (const [indexStr, tokenCount] of Object.entries(indexTokenCountMap)) {
     const index = Number(indexStr);
     shiftedMap[index + 1] = tokenCount;
   }
-  
+
   return shiftedMap;
 }

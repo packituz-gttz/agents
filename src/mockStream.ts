@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+
 // import { nanoid } from 'nanoid';
 import type OpenAITypes from 'openai';
 import type * as t from '@/types';

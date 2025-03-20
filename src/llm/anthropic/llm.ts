@@ -19,15 +19,15 @@ function _documentsInParams(
   params: AnthropicMessageCreateParams | AnthropicStreamingMessageCreateParams
 ): boolean {
   for (const message of params.messages ?? []) {
-    if (typeof message.content === "string") {
+    if (typeof message.content === 'string') {
       continue;
     }
     for (const block of message.content ?? []) {
       if (
-        typeof block === "object" &&
+        typeof block === 'object' &&
         block != null &&
-        block.type === "document" &&
-        typeof block.citations === "object" &&
+        block.type === 'document' &&
+        typeof block.citations === 'object' &&
         block.citations.enabled
       ) {
         return true;
@@ -40,9 +40,8 @@ function _documentsInParams(
 function _thinkingInParams(
   params: AnthropicMessageCreateParams | AnthropicStreamingMessageCreateParams
 ): boolean {
-  return !!(params.thinking && params.thinking.type === "enabled");
+  return !!(params.thinking && params.thinking.type === 'enabled');
 }
-
 
 function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'content'] | [undefined] {
   if (typeof chunk.content === 'string') {
@@ -117,8 +116,8 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     }
     const totalUsage: AnthropicStreamUsage = {
       input_tokens: inputUsage?.input_tokens ?? 0,
-      output_tokens: outputUsage?.output_tokens ?? 0,
-      total_tokens: (inputUsage?.input_tokens ?? 0) + (outputUsage?.output_tokens ?? 0),
+      output_tokens: outputUsage.output_tokens ?? 0,
+      total_tokens: (inputUsage?.input_tokens ?? 0) + (outputUsage.output_tokens ?? 0),
     };
 
     if (inputUsage?.cache_creation_input_tokens != null || inputUsage?.cache_read_input_tokens != null) {

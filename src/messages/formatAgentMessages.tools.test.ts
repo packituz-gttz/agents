@@ -27,9 +27,9 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     const result = formatAgentMessages(payload);
-    
+
     expect(result.messages).toHaveLength(3);
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);
@@ -61,17 +61,17 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     // Provide an empty set of allowed tools
     const allowedTools = new Set<string>();
-    
+
     const result = formatAgentMessages(payload, undefined, allowedTools);
-    
+
     // Should convert to a single AIMessage with string content
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);
-    
+
     // The content should be a string representation of both messages
     expect(typeof result.messages[1].content).toBe('string');
     expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
@@ -100,17 +100,17 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     // Provide a set of allowed tools that doesn't include 'check_weather'
     const allowedTools = new Set(['search', 'calculator']);
-    
+
     const result = formatAgentMessages(payload, undefined, allowedTools);
-    
+
     // Should convert to a single AIMessage with string content
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);
-    
+
     // The content should be a string representation of both messages
     expect(typeof result.messages[1].content).toBe('string');
     expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
@@ -139,12 +139,12 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     // Provide a set of allowed tools that includes 'check_weather'
     const allowedTools = new Set(['check_weather', 'search']);
-    
+
     const result = formatAgentMessages(payload, undefined, allowedTools);
-    
+
     // Should keep the original structure
     expect(result.messages).toHaveLength(3);
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
@@ -189,17 +189,17 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     // Allow calculator but not check_weather
     const allowedTools = new Set(['calculator', 'search']);
-    
+
     const result = formatAgentMessages(payload, undefined, allowedTools);
-    
+
     // Should convert the entire sequence to a single AIMessage
     expect(result.messages).toHaveLength(2);
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);
-    
+
     // The content should include all parts
     expect(typeof result.messages[1].content).toBe('string');
     expect(result.messages[1].content).toContain('Let me check the weather first.');
@@ -231,24 +231,24 @@ describe('formatAgentMessages with tools parameter', () => {
         ],
       },
     ];
-    
+
     const indexTokenCountMap = {
       0: 10,  // 10 tokens for user message
       1: 40,  // 40 tokens for assistant message with tool call
     };
-    
+
     // Provide a set of allowed tools that doesn't include 'check_weather'
     const allowedTools = new Set(['search', 'calculator']);
-    
+
     const result = formatAgentMessages(payload, indexTokenCountMap, allowedTools);
-    
+
     // Should have 2 messages and 2 entries in the token count map
     expect(result.messages).toHaveLength(2);
     expect(Object.keys(result.indexTokenCountMap || {}).length).toBe(2);
-    
+
     // User message token count should be unchanged
     expect(result.indexTokenCountMap?.[0]).toBe(10);
-    
+
     // All assistant message tokens should be assigned to the single AIMessage
     expect(result.indexTokenCountMap?.[1]).toBe(40);
   });
@@ -315,27 +315,27 @@ describe('formatAgentMessages with tools parameter', () => {
       },
       { role: 'assistant', content: 'Here\'s your answer based on all that information.' },
     ];
-    
+
     // Allow search and calculator but not check_weather
     const allowedTools = new Set(['search', 'calculator']);
-    
+
     const result = formatAgentMessages(payload, undefined, allowedTools);
-    
+
     // Should have the user message, search tool sequence (2 messages),
     // a combined message for weather and calculator (since one has an invalid tool),
     // and final message
     expect(result.messages).toHaveLength(5);
-    
+
     // Check the types of messages
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
     expect(result.messages[1]).toBeInstanceOf(AIMessage);  // Search message
     expect(result.messages[2]).toBeInstanceOf(ToolMessage); // Search tool response
     expect(result.messages[3]).toBeInstanceOf(AIMessage); // Converted weather+calculator message
     expect(result.messages[4]).toBeInstanceOf(AIMessage); // Final message
-    
+
     // Check that the combined message was converted to a string
     expect(typeof result.messages[3].content).toBe('string');
-    
+
     // The format might vary based on the getBufferString implementation
     // but we should check that all the key information is present
     const content = result.messages[3].content as string;

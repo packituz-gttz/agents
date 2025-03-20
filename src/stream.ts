@@ -47,16 +47,15 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
     return;
   }
 
-
   const stepKey = graph.getStepKey(metadata);
-  
+
   for (const tool_call of toolCalls) {
     const toolCallId = tool_call.id ?? `toolu_${nanoid()}`;
     tool_call.id = toolCallId;
     if (!toolCallId || graph.toolCallStepIds.has(toolCallId)) {
       continue;
     }
-    
+
     let prevStepId = '';
     let prevRunStep: t.RunStep | undefined;
     try {
@@ -92,10 +91,10 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
       graph.messageStepHasToolCalls.set(prevStepId, true);
     }
 
-      graph.dispatchRunStep(stepKey, {
-        type: StepTypes.TOOL_CALLS,
-        tool_calls: [tool_call],
-      });
+    graph.dispatchRunStep(stepKey, {
+      type: StepTypes.TOOL_CALLS,
+      tool_calls: [tool_call],
+    });
   }
 };
 
@@ -166,7 +165,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
     const stepId = graph.getStepIdByKey(stepKey);
     const runStep = graph.getRunStep(stepId);
     if (!runStep) {
-      // eslint-disable-next-line no-console
+
       console.warn(`\n
 ==============================================================
 
@@ -214,8 +213,8 @@ hasToolCallChunks: ${hasToolCallChunks}
       graph.dispatchReasoningDelta(stepId, {
         content: content.map((c) => ({
           type: ContentTypes.THINK,
-          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText?.text ?? '',
-      }))});
+          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText.text ?? '',
+        }))});
     }
   }
   handleToolCallChunks = ({
@@ -245,13 +244,13 @@ hasToolCallChunks: ${hasToolCallChunks}
     }
 
     const _stepId = graph.getStepIdByKey(stepKey, prevRunStep?.index);
-    
+
     /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
     const tool_calls: ToolCall[] | undefined =
       prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
         ? []
         : undefined;
-    
+
     /** Edge Case: `id` and `name` fields cannot be empty strings */
     for (const toolCallChunk of toolCallChunks) {
       if (toolCallChunk.name === '') {

@@ -139,13 +139,13 @@ export class StandardGraph extends Graph<
       finalInstructions = finalInstructions ? `${finalInstructions}\n\n${additional_instructions}` : additional_instructions;
     }
 
-    if (finalInstructions && provider === Providers.ANTHROPIC && (clientOptions as t.AnthropicClientOptions)?.clientOptions?.defaultHeaders?.['anthropic-beta']?.includes('prompt-caching')) {
+    if (finalInstructions && provider === Providers.ANTHROPIC && (clientOptions as t.AnthropicClientOptions).clientOptions?.defaultHeaders?.['anthropic-beta']?.includes('prompt-caching')) {
       finalInstructions = {
         content: [
           {
-            type: "text",
+            type: 'text',
             text: instructions,
-            cache_control: { type: "ephemeral" },
+            cache_control: { type: 'ephemeral' },
           },
         ],
       };
@@ -364,9 +364,9 @@ export class StandardGraph extends Graph<
       if (!this.pruneMessages && this.tokenCounter && this.maxContextTokens && this.indexTokenCountMap[0] != null) {
         const isAnthropicWithThinking = (
           (this.provider === Providers.ANTHROPIC
-          || (this.provider === Providers.BEDROCK && (this.clientOptions as t.BedrockClientOptions)?.model?.includes('anthropic')))
-          && (this.clientOptions as t.AnthropicClientOptions)?.thinking != null);
-        
+          || (this.provider === Providers.BEDROCK && (this.clientOptions as t.BedrockClientOptions).model?.includes('anthropic')))
+          && (this.clientOptions as t.AnthropicClientOptions).thinking != null);
+
         this.pruneMessages = createPruneMessages({
           indexTokenCountMap: this.indexTokenCountMap,
           maxTokens: this.maxContextTokens,
@@ -446,8 +446,8 @@ export class StandardGraph extends Graph<
         }
         result = { messages: [finalMessage] };
       }
-      
-      this.storeUsageMetadata(result?.messages?.[0]);
+
+      this.storeUsageMetadata(result.messages?.[0]);
       return result;
     };
   }

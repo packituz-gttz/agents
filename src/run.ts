@@ -1,5 +1,5 @@
 // src/run.ts
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
 import { SystemMessage } from '@langchain/core/messages';
@@ -115,7 +115,7 @@ export class Run<T extends t.BaseGraphState> {
       if (!tool.schema) {
         return acc;
       }
-  
+
       const jsonSchema = zodToJsonSchema(tool.schema.describe(tool.description ?? ''), tool.name);
       return acc + tokenCounter(new SystemMessage(JSON.stringify(jsonSchema)));
     }, 0) ?? 0) : 0;

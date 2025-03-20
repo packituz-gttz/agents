@@ -1,4 +1,4 @@
-// eslint-disable-next-line import/no-named-as-default
+
 import Anthropic from '@anthropic-ai/sdk';
 import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources';
 import { BindToolsInput } from '@langchain/core/language_models/chat_models';
@@ -38,9 +38,9 @@ export type AnthropicImageBlockParam = Anthropic.Messages.ImageBlockParam;
 export type AnthropicToolUseBlockParam = Anthropic.Messages.ToolUseBlockParam;
 export type AnthropicToolResultBlockParam =
   Anthropic.Messages.ToolResultBlockParam;
-  export type AnthropicDocumentBlockParam = Anthropic.Messages.DocumentBlockParam;
-  export type AnthropicThinkingBlockParam = Anthropic.Messages.ThinkingBlockParam;
-  export type AnthropicRedactedThinkingBlockParam =
+export type AnthropicDocumentBlockParam = Anthropic.Messages.DocumentBlockParam;
+export type AnthropicThinkingBlockParam = Anthropic.Messages.ThinkingBlockParam;
+export type AnthropicRedactedThinkingBlockParam =
     Anthropic.Messages.RedactedThinkingBlockParam;
 
 /**

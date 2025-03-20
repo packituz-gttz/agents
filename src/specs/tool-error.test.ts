@@ -1,5 +1,4 @@
-/* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { z } from 'zod';
 import { config } from 'dotenv';
 config();
@@ -71,7 +70,7 @@ describe('Tool Error Handling Tests', () => {
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP_COMPLETED]: {
       handle: (event: GraphEvents.ON_RUN_STEP_COMPLETED, data: t.StreamEventData): void => {
-        if ((data.result as t.MessageContentComplex)?.['type'] === 'tool_call') {
+        if ((data.result as t.MessageContentComplex)['type'] === 'tool_call') {
           run.Graph?.overrideTestModel(['Looks like there was an error calling the tool.'], 5);
         }
         onRunStepCompletedSpy(event, data);
@@ -118,16 +117,16 @@ describe('Tool Error Handling Tests', () => {
     });
 
     const toolCalls: ToolCall[] = [
-        {
-          name: "errorTool",
-          args: {
-            input: "test input",
-          },
-          id: "call_test123",
-          type: "tool_call",
-        }
-      ];
-    
+      {
+        name: 'errorTool',
+        args: {
+          input: 'test input',
+        },
+        id: 'call_test123',
+        type: 'tool_call',
+      }
+    ];
+
     const firstResponse = 'Let me try calling the tool';
     run.Graph?.overrideTestModel([firstResponse], 5, toolCalls);
 
@@ -142,12 +141,12 @@ describe('Tool Error Handling Tests', () => {
 
     // Verify handleToolCallError was called
     expect(handleToolCallErrorSpy).toHaveBeenCalled();
-    
+
     // Find the tool call content part
-    const toolCallPart = contentParts.find(part => 
-      part?.type === 'tool_call'
+    const toolCallPart = contentParts.find(part =>
+      part.type === 'tool_call'
     ) as t.ToolCallContent | undefined;
-    
+
     // Verify the error message in contentParts
     expect(toolCallPart).toBeDefined();
     expect(toolCallPart?.tool_call?.args).toEqual(JSON.stringify(toolCalls[0].args));

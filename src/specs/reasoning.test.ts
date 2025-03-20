@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // src/scripts/cli.test.ts
 import { config } from 'dotenv';
 config();

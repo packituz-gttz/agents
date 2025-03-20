@@ -138,23 +138,23 @@ function _formatContent(content: MessageContent): string | Record<string, any>[]
           source,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
-      } else if (contentPart.type === "document") {
+      } else if (contentPart.type === 'document') {
         // PDF
         return {
           ...contentPart,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
-      } else if (contentPart.type === "thinking") {
+      } else if (contentPart.type === 'thinking') {
         const block: AnthropicThinkingBlockParam = {
-          type: "thinking" as const, // Explicitly setting the type as "thinking"
+          type: 'thinking' as const, // Explicitly setting the type as "thinking"
           thinking: contentPart.thinking,
           signature: contentPart.signature,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
         return block;
-      } else if (contentPart.type === "redacted_thinking") {
+      } else if (contentPart.type === 'redacted_thinking') {
         const block: AnthropicRedactedThinkingBlockParam = {
-          type: "redacted_thinking" as const, // Explicitly setting the type as "redacted_thinking"
+          type: 'redacted_thinking' as const, // Explicitly setting the type as "redacted_thinking"
           data: contentPart.data,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
         };
@@ -316,7 +316,7 @@ function mergeMessages(messages?: AnthropicMessageCreateParams['messages']): Ant
     | AnthropicThinkingBlockParam
     | AnthropicRedactedThinkingBlockParam
   > => {
-    if (typeof content === "string") {
+    if (typeof content === 'string') {
       return [
         {
           type: 'text',

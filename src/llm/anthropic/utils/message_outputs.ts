@@ -7,7 +7,7 @@ import {
   UsageMetadata,
   AIMessageChunk,
 } from '@langchain/core/messages';
-import type { ToolCallChunk } from "@langchain/core/messages/tool";
+import type { ToolCallChunk } from '@langchain/core/messages/tool';
 import { ToolCall } from '@langchain/core/messages/tool';
 import { ChatGeneration } from '@langchain/core/outputs';
 import { AnthropicMessageResponse } from '../types.js';
@@ -92,18 +92,18 @@ export function _makeMessageChunkFromAnthropicEvent(
       }),
     };
   } else if (
-    data.type === "content_block_start" &&
-    ["tool_use", "document"].includes(data.content_block.type)
+    data.type === 'content_block_start' &&
+    ['tool_use', 'document'].includes(data.content_block.type)
   ) {
     const contentBlock = data.content_block;
     let toolCallChunks: ToolCallChunk[];
-    if (contentBlock.type === "tool_use") {
+    if (contentBlock.type === 'tool_use') {
       toolCallChunks = [
         {
           id: contentBlock.id,
           index: data.index,
           name: contentBlock.name,
-          args: "",
+          args: '',
         },
       ];
     } else {
@@ -112,28 +112,28 @@ export function _makeMessageChunkFromAnthropicEvent(
     return {
       chunk: new AIMessageChunk({
         content: fields.coerceContentToString
-          ? ""
+          ? ''
           : [
-              {
-                index: data.index,
-                ...data.content_block,
-                input: "",
-              },
-            ],
+            {
+              index: data.index,
+              ...data.content_block,
+              input: '',
+            },
+          ],
         additional_kwargs: {},
         tool_call_chunks: toolCallChunks,
       }),
     };
   } else if (
-    data.type === "content_block_delta" &&
+    data.type === 'content_block_delta' &&
     [
-      "text_delta",
-      "citations_delta",
-      "thinking_delta",
-      "signature_delta",
+      'text_delta',
+      'citations_delta',
+      'thinking_delta',
+      'signature_delta',
     ].includes(data.delta.type)
   ) {
-    if (fields.coerceContentToString && "text" in data.delta) {
+    if (fields.coerceContentToString && 'text' in data.delta) {
       return {
         chunk: new AIMessageChunk({
           content: data.delta.text,
@@ -142,30 +142,30 @@ export function _makeMessageChunkFromAnthropicEvent(
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const contentBlock: Record<string, any> = data.delta;
-      if ("citation" in contentBlock) {
+      if ('citation' in contentBlock) {
         contentBlock.citations = [contentBlock.citation];
         delete contentBlock.citation;
       }
       if (
-        contentBlock.type === "thinking_delta" ||
-        contentBlock.type === "signature_delta"
+        contentBlock.type === 'thinking_delta' ||
+        contentBlock.type === 'signature_delta'
       ) {
         return {
           chunk: new AIMessageChunk({
-            content: [{ index: data.index, ...contentBlock, type: "thinking" }],
+            content: [{ index: data.index, ...contentBlock, type: 'thinking' }],
           }),
         };
       }
 
       return {
         chunk: new AIMessageChunk({
-          content: [{ index: data.index, ...contentBlock, type: "text" }],
+          content: [{ index: data.index, ...contentBlock, type: 'text' }],
         }),
       };
     }
   } else if (
-    data.type === "content_block_delta" &&
-    data.delta.type === "input_json_delta"
+    data.type === 'content_block_delta' &&
+    data.delta.type === 'input_json_delta'
   ) {
     return {
       chunk: new AIMessageChunk({
@@ -208,19 +208,19 @@ export function _makeMessageChunkFromAnthropicEvent(
       };
     }
   } else if (
-    data.type === "content_block_start" &&
-    data.content_block.type === "redacted_thinking"
+    data.type === 'content_block_start' &&
+    data.content_block.type === 'redacted_thinking'
   ) {
     return {
       chunk: new AIMessageChunk({
         content: fields.coerceContentToString
-          ? ""
+          ? ''
           : [{ index: data.index, ...data.content_block }],
       }),
     };
   } else if (
-    data.type === "content_block_start" &&
-    data.content_block.type === "thinking"
+    data.type === 'content_block_start' &&
+    data.content_block.type === 'thinking'
   ) {
     const content = data.content_block.thinking;
     return {
@@ -241,17 +241,17 @@ export function anthropicResponseToChatMessages(
 ): ChatGeneration[] {
   const usage: Record<string, number> | null | undefined =
     additionalKwargs.usage as Record<string, number> | null | undefined;
-    const usageMetadata =
+  const usageMetadata =
     usage != null
       ? {
-          input_tokens: usage.input_tokens ?? 0,
-          output_tokens: usage.output_tokens ?? 0,
-          total_tokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
-          input_token_details: {
-            cache_creation: usage.cache_creation_input_tokens,
-            cache_read: usage.cache_read_input_tokens,
-          },
-        }
+        input_tokens: usage.input_tokens ?? 0,
+        output_tokens: usage.output_tokens ?? 0,
+        total_tokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+        input_token_details: {
+          cache_creation: usage.cache_creation_input_tokens,
+          cache_read: usage.cache_read_input_tokens,
+        },
+      }
       : undefined;
   if (messages.length === 1 && messages[0].type === 'text') {
     return [
