@@ -269,6 +269,7 @@ export function checkValidNumber(value: unknown): value is number {
 export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
   const indexTokenCountMap = { ...factoryParams.indexTokenCountMap };
   let lastTurnStartIndex = factoryParams.startIndex;
+  let lastCutOffIndex = 0;
   let totalTokens = (Object.values(indexTokenCountMap)).reduce((a, b) => a + b, 0);
   return function pruneMessages(params: PruneMessagesParams): {
     context: BaseMessage[];
@@ -302,14 +303,25 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     }
 
     // If `currentUsage` is defined, we need to distribute the current total tokens to our `indexTokenCountMap`,
-    // for all message index keys before `lastTurnStartIndex`, as it has the most accurate count for those messages.
     // We must distribute it in a weighted manner, so that the total token count is equal to `currentUsage.total_tokens`,
     // relative the manually counted tokens in `indexTokenCountMap`.
+    // EDGE CASE: when the resulting context gets pruned, we should not distribute the usage for messages that are not in the context.
     if (currentUsage) {
-      const totalIndexTokens = Object.values(indexTokenCountMap).reduce((a, b) => a + b, 0);
+      // Calculate the sum of tokens only for indices at or after lastCutOffIndex
+      const totalIndexTokens = Object.entries(indexTokenCountMap).reduce((sum, [key, value]) => {
+        // Convert string key to number and check if it's >= lastCutOffIndex
+        return Number(key) >= lastCutOffIndex ? sum + value : sum;
+      }, 0);
+
+      // Calculate ratio based only on messages that remain in the context
       const ratio = currentUsage.total_tokens / totalIndexTokens;
+
+      // Apply the ratio adjustment only to messages at or after lastCutOffIndex
       for (const key in indexTokenCountMap) {
-        indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+        if (Number(key) >= lastCutOffIndex) {
+          // Only adjust token counts for messages still in the context
+          indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+        }
       }
     }
 
@@ -326,6 +338,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       thinkingEnabled: factoryParams.thinkingEnabled,
       tokenCounter: factoryParams.tokenCounter,
     });
+    lastCutOffIndex = Math.max(params.messages.length - context.length, 0);
 
     return { context, indexTokenCountMap };
   };
