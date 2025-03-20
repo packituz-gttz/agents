@@ -1,5 +1,5 @@
-import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
-import type { ThinkingContentText } from '@/types/stream';
+import { AIMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { ThinkingContentText, MessageContentComplex } from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
 import { ContentTypes } from '@/common';
 export type PruneMessagesFactoryParams = {
@@ -12,7 +12,12 @@ export type PruneMessagesFactoryParams = {
 export type PruneMessagesParams = {
   messages: BaseMessage[];
   usageMetadata?: Partial<UsageMetadata>;
-  startOnMessageType?: ReturnType<BaseMessage['getType']>;
+  startType?: ReturnType<BaseMessage['getType']>;
+}
+
+function isIndexInContext(arrayA: any[], arrayB: any[], targetIndex: number): boolean {
+  const startingIndexInA = arrayA.length - arrayB.length;
+  return targetIndex >= startingIndexInA;
 }
 
 /**
@@ -47,7 +52,7 @@ export function getMessagesWithinTokenLimit({
   messages: _messages,
   maxContextTokens,
   indexTokenCountMap,
-  startOnMessageType,
+  startType: _startType,
   thinkingEnabled,
   /** We may need to use this when recalculating */
   tokenCounter,
@@ -56,7 +61,7 @@ export function getMessagesWithinTokenLimit({
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
   tokenCounter: TokenCounter;
-  startOnMessageType?: string;
+  startType?: string;
   thinkingEnabled?: boolean;
 }): {
   context: BaseMessage[];
@@ -70,6 +75,7 @@ export function getMessagesWithinTokenLimit({
   const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
   const initialContextTokens = maxContextTokens - instructionsTokenCount;
   let remainingContextTokens = initialContextTokens;
+  let startType = _startType;
 
   const messages = [..._messages];
   /**
@@ -92,15 +98,21 @@ export function getMessagesWithinTokenLimit({
       }
       const poppedMessage = messages.pop();
       if (!poppedMessage) continue;
-      if (thinkingEnabled && currentIndex === (messages.length - 1) && (poppedMessage.getType() === 'ai') || (poppedMessage.getType() === 'tool')) {
+      const messageType = poppedMessage.getType();
+      if (thinkingEnabled && currentIndex === (_messages.length - 1) && (messageType === 'ai') || (messageType === 'tool')) {
         thinkingEndIndex = currentIndex;
       }
-      if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && poppedMessage.getType() === 'ai' && Array.isArray(poppedMessage.content)) {
+      if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && messageType === 'ai' && Array.isArray(poppedMessage.content)) {
         thinkingBlock = (poppedMessage.content.find((content) => content.type === ContentTypes.THINKING)) as ThinkingContentText;
         thinkingStartIndex = thinkingBlock != null ? currentIndex : -1;
       }
-      if (thinkingEndIndex > -1 && thinkingStartIndex === -1 && thinkingEndIndex !== currentIndex && poppedMessage.getType() === 'human') {
-        thinkingStartIndex = currentIndex + 1;
+      /** False start, the latest message was not part of a multi-assistant/tool sequence of messages */
+      if (
+        thinkingEndIndex > -1
+        && currentIndex === (thinkingEndIndex - 1)
+        && (messageType !== 'ai' && messageType !== 'tool')
+      ) {
+        thinkingEndIndex = -1;
       }
       
       const tokenCount = indexTokenCountMap[currentIndex] || 0;
@@ -113,9 +125,13 @@ export function getMessagesWithinTokenLimit({
         break;
       }
     }
+
+    if (thinkingEndIndex > -1 && context[context.length - 1].getType() === 'tool') {
+      startType = 'ai';
+    }
     
-    if (startOnMessageType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+    if (startType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startType);
       
       if (requiredTypeIndex > 0) {
         context = context.slice(requiredTypeIndex);
@@ -130,104 +146,107 @@ export function getMessagesWithinTokenLimit({
 
   const prunedMemory = messages;
   remainingContextTokens -= currentTokenCount;
-  // 
-
-
-  /**
-  * Edge cases:
-    * We need to ensure a thinking sequence starts and ends with an assistant message.
-    * We have a thinking sequence (denoted by valid `thinkingEndIndex`), but no `thinkingStartIndex`
-      * Need to find the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
-    * We have no thinking block (none encountered in the passed `_messages` array)
-      * Need to "create" thinking block one based off the first human message encountered in `prunedMemory` array, starting from the start of the array.
-    * We have a thinking sequence but no "last" assistant message is found in `context` array from the earlier case
-      * Need to create one, including the thinking block in its content array that we found or create.
-    * It's possible our `thinkingStartIndex` falls outside the `context` array, so we need to check for that.
-      *  If so, we need to add the thinking block to the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
-    * More context on thinking block requirements:
-    *  The thinking block requirement is not strictly about the "first assistant message" in the context, but rather about the latest sequence of assistant/tool messages.
-
-    In other words, if we have a sequence of messages like:
-
-      1. Assistant message (with tool use)
-      2. Tool message
-      3. Human message
-      4. Assistant message (with tool use)
-      5. Tool message
-      6. Assistant message (with tool use)
-      7. Tool message
-      8. Assistant message (with thinking block)
-
-      Then we need to ensure that one of the assistant messages in this latest sequence (messages 4-8)
-      has a thinking block. It doesn't have to be the very first assistant message in the context
-      but it should be one of the assistant messages in the latest sequence of interactions.
-
-      Note, at this point, the context array would like this if all those example messages fit into the current context token window:
-      - 8 (Assistant message with thinking block), 7 (Tool), 6 (etc.), 5, 4, 3, 2, 1
-
-   * More context on GENERAL pruning requirements (thinking or not):
-      We should preserve AI <--> tool message correspondences when pruning, i.e.:
-
-          const assistantMessageWithToolCall = // message.tool_calls
-          const toolResponseMessage = new ToolMessage({
-            content: [
-              {
-                type: "text",
-                text: "{\"success\":true,\"message\":\"File content\"}",
-              },
-            ],
-            tool_call_id: "tool123",
-            name: "text_editor_mcp_textEditor",
-          });
-          const assistantMessageWithThinking = new AIMessage({
-            content: [
-              {
-                type: "thinking",
-                thinking: "This is a thinking block",
-              },
-              {
-                type: "text",
-                text: "Response with thinking",
-              },
-            ],
-          });
-          const messages = [
-            new SystemMessage("System instruction"),
-            new HumanMessage("Hello"),
-            assistantMessageWithToolCall,
-            toolResponseMessage,
-            new HumanMessage("Next message"),
-            assistantMessageWithThinking,
-          ];
-
-          // Note the correspondence of IDs between the assistant message and the tool message.
-          // An AI message can correspond with X tool messages following it. 
-
-          // if only the following messages fit in the context:
-          const messages = [
-            toolResponseMessage,
-            new HumanMessage("Next message"),
-            assistantMessageWithThinking,
-          ];
-
-          // then it must become:
-          const messages = [
-            new HumanMessage("Next message"),
-            assistantMessageWithThinking,
-          ];
-
-   LASTLY, we need to recalculate the remainingContextTokens, since we may have added a new message
-   to the context or re-ordered things, making sure our manipulation of the context array is correct and remains within the context array.
-   In order to add thinking block when required, we should prioritize its insertion over the token count of subsequent content blocks and/or whole messages
-
-   * 
-   */
-  return {
+  const result = {
     remainingContextTokens,
-    context: context.reverse(),
+    context: [] as BaseMessage[],
     messagesToRefine: prunedMemory,
   };
-}
+
+  if (prunedMemory.length === 0 || thinkingEndIndex < 0 || (thinkingStartIndex > -1 && isIndexInContext(_messages, context, thinkingStartIndex))) {
+    // we reverse at this step to ensure the context is in the correct order for the model, and we need to work backwards
+    result.context = context.reverse();
+    return result;
+  }
+
+  if (thinkingEndIndex > -1 && thinkingStartIndex < 0) {
+    throw new Error('The payload is malformed. There is a thinking sequence but no "AI" messages with thinking blocks.');
+  }
+
+  if (!thinkingBlock) {
+    throw new Error('The payload is malformed. There is a thinking sequence but no thinking block found.');
+  }
+
+  // Since we have a thinking sequence, we need to find the last assistant message
+  // in the latest AI/tool sequence to add the thinking block that falls outside of the current context
+  // Latest messages are ordered first.
+    let assistantIndex = -1;
+    for (let i = 0; i < context.length; i++) {
+      const currentMessage = context[i];
+      const type = currentMessage.getType();
+      if (type === 'ai') {
+        assistantIndex = i;
+      }
+      if (assistantIndex > -1 && (type === 'human' || type === 'system')) {
+        break;
+      }
+    }
+
+    if (assistantIndex === -1) {
+      throw new Error('The payload is malformed. There is a thinking sequence but no "AI" messages to append thinking blocks to.');
+    }
+
+
+    thinkingStartIndex = _messages.length - 1 - assistantIndex;
+    const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
+    const newRemainingCount = remainingContextTokens - thinkingTokenCount;
+
+      const content: MessageContentComplex[] = Array.isArray(context[assistantIndex].content)
+      ? context[assistantIndex].content as MessageContentComplex[]
+      : [{
+        type: ContentTypes.TEXT,
+        text: context[assistantIndex].content,
+      }];
+      content.unshift(thinkingBlock);
+      context[assistantIndex].content = content;
+    if (newRemainingCount > 0) {
+      result.context = context.reverse();
+      return result;
+    }
+
+    const thinkingMessage = context[assistantIndex];
+    // now we need to an additional round of pruning but making the thinking block fit
+    const newThinkingMessageTokenCount = indexTokenCountMap[thinkingStartIndex] + thinkingTokenCount;
+    remainingContextTokens = initialContextTokens - newThinkingMessageTokenCount;
+    currentTokenCount = 3;
+    let newContext: BaseMessage[] = [];
+    const secondRoundMessages = [..._messages];
+    let currentIndex = secondRoundMessages.length;
+    while (secondRoundMessages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > thinkingStartIndex) {
+      currentIndex--;
+      const poppedMessage = secondRoundMessages.pop();
+      if (!poppedMessage) continue;
+      const tokenCount = indexTokenCountMap[currentIndex] || 0;
+      if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
+        newContext.push(poppedMessage);
+        currentTokenCount += tokenCount;
+      } else {
+        messages.push(poppedMessage);
+        break;
+      }
+    }
+
+    if (newContext[newContext.length - 1].getType() === 'tool') {
+      startType = 'ai';
+    }
+    
+    if (startType && newContext.length > 0) {
+      const requiredTypeIndex = newContext.findIndex(msg => msg.getType() === startType);
+      if (requiredTypeIndex > 0) {
+        newContext = newContext.slice(requiredTypeIndex);
+      }
+    }
+
+    newContext.push(thinkingMessage);
+
+    if (instructions && _messages.length > 0) {
+      newContext.push(_messages[0] as BaseMessage);
+      secondRoundMessages.shift();
+    }
+
+
+    result.context = newContext.reverse();
+    return result;
+  }
 
 export function checkValidNumber(value: unknown): value is number {
   return typeof value === 'number' && !isNaN(value) && value > 0;
@@ -287,7 +306,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       maxContextTokens: factoryParams.maxTokens,
       messages: params.messages,
       indexTokenCountMap,
-      startOnMessageType: params.startOnMessageType,
+      startType: params.startType,
       thinkingEnabled: factoryParams.thinkingEnabled,
       tokenCounter: factoryParams.tokenCounter,
     });

@@ -211,7 +211,7 @@ describe('Prune Messages with Thinking Mode Tests', () => {
           cache_creation: 0,
         },
       },
-      startOnMessageType: 'human',
+      startType: 'human',
     });
     
     // Verify that the first assistant message in the pruned context has a thinking block
