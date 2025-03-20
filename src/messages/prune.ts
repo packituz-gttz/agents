@@ -102,10 +102,20 @@ function getMessagesWithinTokenLimit({
     }
   }
   
+  // Add system message if it exists
+  if (instructions && _messages.length > 0) {
+    context.push(_messages[0] as BaseMessage);
+    messages.shift();
+  }
+  
   // Handle thinking mode requirement for Anthropic
   if (thinkingEnabled && context.length > 0 && tokenCounter) {
+    // Check if the latest message is an assistant message
+    const latestMessageIsAssistant = _messages.length > 0 && _messages[_messages.length - 1].getType() === 'ai';
+    
     // Process only if we have an assistant message in the context
     const firstAssistantIndex = context.findIndex(msg => msg.getType() === 'ai');
+    
     if (firstAssistantIndex >= 0) {
       const firstAssistantMsg = context[firstAssistantIndex];
       
@@ -116,11 +126,12 @@ function getMessagesWithinTokenLimit({
       
       // Only proceed if we need to add thinking blocks
       if (!hasThinkingBlock) {
-        // Collect thinking blocks from pruned assistant messages
+        // Collect thinking blocks from pruned assistant messages, starting from the most recent
         const thinkingBlocks: any[] = [];
         
-        // Look through pruned messages for thinking blocks
-        for (const msg of messages) {
+        // Look through pruned messages for thinking blocks, starting from the end (most recent)
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
           if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
             for (const item of msg.content) {
               if (item && typeof item === 'object' && item.type === 'thinking') {
@@ -174,15 +185,79 @@ function getMessagesWithinTokenLimit({
           
           // If we've exceeded the token limit, we need to prune more messages
           if (currentTokenCount > remainingContextTokens) {
-            // Remove messages from the end of the context until we're under the token limit
-            // But make sure to keep the first assistant message with thinking block
+            // Build a map of tool call IDs to track AI <--> tool message correspondences
+            const toolCallIdMap = new Map<string, number>();
+            
+            // Identify tool call IDs in the context
+            for (let i = 0; i < context.length; i++) {
+              const msg = context[i];
+              
+              // Check for tool calls in AI messages
+              if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
+                for (const item of msg.content) {
+                  if (item && typeof item === 'object' && item.type === 'tool_use' && item.id) {
+                    toolCallIdMap.set(item.id, i);
+                  }
+                }
+              }
+              
+              // Check for tool messages
+              if (msg.getType() === 'tool' && 'tool_call_id' in msg && typeof msg.tool_call_id === 'string') {
+                toolCallIdMap.set(msg.tool_call_id, i);
+              }
+            }
+            
+            // Track which messages to remove
+            const indicesToRemove = new Set<number>();
+            
+            // Start removing messages from the end, but preserve AI <--> tool message correspondences
             let i = context.length - 1;
             while (i > firstAssistantIndex && currentTokenCount > remainingContextTokens) {
               const msgToRemove = context[i];
-              const msgTokenCount = tokenCounter(msgToRemove);
-              context.splice(i, 1);
-              currentTokenCount -= msgTokenCount;
+              
+              // Check if this is a tool message or has tool calls
+              let canRemove = true;
+              
+              if (msgToRemove.getType() === 'tool' && 'tool_call_id' in msgToRemove && typeof msgToRemove.tool_call_id === 'string') {
+                // If this is a tool message, check if we need to keep its corresponding AI message
+                const aiIndex = toolCallIdMap.get(msgToRemove.tool_call_id);
+                if (aiIndex !== undefined && aiIndex !== i && !indicesToRemove.has(aiIndex)) {
+                  // We need to remove both the tool message and its corresponding AI message
+                  indicesToRemove.add(i);
+                  indicesToRemove.add(aiIndex);
+                  currentTokenCount -= (tokenCounter(msgToRemove) + tokenCounter(context[aiIndex]));
+                  canRemove = false;
+                }
+              } else if (msgToRemove.getType() === 'ai' && Array.isArray(msgToRemove.content)) {
+                // If this is an AI message with tool calls, check if we need to keep its corresponding tool messages
+                for (const item of msgToRemove.content) {
+                  if (item && typeof item === 'object' && item.type === 'tool_use' && item.id) {
+                    const toolIndex = toolCallIdMap.get(item.id as string);
+                    if (toolIndex !== undefined && toolIndex !== i && !indicesToRemove.has(toolIndex)) {
+                      // We need to remove both the AI message and its corresponding tool message
+                      indicesToRemove.add(i);
+                      indicesToRemove.add(toolIndex);
+                      currentTokenCount -= (tokenCounter(msgToRemove) + tokenCounter(context[toolIndex]));
+                      canRemove = false;
+                      break;
+                    }
+                  }
+                }
+              }
+              
+              // If we can remove this message individually
+              if (canRemove && !indicesToRemove.has(i)) {
+                indicesToRemove.add(i);
+                currentTokenCount -= tokenCounter(msgToRemove);
+              }
+              
               i--;
+            }
+            
+            // Remove messages in reverse order to avoid index shifting
+            const sortedIndices = Array.from(indicesToRemove).sort((a, b) => b - a);
+            for (const index of sortedIndices) {
+              context.splice(index, 1);
             }
             
             // Update remainingContextTokens to reflect the new token count
@@ -191,12 +266,30 @@ function getMessagesWithinTokenLimit({
         }
       }
     }
+    
+    // If the latest message is an assistant message, ensure an assistant message appears early in the context
+    // but maintain system message precedence
+    if (latestMessageIsAssistant && context.length > 0) {
+      // Find the first assistant message in the context
+      const assistantIndex = context.findIndex(msg => msg.getType() === 'ai');
+      if (assistantIndex > 0) {
+        // Check if there's a system message at the beginning
+        const hasSystemFirst = context[0].getType() === 'system';
+        
+        // Move the assistant message to the appropriate position
+        const assistantMsg = context[assistantIndex];
+        context.splice(assistantIndex, 1);
+        
+        if (hasSystemFirst) {
+          // Insert after the system message
+          context.splice(1, 0, assistantMsg);
+        } else {
+          // Insert at the beginning if no system message
+          context.unshift(assistantMsg);
+        }
+      }
+    }
   }
-  }
-
-  if (instructions && _messages.length > 0) {
-    context.push(_messages[0] as BaseMessage);
-    messages.shift();
   }
 
   const prunedMemory = messages;

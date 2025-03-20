@@ -390,4 +390,266 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     // The function should not throw an error even though no thinking blocks are found
     expect(() => pruneMessages({ messages })).not.toThrow();
   });
+  
+  it('should preserve AI <--> tool message correspondences when pruning', () => {
+    // Create a token counter
+    const tokenCounter = createTestTokenCounter();
+    
+    // Create messages with tool calls
+    const assistantMessageWithToolCall = new AIMessage({
+      content: [
+        {
+          type: "text",
+          text: "Let me check that file:",
+        },
+        {
+          type: "tool_use",
+          id: "tool123",
+          name: "text_editor_mcp_textEditor",
+          input: "{\"command\": \"view\", \"path\": \"/path/to/file.txt\"}",
+        },
+      ],
+    });
+    
+    const toolResponseMessage = new ToolMessage({
+      content: [
+        {
+          type: "text",
+          text: "{\"success\":true,\"message\":\"File content\"}",
+        },
+      ],
+      tool_call_id: "tool123",
+      name: "text_editor_mcp_textEditor",
+    });
+    
+    const assistantMessageWithThinking = new AIMessage({
+      content: [
+        {
+          type: "thinking",
+          thinking: "This is a thinking block",
+        },
+        {
+          type: "text",
+          text: "Response with thinking",
+        },
+      ],
+    });
+    
+    const messages = [
+      new SystemMessage("System instruction"),
+      new HumanMessage("Hello"),
+      assistantMessageWithToolCall,
+      toolResponseMessage,
+      new HumanMessage("Next message"),
+      assistantMessageWithThinking,
+    ];
+    
+    // Calculate token counts for each message
+    const indexTokenCountMap: Record<string, number> = {};
+    for (let i = 0; i < messages.length; i++) {
+      indexTokenCountMap[i] = tokenCounter(messages[i]);
+    }
+    
+    // Create pruneMessages function with thinking mode enabled and a low token limit
+    const pruneMessages = createPruneMessages({
+      maxTokens: 100, // Set a low token limit to force pruning
+      startIndex: 0,
+      tokenCounter,
+      indexTokenCountMap: { ...indexTokenCountMap },
+      thinkingEnabled: true,
+    });
+    
+    // Prune messages
+    const result = pruneMessages({ messages });
+    
+    // Find assistant message with tool call and its corresponding tool message in the pruned context
+    const assistantIndex = result.context.findIndex(msg => 
+      msg.getType() === 'ai' && 
+      Array.isArray(msg.content) && 
+      msg.content.some(item => item && typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
+    );
+    
+    // If the assistant message with tool call is in the context, its corresponding tool message should also be there
+    if (assistantIndex !== -1) {
+      const toolIndex = result.context.findIndex(msg => 
+        msg.getType() === 'tool' && 
+        'tool_call_id' in msg && 
+        msg.tool_call_id === 'tool123'
+      );
+      
+      expect(toolIndex).not.toBe(-1);
+    }
+    
+    // If the tool message is in the context, its corresponding assistant message should also be there
+    const toolIndex = result.context.findIndex(msg => 
+      msg.getType() === 'tool' && 
+      'tool_call_id' in msg && 
+      msg.tool_call_id === 'tool123'
+    );
+    
+    if (toolIndex !== -1) {
+      const assistantWithToolIndex = result.context.findIndex(msg => 
+        msg.getType() === 'ai' && 
+        Array.isArray(msg.content) && 
+        msg.content.some(item => item && typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
+      );
+      
+      expect(assistantWithToolIndex).not.toBe(-1);
+    }
+  });
+  
+  it('should ensure an assistant message appears early in the context when the latest message is an assistant message', () => {
+    // Create a token counter
+    const tokenCounter = createTestTokenCounter();
+    
+    // Create messages with the latest message being an assistant message
+    const assistantMessageWithThinking = new AIMessage({
+      content: [
+        {
+          type: "thinking",
+          thinking: "This is a thinking block",
+        },
+        {
+          type: "text",
+          text: "Response with thinking",
+        },
+      ],
+    });
+    
+    // Test case without system message
+    const messagesWithoutSystem = [
+      new HumanMessage("Hello"),
+      new AIMessage("First assistant response"),
+      new HumanMessage("Next message"),
+      assistantMessageWithThinking, // Latest message is an assistant message
+    ];
+    
+    // Calculate token counts for each message
+    const indexTokenCountMapWithoutSystem: Record<string, number> = {};
+    for (let i = 0; i < messagesWithoutSystem.length; i++) {
+      indexTokenCountMapWithoutSystem[i] = tokenCounter(messagesWithoutSystem[i]);
+    }
+    
+    // Create pruneMessages function with thinking mode enabled
+    const pruneMessagesWithoutSystem = createPruneMessages({
+      maxTokens: 60, // Set a lower token limit to force more pruning
+      startIndex: 0,
+      tokenCounter,
+      indexTokenCountMap: { ...indexTokenCountMapWithoutSystem },
+      thinkingEnabled: true,
+    });
+    
+    // Prune messages
+    const resultWithoutSystem = pruneMessagesWithoutSystem({ messages: messagesWithoutSystem });
+    
+    // Verify that the first message in the pruned context is an assistant message when no system message
+    expect(resultWithoutSystem.context.length).toBeGreaterThan(0);
+    expect(resultWithoutSystem.context[0].getType()).toBe('ai');
+    
+    // Test case with system message
+    const messagesWithSystem = [
+      new SystemMessage("System instruction"),
+      new HumanMessage("Hello"),
+      new AIMessage("First assistant response"),
+      new HumanMessage("Next message"),
+      assistantMessageWithThinking, // Latest message is an assistant message
+    ];
+    
+    // Calculate token counts for each message
+    const indexTokenCountMapWithSystem: Record<string, number> = {};
+    for (let i = 0; i < messagesWithSystem.length; i++) {
+      indexTokenCountMapWithSystem[i] = tokenCounter(messagesWithSystem[i]);
+    }
+    
+    // Create pruneMessages function with thinking mode enabled
+    const pruneMessagesWithSystem = createPruneMessages({
+      maxTokens: 70, // Set a token limit to force some pruning but keep system message
+      startIndex: 0,
+      tokenCounter,
+      indexTokenCountMap: { ...indexTokenCountMapWithSystem },
+      thinkingEnabled: true,
+    });
+    
+    // Prune messages
+    const resultWithSystem = pruneMessagesWithSystem({ messages: messagesWithSystem });
+    
+    // Verify that the system message remains first, followed by an assistant message
+    expect(resultWithSystem.context.length).toBeGreaterThan(1);
+    expect(resultWithSystem.context[0].getType()).toBe('system');
+    expect(resultWithSystem.context[1].getType()).toBe('ai');
+  });
+  
+  it('should look for thinking blocks starting from the most recent messages', () => {
+    // Create a token counter
+    const tokenCounter = createTestTokenCounter();
+    
+    // Create messages with multiple thinking blocks
+    const olderAssistantMessageWithThinking = new AIMessage({
+      content: [
+        {
+          type: "thinking",
+          thinking: "This is an older thinking block",
+        },
+        {
+          type: "text",
+          text: "Older response with thinking",
+        },
+      ],
+    });
+    
+    const newerAssistantMessageWithThinking = new AIMessage({
+      content: [
+        {
+          type: "thinking",
+          thinking: "This is a newer thinking block",
+        },
+        {
+          type: "text",
+          text: "Newer response with thinking",
+        },
+      ],
+    });
+    
+    const messages = [
+      new SystemMessage("System instruction"),
+      new HumanMessage("Hello"),
+      olderAssistantMessageWithThinking,
+      new HumanMessage("Next message"),
+      newerAssistantMessageWithThinking,
+    ];
+    
+    // Calculate token counts for each message
+    const indexTokenCountMap: Record<string, number> = {};
+    for (let i = 0; i < messages.length; i++) {
+      indexTokenCountMap[i] = tokenCounter(messages[i]);
+    }
+    
+    // Create pruneMessages function with thinking mode enabled
+    // Set a token limit that will force pruning of the older assistant message
+    const pruneMessages = createPruneMessages({
+      maxTokens: 80,
+      startIndex: 0,
+      tokenCounter,
+      indexTokenCountMap: { ...indexTokenCountMap },
+      thinkingEnabled: true,
+    });
+    
+    // Prune messages
+    const result = pruneMessages({ messages });
+    
+    // Find the first assistant message in the pruned context
+    const firstAssistantIndex = result.context.findIndex(msg => msg.getType() === 'ai');
+    expect(firstAssistantIndex).not.toBe(-1);
+    
+    const firstAssistantMsg = result.context[firstAssistantIndex];
+    expect(Array.isArray(firstAssistantMsg.content)).toBe(true);
+    
+    // Verify that the first assistant message has a thinking block
+    const thinkingBlock = (firstAssistantMsg.content as any[]).find(item => 
+      item && typeof item === 'object' && item.type === 'thinking');
+    expect(thinkingBlock).toBeDefined();
+    
+    // Verify that it's the newer thinking block
+    expect(thinkingBlock.thinking).toContain("newer thinking block");
+  });
 });
