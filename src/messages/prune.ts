@@ -55,11 +55,9 @@ export function getMessagesWithinTokenLimit({
   context: BaseMessage[];
   remainingContextTokens: number;
   messagesToRefine: BaseMessage[];
-  summaryIndex: number;
 } {
   // Every reply is primed with <|start|>assistant<|message|>, so we
   // start with 3 tokens for the label after all messages have been counted.
-  let summaryIndex = -1;
   let currentTokenCount = 3;
   const instructions = _messages?.[0]?.getType() === 'system' ? _messages[0] : undefined;
   const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
@@ -103,11 +101,9 @@ export function getMessagesWithinTokenLimit({
   }
 
   const prunedMemory = messages;
-  summaryIndex = prunedMemory.length - 1;
   remainingContextTokens -= currentTokenCount;
 
   return {
-    summaryIndex,
     remainingContextTokens,
     context: context.reverse(),
     messagesToRefine: prunedMemory,
