@@ -47,15 +47,11 @@ function getMessagesWithinTokenLimit({
   maxContextTokens,
   indexTokenCountMap,
   startOnMessageType,
-  thinkingEnabled,
-  tokenCounter,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
   startOnMessageType?: string;
-  thinkingEnabled?: boolean;
-  tokenCounter?: TokenCounter;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -93,232 +89,20 @@ function getMessagesWithinTokenLimit({
       }
     }
     
-  // Handle startOnMessageType requirement
-  if (startOnMessageType && context.length > 0) {
-    const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
-    
-    if (requiredTypeIndex > 0) {
-      context = context.slice(requiredTypeIndex);
-    }
-  }
-  
-  // Add system message if it exists
-  if (instructions && _messages.length > 0) {
-    context.push(_messages[0] as BaseMessage);
-    messages.shift();
-  }
-  
-  // Handle thinking mode requirement for Anthropic
-  if (thinkingEnabled && context.length > 0 && tokenCounter) {
-    // Check if the latest message is an assistant message
-    const latestMessageIsAssistant = _messages.length > 0 && _messages[_messages.length - 1].getType() === 'ai';
-    
-    // Process only if we have an assistant message in the context
-    const firstAssistantIndex = context.findIndex(msg => msg.getType() === 'ai');
-    
-    if (firstAssistantIndex >= 0) {
-      const firstAssistantMsg = context[firstAssistantIndex];
+    // Handle startOnMessageType requirement
+    if (startOnMessageType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
       
-      // Check if the first assistant message already has a thinking block
-      const hasThinkingBlock = Array.isArray(firstAssistantMsg.content) && 
-        firstAssistantMsg.content.some(item => 
-          item && typeof item === 'object' && item.type === 'thinking');
-      
-      // Only proceed if we need to add thinking blocks
-      if (!hasThinkingBlock) {
-        // Collect thinking blocks from pruned assistant messages, starting from the most recent
-        const thinkingBlocks: any[] = [];
-        
-        // Look through pruned messages for thinking blocks, starting from the end (most recent)
-        for (let i = messages.length - 1; i >= 0; i--) {
-          const msg = messages[i];
-          if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
-            for (const item of msg.content) {
-              if (item && typeof item === 'object' && item.type === 'thinking') {
-                thinkingBlocks.push(item);
-                // We only need one thinking block
-                break;
-              }
-            }
-            if (thinkingBlocks.length > 0) break; // Stop after finding one thinking block
-          }
-        }
-        
-        // If we found thinking blocks, add them to the first assistant message
-        if (thinkingBlocks.length > 0) {
-          // Calculate token count of original message
-          const originalTokenCount = tokenCounter(firstAssistantMsg);
-          
-          // Create a new content array with thinking blocks at the beginning
-          let newContent: any[];
-          
-          if (Array.isArray(firstAssistantMsg.content)) {
-            // Keep the original content (excluding any existing thinking blocks)
-            const originalContent = firstAssistantMsg.content.filter(item => 
-              !(item && typeof item === 'object' && item.type === 'thinking'));
-            
-            newContent = [...thinkingBlocks, ...originalContent];
-          } else if (typeof firstAssistantMsg.content === 'string') {
-            newContent = [
-              ...thinkingBlocks,
-              { type: 'text', text: firstAssistantMsg.content }
-            ];
-          } else {
-            newContent = thinkingBlocks;
-          }
-          
-          // Create a new message with the updated content
-          const newMessage = new AIMessage({
-            content: newContent,
-            additional_kwargs: firstAssistantMsg.additional_kwargs,
-            response_metadata: firstAssistantMsg.response_metadata,
-          });
-          
-          // Calculate token count of new message
-          const newTokenCount = tokenCounter(newMessage);
-          
-          // Adjust current token count
-          currentTokenCount += (newTokenCount - originalTokenCount);
-          
-          // Replace the first assistant message
-          context[firstAssistantIndex] = newMessage;
-          
-          // If we've exceeded the token limit, we need to prune more messages
-          if (currentTokenCount > remainingContextTokens) {
-            // Build a map of tool call IDs to track AI <--> tool message correspondences
-            const toolCallIdMap = new Map<string, number>();
-            
-            // Identify tool call IDs in the context
-            for (let i = 0; i < context.length; i++) {
-              const msg = context[i];
-              
-              // Check for tool calls in AI messages
-              if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
-                for (const item of msg.content) {
-                  if (item && typeof item === 'object' && item.type === 'tool_use' && item.id) {
-                    toolCallIdMap.set(item.id, i);
-                  }
-                }
-              }
-              
-              // Check for tool messages
-              if (msg.getType() === 'tool' && 'tool_call_id' in msg && typeof msg.tool_call_id === 'string') {
-                toolCallIdMap.set(msg.tool_call_id, i);
-              }
-            }
-            
-            // Track which messages to remove
-            const indicesToRemove = new Set<number>();
-            
-            // Start removing messages from the end, but preserve AI <--> tool message correspondences
-            let i = context.length - 1;
-            while (i > firstAssistantIndex && currentTokenCount > remainingContextTokens) {
-              const msgToRemove = context[i];
-              
-              // Check if this is a tool message or has tool calls
-              let canRemove = true;
-              
-              if (msgToRemove.getType() === 'tool' && 'tool_call_id' in msgToRemove && typeof msgToRemove.tool_call_id === 'string') {
-                // If this is a tool message, check if we need to keep its corresponding AI message
-                const aiIndex = toolCallIdMap.get(msgToRemove.tool_call_id);
-                if (aiIndex !== undefined && aiIndex !== i && !indicesToRemove.has(aiIndex)) {
-                  // We need to remove both the tool message and its corresponding AI message
-                  indicesToRemove.add(i);
-                  indicesToRemove.add(aiIndex);
-                  currentTokenCount -= (tokenCounter(msgToRemove) + tokenCounter(context[aiIndex]));
-                  canRemove = false;
-                }
-              } else if (msgToRemove.getType() === 'ai' && Array.isArray(msgToRemove.content)) {
-                // If this is an AI message with tool calls, check if we need to keep its corresponding tool messages
-                for (const item of msgToRemove.content) {
-                  if (item && typeof item === 'object' && item.type === 'tool_use' && item.id) {
-                    const toolIndex = toolCallIdMap.get(item.id as string);
-                    if (toolIndex !== undefined && toolIndex !== i && !indicesToRemove.has(toolIndex)) {
-                      // We need to remove both the AI message and its corresponding tool message
-                      indicesToRemove.add(i);
-                      indicesToRemove.add(toolIndex);
-                      currentTokenCount -= (tokenCounter(msgToRemove) + tokenCounter(context[toolIndex]));
-                      canRemove = false;
-                      break;
-                    }
-                  }
-                }
-              }
-              
-              // If we can remove this message individually
-              if (canRemove && !indicesToRemove.has(i)) {
-                indicesToRemove.add(i);
-                currentTokenCount -= tokenCounter(msgToRemove);
-              }
-              
-              i--;
-            }
-            
-            // Remove messages in reverse order to avoid index shifting
-            const sortedIndices = Array.from(indicesToRemove).sort((a, b) => b - a);
-            for (const index of sortedIndices) {
-              context.splice(index, 1);
-            }
-            
-            // Update remainingContextTokens to reflect the new token count
-            remainingContextTokens = maxContextTokens - currentTokenCount;
-          }
-        }
+      if (requiredTypeIndex > 0) {
+        context = context.slice(requiredTypeIndex);
       }
     }
     
-    // If the latest message is an assistant message, ensure an assistant message with thinking appears at the end
-    // of the context (which will become the beginning after reversal)
-    // but maintain system message precedence after reversal
-    if (latestMessageIsAssistant && context.length > 0) {
-      // Find assistant messages with thinking blocks
-      const assistantIndices: number[] = [];
-      for (let i = 0; i < context.length; i++) {
-        const msg = context[i];
-        if (msg.getType() === 'ai') {
-          const hasThinking = Array.isArray(msg.content) && 
-            msg.content.some(item => item && typeof item === 'object' && item.type === 'thinking');
-          
-          if (hasThinking) {
-            assistantIndices.push(i);
-          }
-        }
-      }
-      
-      // If we found assistant messages with thinking blocks
-      if (assistantIndices.length > 0) {
-        // Get the first assistant message with thinking
-        const assistantWithThinkingIndex = assistantIndices[0];
-        const assistantWithThinking = context[assistantWithThinkingIndex];
-        
-        // Remove it from its current position
-        context.splice(assistantWithThinkingIndex, 1);
-        
-        // Check if there's a system message in the context
-        const systemIndex = context.findIndex(msg => msg.getType() === 'system');
-        const hasSystem = systemIndex !== -1;
-        
-        if (hasSystem) {
-          // We want the system message to be first after reversal
-          // This means we need to put it at the end position before reversal
-          // And the assistant message should be second after reversal
-          // This means we need to put it at the end - 1 position before reversal
-          
-          // First, ensure the system message is at the end (will be first after reversal)
-          const systemMsg = context[systemIndex];
-          context.splice(systemIndex, 1);
-          context.push(systemMsg);
-          
-          // Then, put the assistant message right before the system message (will be second after reversal)
-          context.splice(context.length - 1, 0, assistantWithThinking);
-        } else {
-          // No system message, so we want assistant to be first after reversal
-          // This means we need to put it at the end position before reversal
-          context.push(assistantWithThinking);
-        }
-      }
+    // Add system message if it exists
+    if (instructions && _messages.length > 0) {
+      context.push(_messages[0] as BaseMessage);
+      messages.shift();
     }
-  }
   }
 
   const prunedMemory = messages;
@@ -371,7 +155,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       }
     }
 
-    // If `currentUsage` is defined, we need to distribute the current total tokensto our `indexTokenCountMap`,
+    // If `currentUsage` is defined, we need to distribute the current total tokens to our `indexTokenCountMap`,
     // for all message index keys before `lastTurnStartIndex`, as it has the most accurate count for those messages.
     // We must distribute it in a weighted manner, so that the total token count is equal to `currentUsage.total_tokens`,
     // relative the manually counted tokens in `indexTokenCountMap`.
@@ -388,16 +172,121 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       return { context: params.messages, indexTokenCountMap };
     }
 
-    // Pass the tokenCounter to getMessagesWithinTokenLimit for token recalculation
-    const { context } = getMessagesWithinTokenLimit({
+    // Get the standard pruned context first
+    const result = getMessagesWithinTokenLimit({
       maxContextTokens: factoryParams.maxTokens,
       messages: params.messages,
       indexTokenCountMap,
       startOnMessageType: params.startOnMessageType,
-      thinkingEnabled: factoryParams.thinkingEnabled,
-      tokenCounter: factoryParams.tokenCounter,
     });
-
-    return { context, indexTokenCountMap };
+    
+    // For thinking mode, we need to handle special cases
+    if (factoryParams.thinkingEnabled && result.context.length > 0) {
+      // Check if the latest message is an assistant message
+      const latestMessageIsAssistant = params.messages.length > 0 && 
+        params.messages[params.messages.length - 1].getType() === 'ai';
+      
+      // Get system message if it exists
+      const systemMessage = result.context.find(msg => msg.getType() === 'system');
+      
+      // Find assistant messages with thinking blocks
+      let assistantWithThinking: BaseMessage | undefined;
+      for (const msg of result.context) {
+        if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
+          const hasThinking = msg.content.some(item => 
+            item && typeof item === 'object' && item.type === 'thinking');
+          
+          if (hasThinking) {
+            assistantWithThinking = msg;
+            break;
+          }
+        }
+      }
+      
+      // Always try to add thinking blocks to the first assistant message
+      // Find the first assistant message in the context
+      const firstAssistantIndex = result.context.findIndex(msg => msg.getType() === 'ai');
+      
+      if (firstAssistantIndex !== -1) {
+        const firstAssistantMsg = result.context[firstAssistantIndex];
+        
+        // Check if it already has a thinking block
+        const hasThinking = Array.isArray(firstAssistantMsg.content) && 
+          firstAssistantMsg.content.some(item => 
+            item && typeof item === 'object' && item.type === 'thinking');
+        
+        if (!hasThinking) {
+          // Look for thinking blocks in the original messages
+          let thinkingBlock: any = undefined;
+          for (const msg of params.messages) {
+            if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
+              const block = msg.content.find(item => 
+                item && typeof item === 'object' && item.type === 'thinking');
+              
+              if (block) {
+                thinkingBlock = block;
+                break;
+              }
+            }
+          }
+          
+          if (thinkingBlock) {
+            // Create a new content array with thinking block
+            let newContent: any[];
+            
+            if (Array.isArray(firstAssistantMsg.content)) {
+              newContent = [thinkingBlock, ...firstAssistantMsg.content];
+            } else if (typeof firstAssistantMsg.content === 'string') {
+              newContent = [
+                thinkingBlock,
+                { type: 'text', text: firstAssistantMsg.content }
+              ];
+            } else {
+              newContent = [thinkingBlock];
+            }
+            
+            // Create a new message with the updated content
+            const newAssistantMsg = new AIMessage({
+              content: newContent,
+              additional_kwargs: firstAssistantMsg.additional_kwargs,
+              response_metadata: firstAssistantMsg.response_metadata,
+            });
+            
+            // Replace the first assistant message
+            result.context[firstAssistantIndex] = newAssistantMsg;
+            assistantWithThinking = newAssistantMsg;
+          }
+        }
+      }
+      
+      // If we have an assistant message with thinking, ensure it appears at the beginning
+      if (assistantWithThinking) {
+        // Create a new context array with the correct order
+        const newContext: BaseMessage[] = [];
+        
+        // Add system message first if it exists
+        if (systemMessage) {
+          newContext.push(systemMessage);
+        }
+        
+        // Add assistant message with thinking next
+        newContext.push(assistantWithThinking);
+        
+        // Add all other messages except system and assistant with thinking
+        for (const msg of result.context) {
+          if (msg !== systemMessage && msg !== assistantWithThinking) {
+            newContext.push(msg);
+          }
+        }
+        
+        // Replace the context array
+        result.context = newContext;
+      }
+      
+      return { context: result.context, indexTokenCountMap };
+    }
+    
+    // If thinking mode is not enabled, just return the standard result
+    return { context: result.context || [], indexTokenCountMap };
   }
 }
