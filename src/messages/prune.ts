@@ -49,10 +49,13 @@ export function getMessagesWithinTokenLimit({
   indexTokenCountMap,
   startOnMessageType,
   thinkingEnabled,
+  /** We may need to use this when recalculating */
+  tokenCounter,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
+  tokenCounter: TokenCounter;
   startOnMessageType?: string;
   thinkingEnabled?: boolean;
 }): {
@@ -289,6 +292,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       indexTokenCountMap,
       startOnMessageType: params.startOnMessageType,
       thinkingEnabled: factoryParams.thinkingEnabled,
+      tokenCounter: factoryParams.tokenCounter,
     });
 
     return { context, indexTokenCountMap };
