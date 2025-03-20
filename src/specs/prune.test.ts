@@ -65,12 +65,12 @@ function getMessagesWithinTokenLimit({
   messages: _messages,
   maxContextTokens,
   indexTokenCountMap,
-  startOnMessageType,
+  startType,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
-  startOnMessageType?: string;
+  startType?: string;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -108,9 +108,9 @@ function getMessagesWithinTokenLimit({
       }
     }
     
-    // If startOnMessageType is specified, discard messages until we find one of the required type
-    if (startOnMessageType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+    // If startType is specified, discard messages until we find one of the required type
+    if (startType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startType);
       
       if (requiredTypeIndex > 0) {
         // If we found a message of the required type, discard all messages before it
@@ -277,7 +277,7 @@ describe('Prune Messages Tests', () => {
       expect(result.messagesToRefine.length).toBe(2);
     });
 
-    it('should start context with a specific message type when startOnMessageType is specified', () => {
+    it('should start context with a specific message type when startType is specified', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new AIMessage('AI message 1'),
@@ -299,7 +299,7 @@ describe('Prune Messages Tests', () => {
         messages,
         maxContextTokens: 100,
         indexTokenCountMap,
-        startOnMessageType: 'human'
+        startType: 'human'
       });
       
       // All messages should be included since we're under the token limit
@@ -332,7 +332,7 @@ describe('Prune Messages Tests', () => {
         messages,
         maxContextTokens: 100,
         indexTokenCountMap,
-        startOnMessageType: 'human'
+        startType: 'human'
       });
       
       // Should include all messages since no human messages exist to start from
@@ -430,7 +430,7 @@ describe('Prune Messages Tests', () => {
       expect(result.context[2]).toBe(messages[4]); // Response 2
     });
 
-    it('should respect startOnMessageType parameter', () => {
+    it('should respect startType parameter', () => {
       const tokenCounter = createTestTokenCounter();
       const messages = [
         new SystemMessage('System instruction'),
@@ -458,7 +458,7 @@ describe('Prune Messages Tests', () => {
       
       const result = pruneMessages({ 
         messages,
-        startOnMessageType: 'human'
+        startType: 'human'
       });
       
       // All messages should be included since we're under the token limit
