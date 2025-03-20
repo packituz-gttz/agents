@@ -156,6 +156,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
               });
             }
           } catch (e) {
+            console.error('Error parsing input:', e);
             if (extendedItem.input) {
               acc.push({ type: 'text', text: extendedItem.input });
             }

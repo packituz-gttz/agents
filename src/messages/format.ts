@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ToolMessage, BaseMessage , HumanMessage, AIMessage, SystemMessage, getBufferString } from '@langchain/core/messages';
 import type { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
@@ -93,6 +94,7 @@ export const formatMessage = ({
   endpoint,
   langChain = false
 }: FormatMessageParams): FormattedMessage | HumanMessage | AIMessage | SystemMessage => {
+  // eslint-disable-next-line prefer-const
   let { role: _role, _name, sender, text, content: _content, lc_id } = message;
   if (lc_id && lc_id[2] && !langChain) {
     const roleMapping: Record<string, string> = {
@@ -102,7 +104,7 @@ export const formatMessage = ({
     };
     _role = roleMapping[lc_id[2]] || _role;
   }
-  const role = _role ?? (sender && sender.toLowerCase() === 'user' ? 'user' : 'assistant');
+  const role = _role ?? (sender != null && sender && sender.toLowerCase() === 'user' ? 'user' : 'assistant');
   const content = _content ?? text ?? '';
   const formattedMessage: FormattedMessage = {
     role,
@@ -121,19 +123,19 @@ export const formatMessage = ({
     });
   }
 
-  if (_name) {
+  if (_name != null && _name) {
     formattedMessage.name = _name;
   }
 
-  if (userName && formattedMessage.role === 'user') {
+  if (userName != null && userName && formattedMessage.role === 'user') {
     formattedMessage.name = userName;
   }
 
-  if (assistantName && formattedMessage.role === 'assistant') {
+  if (assistantName != null && assistantName && formattedMessage.role === 'assistant') {
     formattedMessage.name = assistantName;
   }
 
-  if (formattedMessage.name) {
+  if (formattedMessage.name != null && formattedMessage.name) {
     // Conform to API regex: ^[a-zA-Z0-9_-]{1,64}$
     // https://community.openai.com/t/the-format-of-the-name-field-in-the-documentation-is-incorrect/175684/2
     formattedMessage.name = formattedMessage.name.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -251,6 +253,7 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
             args = JSON.parse(_args);
           }
         } catch (e) {
+          console.error('Failed to parse args:', e);
           if (typeof _args === 'string') {
             args = { input: _args };
           }

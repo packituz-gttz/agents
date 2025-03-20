@@ -56,12 +56,13 @@ export type RunStep = {
   index: number; // #new
   stepIndex?: number; // #new
   stepDetails: StepDetails;
-  usage?: null | {
+  usage?: null | object;
+  // {
     // Define usage structure if it's ever non-null
     // prompt_tokens: number; // #new
     // completion_tokens: number; // #new
     // total_tokens: number; // #new
-  };
+  // };
 };
 
 /**
@@ -285,7 +286,7 @@ export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ToolCal
 export interface TMessage {
   role?: string;
   content?: MessageContentComplex[] | string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type TPayload = Array<Partial<TMessage>>;

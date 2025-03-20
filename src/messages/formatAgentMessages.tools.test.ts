@@ -1,4 +1,4 @@
-import { HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { TPayload } from '@/types';
 import { formatAgentMessages } from './format';
 import { ContentTypes } from '@/common';

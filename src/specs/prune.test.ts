@@ -5,17 +5,17 @@ import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
-import { GraphEvents, Providers } from '@/common';
-import { getLLMConfig } from '@/utils/llmConfig';
-import { Run } from '@/run';
 import { createPruneMessages } from '@/messages/prune';
+import { getLLMConfig } from '@/utils/llmConfig';
+import { Providers } from '@/common';
+import { Run } from '@/run';
 
 // Create a simple token counter for testing
 const createTestTokenCounter = (): t.TokenCounter => {
   // This simple token counter just counts characters as tokens for predictable testing
   return (message: BaseMessage): number => {
     // Use type assertion to help TypeScript understand the type
-    const content = message.content as string | Array<any> | undefined;
+    const content = message.content as string | Array<t.MessageContentComplex | string> | undefined;
 
     // Handle string content
     if (typeof content === 'string') {
@@ -29,7 +29,7 @@ const createTestTokenCounter = (): t.TokenCounter => {
       for (const item of content) {
         if (typeof item === 'string') {
           totalLength += item.length;
-        } else if (item && typeof item === 'object') {
+        } else if (typeof item === 'object') {
           if ('text' in item && typeof item.text === 'string') {
             totalLength += item.text.length;
           }

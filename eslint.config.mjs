@@ -25,6 +25,9 @@ export default defineConfig([globalIgnores([
     "**/*.mjs",
     "src/proto/",
     "src/scripts/",
+    "types/**/*",
+    "./script_docs.ts",
+    "./src/llm/anthropic/llm.spec.ts",
 ]), {
     extends: fixupConfigRules(compat.extends(
         "eslint:recommended",

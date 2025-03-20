@@ -15,7 +15,7 @@ export type PruneMessagesParams = {
   startType?: ReturnType<BaseMessage['getType']>;
 }
 
-function isIndexInContext(arrayA: any[], arrayB: any[], targetIndex: number): boolean {
+function isIndexInContext(arrayA: BaseMessage[], arrayB: BaseMessage[], targetIndex: number): boolean {
   const startingIndexInA = arrayA.length - arrayB.length;
   return targetIndex >= startingIndexInA;
 }

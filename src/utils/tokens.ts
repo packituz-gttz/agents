@@ -5,7 +5,7 @@ import { ContentTypes } from '@/common/enum';
 export function getTokenCountForMessage(message: BaseMessage, getTokenCount: (text: string) => number): number {
   const tokensPerMessage = 3;
 
-  const processValue = (value: unknown) => {
+  const processValue = (value: unknown): void => {
     if (Array.isArray(value)) {
       for (const item of value) {
         if (
@@ -61,10 +61,10 @@ export const createTokenCounter = async () => {
   const res = await fetch('https://tiktoken.pages.dev/js/o200k_base.json');
   const o200k_base = await res.json();
 
-  const countTokens = (text: string) => {
+  const countTokens = (text: string): number => {
     const enc = new Tiktoken(o200k_base);
     return enc.encode(text).length;
   };
 
-  return (message: BaseMessage) => getTokenCountForMessage(message, countTokens);
+  return (message: BaseMessage): number => getTokenCountForMessage(message, countTokens);
 };
