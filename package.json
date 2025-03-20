@@ -66,7 +66,7 @@
     "test": "jest",
     "reinstall": "npm run clean && npm ci && rm -rf ./dist && npm run build",
     "re": "bun run clean && bun install && rm -rf ./dist && turbo build",
-    "lint": "eslint . --ext .js,.ts --fix",
+    "lint": "eslint \"{,!(node_modules|venv)/**/}*.{js,jsx,ts,tsx}\" --fix",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -104,6 +104,7 @@
     "~/*": "./*"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.2.7",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-json": "^6.1.0",
@@ -116,7 +117,7 @@
     "@types/yargs-parser": "^21.0.3",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
     "@typescript-eslint/parser": "^8.24.0",
-    "eslint": "^9.20.1",
+    "eslint": "^9.22.0",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-import": "^2.31.0",
     "husky": "^9.1.7",
