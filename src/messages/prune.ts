@@ -1,3 +1,4 @@
+import { AIMessage } from '@langchain/core/messages';
 import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { TokenCounter } from '@/types/run';
 export type PruneMessagesFactoryParams = {
@@ -5,6 +6,7 @@ export type PruneMessagesFactoryParams = {
   startIndex: number;
   tokenCounter: TokenCounter;
   indexTokenCountMap: Record<string, number>;
+  thinkingEnabled?: boolean;
 };
 export type PruneMessagesParams = {
   messages: BaseMessage[];
@@ -45,11 +47,15 @@ function getMessagesWithinTokenLimit({
   maxContextTokens,
   indexTokenCountMap,
   startOnMessageType,
+  thinkingEnabled,
+  tokenCounter,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
   startOnMessageType?: string;
+  thinkingEnabled?: boolean;
+  tokenCounter?: TokenCounter;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -87,13 +93,102 @@ function getMessagesWithinTokenLimit({
       }
     }
     
-    if (startOnMessageType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+  // Handle startOnMessageType requirement
+  if (startOnMessageType && context.length > 0) {
+    const requiredTypeIndex = context.findIndex(msg => msg.getType() === startOnMessageType);
+    
+    if (requiredTypeIndex > 0) {
+      context = context.slice(requiredTypeIndex);
+    }
+  }
+  
+  // Handle thinking mode requirement for Anthropic
+  if (thinkingEnabled && context.length > 0 && tokenCounter) {
+    // Process only if we have an assistant message in the context
+    const firstAssistantIndex = context.findIndex(msg => msg.getType() === 'ai');
+    if (firstAssistantIndex >= 0) {
+      const firstAssistantMsg = context[firstAssistantIndex];
       
-      if (requiredTypeIndex > 0) {
-        context = context.slice(requiredTypeIndex);
+      // Check if the first assistant message already has a thinking block
+      const hasThinkingBlock = Array.isArray(firstAssistantMsg.content) && 
+        firstAssistantMsg.content.some(item => 
+          item && typeof item === 'object' && item.type === 'thinking');
+      
+      // Only proceed if we need to add thinking blocks
+      if (!hasThinkingBlock) {
+        // Collect thinking blocks from pruned assistant messages
+        const thinkingBlocks: any[] = [];
+        
+        // Look through pruned messages for thinking blocks
+        for (const msg of messages) {
+          if (msg.getType() === 'ai' && Array.isArray(msg.content)) {
+            for (const item of msg.content) {
+              if (item && typeof item === 'object' && item.type === 'thinking') {
+                thinkingBlocks.push(item);
+                // We only need one thinking block
+                break;
+              }
+            }
+            if (thinkingBlocks.length > 0) break; // Stop after finding one thinking block
+          }
+        }
+        
+        // If we found thinking blocks, add them to the first assistant message
+        if (thinkingBlocks.length > 0) {
+          // Calculate token count of original message
+          const originalTokenCount = tokenCounter(firstAssistantMsg);
+          
+          // Create a new content array with thinking blocks at the beginning
+          let newContent: any[];
+          
+          if (Array.isArray(firstAssistantMsg.content)) {
+            // Keep the original content (excluding any existing thinking blocks)
+            const originalContent = firstAssistantMsg.content.filter(item => 
+              !(item && typeof item === 'object' && item.type === 'thinking'));
+            
+            newContent = [...thinkingBlocks, ...originalContent];
+          } else if (typeof firstAssistantMsg.content === 'string') {
+            newContent = [
+              ...thinkingBlocks,
+              { type: 'text', text: firstAssistantMsg.content }
+            ];
+          } else {
+            newContent = thinkingBlocks;
+          }
+          
+          // Create a new message with the updated content
+          const newMessage = new AIMessage({
+            content: newContent,
+            additional_kwargs: firstAssistantMsg.additional_kwargs,
+            response_metadata: firstAssistantMsg.response_metadata,
+          });
+          
+          // Calculate token count of new message
+          const newTokenCount = tokenCounter(newMessage);
+          
+          // Adjust current token count
+          currentTokenCount += (newTokenCount - originalTokenCount);
+          
+          // Replace the first assistant message
+          context[firstAssistantIndex] = newMessage;
+          
+          // If we've exceeded the token limit, we need to prune more messages
+          if (currentTokenCount > remainingContextTokens) {
+            // Remove messages from the end of the context until we're under the token limit
+            // But make sure to keep the first assistant message with thinking block
+            let i = context.length - 1;
+            while (i > firstAssistantIndex && currentTokenCount > remainingContextTokens) {
+              const msgToRemove = context[i];
+              const msgTokenCount = tokenCounter(msgToRemove);
+              context.splice(i, 1);
+              currentTokenCount -= msgTokenCount;
+              i--;
+            }
+          }
+        }
       }
     }
+  }
   }
 
   if (instructions && _messages.length > 0) {
@@ -121,6 +216,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
   const indexTokenCountMap = { ...factoryParams.indexTokenCountMap };
   let lastTurnStartIndex = factoryParams.startIndex;
   let totalTokens = (Object.values(indexTokenCountMap)).reduce((a, b) => a + b, 0);
+  
   return function pruneMessages(params: PruneMessagesParams): {
     context: BaseMessage[];
     indexTokenCountMap: Record<string, number>;
@@ -167,11 +263,14 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       return { context: params.messages, indexTokenCountMap };
     }
 
+    // Pass the tokenCounter to getMessagesWithinTokenLimit for token recalculation
     const { context } = getMessagesWithinTokenLimit({
       maxContextTokens: factoryParams.maxTokens,
       messages: params.messages,
       indexTokenCountMap,
       startOnMessageType: params.startOnMessageType,
+      thinkingEnabled: factoryParams.thinkingEnabled,
+      tokenCounter: factoryParams.tokenCounter,
     });
 
     return { context, indexTokenCountMap };
