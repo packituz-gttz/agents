@@ -168,21 +168,7 @@ export function getMessagesWithinTokenLimit({
    * More context on GENERAL pruning requirements (thinking or not):
       We should preserve AI <--> tool message correspondences when pruning, i.e.:
 
-          const assistantMessageWithToolCall = new AIMessage({
-            content: [
-              {
-                type: "text",
-                text: "Let me check that file:",
-              },
-              {
-                type: "tool_use",
-                id: "tool123",
-                name: "text_editor_mcp_textEditor",
-                input: "{\"command\": \"view\", \"path\": \"/path/to/file.txt\"}",
-              },
-            ],
-          });
-          
+          const assistantMessageWithToolCall = // message.tool_calls
           const toolResponseMessage = new ToolMessage({
             content: [
               {
@@ -193,7 +179,6 @@ export function getMessagesWithinTokenLimit({
             tool_call_id: "tool123",
             name: "text_editor_mcp_textEditor",
           });
-          
           const assistantMessageWithThinking = new AIMessage({
             content: [
               {
@@ -206,7 +191,6 @@ export function getMessagesWithinTokenLimit({
               },
             ],
           });
-          
           const messages = [
             new SystemMessage("System instruction"),
             new HumanMessage("Hello"),
@@ -216,8 +200,21 @@ export function getMessagesWithinTokenLimit({
             assistantMessageWithThinking,
           ];
 
-          Note the correspondence of IDs between the assistant message and the tool message.
-          An AI message can correspond with X tool messages following it
+          // Note the correspondence of IDs between the assistant message and the tool message.
+          // An AI message can correspond with X tool messages following it. 
+
+          // if only the following messages fit in the context:
+          const messages = [
+            toolResponseMessage,
+            new HumanMessage("Next message"),
+            assistantMessageWithThinking,
+          ];
+
+          // then it must become:
+          const messages = [
+            new HumanMessage("Next message"),
+            assistantMessageWithThinking,
+          ];
 
    LASTLY, we need to recalculate the remainingContextTokens, since we may have added a new message
    to the context or re-ordered things, making sure our manipulation of the context array is correct and remains within the context array.
