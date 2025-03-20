@@ -362,18 +362,24 @@ export class StandardGraph extends Graph<
 
       let messagesToUse = messages;
       if (!this.pruneMessages && this.tokenCounter && this.maxContextTokens && this.indexTokenCountMap[0] != null) {
+        const isAnthropicWithThinking = (
+          (this.provider === Providers.ANTHROPIC
+          || (this.provider === Providers.BEDROCK && (this.clientOptions as t.BedrockClientOptions)?.model?.includes('anthropic')))
+          && (this.clientOptions as t.AnthropicClientOptions)?.thinking != null);
+        
         this.pruneMessages = createPruneMessages({
           indexTokenCountMap: this.indexTokenCountMap,
           maxTokens: this.maxContextTokens,
           tokenCounter: this.tokenCounter,
           startIndex: this.startIndex,
+          thinkingEnabled: isAnthropicWithThinking,
         });
       }
       if (this.pruneMessages) {
         const { context, indexTokenCountMap } = this.pruneMessages({
           messages,
           usageMetadata: this.currentUsage,
-          startOnMessageType: 'human',
+          // startOnMessageType: 'human',
         });
         this.indexTokenCountMap = indexTokenCountMap;
         messagesToUse = context;

@@ -184,6 +184,9 @@ function getMessagesWithinTokenLimit({
               currentTokenCount -= msgTokenCount;
               i--;
             }
+            
+            // Update remainingContextTokens to reflect the new token count
+            remainingContextTokens = maxContextTokens - currentTokenCount;
           }
         }
       }
