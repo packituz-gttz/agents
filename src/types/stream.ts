@@ -243,7 +243,7 @@ export type ThinkingContentText = {
 export type BedrockReasoningContentText = {
   type: ContentTypes.REASONING_CONTENT;
   index?: number;
-  reasoningText: { text?: string; signature?: string; }
+  reasoningText?: { text?: string; signature?: string; }
 };
 
 /**

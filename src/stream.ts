@@ -116,7 +116,7 @@ export class ChatModelStreamHandler implements t.EventHandler {
     this.handleReasoning(chunk, graph);
 
     let hasToolCalls = false;
-    if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id)) {
+    if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id != null && tc.id !== '')) {
       hasToolCalls = true;
       handleToolCalls(chunk.tool_calls, metadata, graph);
     }
@@ -205,15 +205,19 @@ hasToolCallChunks: ${hasToolCallChunks}
           }],
         });
       }
-    } else if (content.every((c) => c.type?.startsWith(ContentTypes.TEXT))) {
+    } else if (content.every((c) => c.type?.startsWith(ContentTypes.TEXT) ?? false)) {
       graph.dispatchMessageDelta(stepId, {
         content,
       });
-    } else if (content.every((c) => c.type?.startsWith(ContentTypes.THINKING) || c.type?.startsWith(ContentTypes.REASONING_CONTENT))) {
+    } else if (content.every(
+      (c) =>
+        (c.type?.startsWith(ContentTypes.THINKING) ?? false) ||
+      (c.type?.startsWith(ContentTypes.REASONING_CONTENT) ?? false)
+    )) {
       graph.dispatchReasoningDelta(stepId, {
         content: content.map((c) => ({
           type: ContentTypes.THINK,
-          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText.text ?? '',
+          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText?.text ?? '',
         }))});
     }
   }
@@ -370,7 +374,7 @@ export function createContentAggregator(): t.ContentAggregatorResult {
     } else if (
       partType.startsWith(ContentTypes.AGENT_UPDATE) &&
       ContentTypes.AGENT_UPDATE in contentPart &&
-      contentPart.agent_update
+      contentPart.agent_update != null
     ) {
       const update: t.AgentUpdate = {
         type: ContentTypes.AGENT_UPDATE,
