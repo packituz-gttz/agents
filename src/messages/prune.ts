@@ -1,3 +1,4 @@
+import { concat } from '@langchain/core/utils/stream';
 import { AIMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { ThinkingContentText, MessageContentComplex } from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
@@ -59,7 +60,7 @@ export function getMessagesWithinTokenLimit({
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
-  indexTokenCountMap: Record<string, number>;
+  indexTokenCountMap: Record<string, number | undefined>;
   tokenCounter: TokenCounter;
   startType?: string;
   thinkingEnabled?: boolean;
@@ -72,11 +73,11 @@ export function getMessagesWithinTokenLimit({
   // start with 3 tokens for the label after all messages have been counted.
   let currentTokenCount = 3;
   const instructions = _messages[0]?.getType() === 'system' ? _messages[0] : undefined;
-  const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
+  const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] ?? 0 : 0;
   const initialContextTokens = maxContextTokens - instructionsTokenCount;
   let remainingContextTokens = initialContextTokens;
   let startType = _startType;
-
+  const originalLength = _messages.length;
   const messages = [..._messages];
   /**
    * IMPORTANT: this context array gets reversed at the end, since the latest messages get pushed first.
@@ -88,10 +89,12 @@ export function getMessagesWithinTokenLimit({
   let thinkingStartIndex = -1;
   let thinkingEndIndex = -1;
   let thinkingBlock: ThinkingContentText | undefined;
+  const endIndex = instructions != null ? 1 : 0;
+  const prunedMemory: BaseMessage[] = [];
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
-    while (messages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > 1) {
+    while (messages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > endIndex) {
       currentIndex--;
       if (messages.length === 1 && instructions) {
         break;
@@ -99,11 +102,11 @@ export function getMessagesWithinTokenLimit({
       const poppedMessage = messages.pop();
       if (!poppedMessage) continue;
       const messageType = poppedMessage.getType();
-      if (thinkingEnabled && currentIndex === (_messages.length - 1) && (messageType === 'ai') || (messageType === 'tool')) {
+      if (thinkingEnabled === true && thinkingEndIndex === -1 && (currentIndex === (originalLength - 1)) && (messageType === 'ai' || messageType === 'tool')) {
         thinkingEndIndex = currentIndex;
       }
       if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && messageType === 'ai' && Array.isArray(poppedMessage.content)) {
-        thinkingBlock = (poppedMessage.content.find((content) => content.type === ContentTypes.THINKING)) as ThinkingContentText;
+        thinkingBlock = (poppedMessage.content.find((content) => content.type === ContentTypes.THINKING)) as ThinkingContentText | undefined;
         thinkingStartIndex = thinkingBlock != null ? currentIndex : -1;
       }
       /** False start, the latest message was not part of a multi-assistant/tool sequence of messages */
@@ -115,13 +118,16 @@ export function getMessagesWithinTokenLimit({
         thinkingEndIndex = -1;
       }
 
-      const tokenCount = indexTokenCountMap[currentIndex] || 0;
+      const tokenCount = indexTokenCountMap[currentIndex] ?? 0;
 
-      if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
+      if (prunedMemory.length === 0 && ((currentTokenCount + tokenCount) <= remainingContextTokens)) {
         context.push(poppedMessage);
         currentTokenCount += tokenCount;
       } else {
-        messages.push(poppedMessage);
+        prunedMemory.push(poppedMessage);
+        if (thinkingEndIndex > -1) {
+          continue;
+        }
         break;
       }
     }
@@ -130,7 +136,7 @@ export function getMessagesWithinTokenLimit({
       startType = 'ai';
     }
 
-    if (startType && context.length > 0) {
+    if (startType != null && startType && context.length > 0) {
       const requiredTypeIndex = context.findIndex(msg => msg.getType() === startType);
 
       if (requiredTypeIndex > 0) {
@@ -139,12 +145,11 @@ export function getMessagesWithinTokenLimit({
     }
   }
 
-  if (instructions && _messages.length > 0) {
+  if (instructions && originalLength > 0) {
     context.push(_messages[0] as BaseMessage);
     messages.shift();
   }
 
-  const prunedMemory = messages;
   remainingContextTokens -= currentTokenCount;
   const result = {
     remainingContextTokens,
@@ -185,7 +190,7 @@ export function getMessagesWithinTokenLimit({
     throw new Error('The payload is malformed. There is a thinking sequence but no "AI" messages to append thinking blocks to.');
   }
 
-  thinkingStartIndex = _messages.length - 1 - assistantIndex;
+  thinkingStartIndex = originalLength - 1 - assistantIndex;
   const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
   const newRemainingCount = remainingContextTokens - thinkingTokenCount;
 
@@ -202,9 +207,9 @@ export function getMessagesWithinTokenLimit({
     return result;
   }
 
-  const thinkingMessage = context[assistantIndex];
+  const thinkingMessage: AIMessage = context[assistantIndex];
   // now we need to an additional round of pruning but making the thinking block fit
-  const newThinkingMessageTokenCount = indexTokenCountMap[thinkingStartIndex] + thinkingTokenCount;
+  const newThinkingMessageTokenCount = (indexTokenCountMap[thinkingStartIndex] ?? 0) + thinkingTokenCount;
   remainingContextTokens = initialContextTokens - newThinkingMessageTokenCount;
   currentTokenCount = 3;
   let newContext: BaseMessage[] = [];
@@ -214,7 +219,7 @@ export function getMessagesWithinTokenLimit({
     currentIndex--;
     const poppedMessage = secondRoundMessages.pop();
     if (!poppedMessage) continue;
-    const tokenCount = indexTokenCountMap[currentIndex] || 0;
+    const tokenCount = indexTokenCountMap[currentIndex] ?? 0;
     if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
       newContext.push(poppedMessage);
       currentTokenCount += tokenCount;
@@ -224,20 +229,29 @@ export function getMessagesWithinTokenLimit({
     }
   }
 
-  if (newContext[newContext.length - 1].getType() === 'tool') {
+  const firstMessage: AIMessage = newContext[newContext.length - 1];
+  const firstMessageType = newContext[newContext.length - 1].getType();
+  if (firstMessageType === 'tool') {
     startType = 'ai';
   }
 
-  if (startType && newContext.length > 0) {
+  if (startType != null && startType && newContext.length > 0) {
     const requiredTypeIndex = newContext.findIndex(msg => msg.getType() === startType);
     if (requiredTypeIndex > 0) {
       newContext = newContext.slice(requiredTypeIndex);
     }
   }
 
-  newContext.push(thinkingMessage);
+  if (firstMessageType === 'ai') {
+    newContext[newContext.length - 1] = new AIMessage({
+      content: concat(thinkingMessage.content as MessageContentComplex[], newContext[newContext.length - 1].content as MessageContentComplex[]),
+      tool_calls: concat(firstMessage.tool_calls, thinkingMessage.tool_calls),
+    });
+  } else {
+    newContext.push(thinkingMessage);
+  }
 
-  if (instructions && _messages.length > 0) {
+  if (instructions && originalLength > 0) {
     newContext.push(_messages[0] as BaseMessage);
     secondRoundMessages.shift();
   }
@@ -275,8 +289,10 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
 
     for (let i = lastTurnStartIndex; i < params.messages.length; i++) {
       const message = params.messages[i];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (i === lastTurnStartIndex && indexTokenCountMap[i] === undefined && currentUsage) {
         indexTokenCountMap[i] = currentUsage.output_tokens;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       } else if (indexTokenCountMap[i] === undefined) {
         indexTokenCountMap[i] = factoryParams.tokenCounter(message);
         totalTokens += indexTokenCountMap[i];
