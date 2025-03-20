@@ -69,6 +69,11 @@ export function getMessagesWithinTokenLimit({
   let remainingContextTokens = initialContextTokens;
 
   const messages = [..._messages];
+  /**
+   * IMPORTANT: this context array gets reversed at the end, since the latest messages get pushed first.
+   * 
+   * This may be confusing to read, but it is done to ensure the context is in the correct order for the model.
+   * */
   let context: BaseMessage[] = [];
 
   let thinkingStartIndex = -1;
@@ -123,19 +128,100 @@ export function getMessagesWithinTokenLimit({
   const prunedMemory = messages;
   remainingContextTokens -= currentTokenCount;
   // 
-  // Edge cases:
-  // * We need to ensure a thinking sequence starts and ends with an assistant message.
-  // * We have a thinking sequence (denoted by valid `thinkingEndIndex`), but no `thinkingStartIndex`
-  //   * Need to find the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
-  // * We have no thinking block (none encountered in the passed `_messages` array)
-  //   * Need to "create" thinking block one based off the first human message encountered in `prunedMemory` array, starting from the start of the array.
-  // * We have a thinking sequence but no "last" assistant message is found in `context` array from the earlier case
-  //   * Need to create one, including the thinking block in its content array that we found or create.
-  // * It's possible our `thinkingStartIndex` falls outside the `context` array, so we need to check for that.
-  //   *  If so, we need to add the thinking block to the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
 
-  const currentContext = context.reverse();
 
+  /**
+  * Edge cases:
+    * We need to ensure a thinking sequence starts and ends with an assistant message.
+    * We have a thinking sequence (denoted by valid `thinkingEndIndex`), but no `thinkingStartIndex`
+      * Need to find the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
+    * We have no thinking block (none encountered in the passed `_messages` array)
+      * Need to "create" thinking block one based off the first human message encountered in `prunedMemory` array, starting from the start of the array.
+    * We have a thinking sequence but no "last" assistant message is found in `context` array from the earlier case
+      * Need to create one, including the thinking block in its content array that we found or create.
+    * It's possible our `thinkingStartIndex` falls outside the `context` array, so we need to check for that.
+      *  If so, we need to add the thinking block to the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
+    * More context on thinking block requirements:
+    *  The thinking block requirement is not strictly about the "first assistant message" in the context, but rather about the latest sequence of assistant/tool messages.
+
+    In other words, if we have a sequence of messages like:
+
+      1. Assistant message (with tool use)
+      2. Tool message
+      3. Human message
+      4. Assistant message (with tool use)
+      5. Tool message
+      6. Assistant message (with tool use)
+      7. Tool message
+      8. Assistant message (with thinking block)
+
+      Then we need to ensure that one of the assistant messages in this latest sequence (messages 4-8)
+      has a thinking block. It doesn't have to be the very first assistant message in the context
+      but it should be one of the assistant messages in the latest sequence of interactions.
+
+      Note, at this point, the context array would like this if all those example messages fit into the current context token window:
+      - 8 (Assistant message with thinking block), 7 (Tool), 6 (etc.), 5, 4, 3, 2, 1
+
+   * More context on GENERAL pruning requirements (thinking or not):
+      We should preserve AI <--> tool message correspondences when pruning, i.e.:
+
+          const assistantMessageWithToolCall = new AIMessage({
+            content: [
+              {
+                type: "text",
+                text: "Let me check that file:",
+              },
+              {
+                type: "tool_use",
+                id: "tool123",
+                name: "text_editor_mcp_textEditor",
+                input: "{\"command\": \"view\", \"path\": \"/path/to/file.txt\"}",
+              },
+            ],
+          });
+          
+          const toolResponseMessage = new ToolMessage({
+            content: [
+              {
+                type: "text",
+                text: "{\"success\":true,\"message\":\"File content\"}",
+              },
+            ],
+            tool_call_id: "tool123",
+            name: "text_editor_mcp_textEditor",
+          });
+          
+          const assistantMessageWithThinking = new AIMessage({
+            content: [
+              {
+                type: "thinking",
+                thinking: "This is a thinking block",
+              },
+              {
+                type: "text",
+                text: "Response with thinking",
+              },
+            ],
+          });
+          
+          const messages = [
+            new SystemMessage("System instruction"),
+            new HumanMessage("Hello"),
+            assistantMessageWithToolCall,
+            toolResponseMessage,
+            new HumanMessage("Next message"),
+            assistantMessageWithThinking,
+          ];
+
+          Note the correspondence of IDs between the assistant message and the tool message.
+          An AI message can correspond with X tool messages following it
+
+   LASTLY, we need to recalculate the remainingContextTokens, since we may have added a new message
+   to the context or re-ordered things, making sure our manipulation of the context array is correct and remains within the context array.
+   In order to add thinking block when required, we should prioritize its insertion over the token count of subsequent content blocks and/or whole messages
+
+   * 
+   */
   return {
     remainingContextTokens,
     context: context.reverse(),
