@@ -1,5 +1,7 @@
 import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
+import type { ThinkingContentText } from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
+import { ContentTypes } from '@/common';
 export type PruneMessagesFactoryParams = {
   maxTokens: number;
   startIndex: number;
@@ -46,11 +48,13 @@ export function getMessagesWithinTokenLimit({
   maxContextTokens,
   indexTokenCountMap,
   startOnMessageType,
+  thinkingEnabled,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number>;
   startOnMessageType?: string;
+  thinkingEnabled?: boolean;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -61,9 +65,15 @@ export function getMessagesWithinTokenLimit({
   let currentTokenCount = 3;
   const instructions = _messages?.[0]?.getType() === 'system' ? _messages[0] : undefined;
   const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
-  let remainingContextTokens = maxContextTokens - instructionsTokenCount;
+  const initialContextTokens = maxContextTokens - instructionsTokenCount;
+  let remainingContextTokens = initialContextTokens;
+
   const messages = [..._messages];
   let context: BaseMessage[] = [];
+
+  let thinkingStartIndex = -1;
+  let thinkingEndIndex = -1;
+  let thinkingBlock: ThinkingContentText | undefined;
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
@@ -74,6 +84,16 @@ export function getMessagesWithinTokenLimit({
       }
       const poppedMessage = messages.pop();
       if (!poppedMessage) continue;
+      if (thinkingEnabled && currentIndex === (messages.length - 1) && (poppedMessage.getType() === 'ai') || (poppedMessage.getType() === 'tool')) {
+        thinkingEndIndex = currentIndex;
+      }
+      if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && poppedMessage.getType() === 'ai' && Array.isArray(poppedMessage.content)) {
+        thinkingBlock = (poppedMessage.content.find((content) => content.type === ContentTypes.THINKING)) as ThinkingContentText;
+        thinkingStartIndex = thinkingBlock != null ? currentIndex : -1;
+      }
+      if (thinkingEndIndex > -1 && thinkingStartIndex === -1 && thinkingEndIndex !== currentIndex && poppedMessage.getType() === 'human') {
+        thinkingStartIndex = currentIndex + 1;
+      }
       
       const tokenCount = indexTokenCountMap[currentIndex] || 0;
 
@@ -102,6 +122,19 @@ export function getMessagesWithinTokenLimit({
 
   const prunedMemory = messages;
   remainingContextTokens -= currentTokenCount;
+  // 
+  // Edge cases:
+  // * We need to ensure a thinking sequence starts and ends with an assistant message.
+  // * We have a thinking sequence (denoted by valid `thinkingEndIndex`), but no `thinkingStartIndex`
+  //   * Need to find the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
+  // * We have no thinking block (none encountered in the passed `_messages` array)
+  //   * Need to "create" thinking block one based off the first human message encountered in `prunedMemory` array, starting from the start of the array.
+  // * We have a thinking sequence but no "last" assistant message is found in `context` array from the earlier case
+  //   * Need to create one, including the thinking block in its content array that we found or create.
+  // * It's possible our `thinkingStartIndex` falls outside the `context` array, so we need to check for that.
+  //   *  If so, we need to add the thinking block to the "last" assistant message in `context` array, starting from the end (so the first we encounter starting from the end)
+
+  const currentContext = context.reverse();
 
   return {
     remainingContextTokens,
@@ -169,6 +202,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       messages: params.messages,
       indexTokenCountMap,
       startOnMessageType: params.startOnMessageType,
+      thinkingEnabled: factoryParams.thinkingEnabled,
     });
 
     return { context, indexTokenCountMap };
