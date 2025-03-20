@@ -498,11 +498,11 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     }
   });
   
-  it('should ensure an assistant message appears early in the context when the latest message is an assistant message', () => {
+  it('should ensure an assistant message with thinking appears at the beginning of the context when the latest message is an assistant message', () => {
     // Create a token counter
     const tokenCounter = createTestTokenCounter();
     
-    // Create messages with the latest message being an assistant message
+    // Create messages with the latest message being an assistant message with thinking
     const assistantMessageWithThinking = new AIMessage({
       content: [
         {
@@ -516,12 +516,41 @@ describe('Prune Messages with Thinking Mode Tests', () => {
       ],
     });
     
+    // Create an assistant message with tool use
+    const assistantMessageWithToolUse = new AIMessage({
+      content: [
+        {
+          type: "text",
+          text: "Let me check that file:",
+        },
+        {
+          type: "tool_use",
+          id: "tool123",
+          name: "text_editor_mcp_textEditor",
+          input: "{\"command\": \"view\", \"path\": \"/path/to/file.txt\"}",
+        },
+      ],
+    });
+    
+    // Create a tool response message
+    const toolResponseMessage = new ToolMessage({
+      content: [
+        {
+          type: "text",
+          text: "{\"success\":true,\"message\":\"File content\"}",
+        },
+      ],
+      tool_call_id: "tool123",
+      name: "text_editor_mcp_textEditor",
+    });
+    
     // Test case without system message
     const messagesWithoutSystem = [
       new HumanMessage("Hello"),
-      new AIMessage("First assistant response"),
+      assistantMessageWithToolUse,
+      toolResponseMessage,
       new HumanMessage("Next message"),
-      assistantMessageWithThinking, // Latest message is an assistant message
+      assistantMessageWithThinking, // Latest message is an assistant message with thinking
     ];
     
     // Calculate token counts for each message
@@ -532,7 +561,7 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     
     // Create pruneMessages function with thinking mode enabled
     const pruneMessagesWithoutSystem = createPruneMessages({
-      maxTokens: 60, // Set a lower token limit to force more pruning
+      maxTokens: 100, // Set a token limit to force some pruning
       startIndex: 0,
       tokenCounter,
       indexTokenCountMap: { ...indexTokenCountMapWithoutSystem },
@@ -542,17 +571,25 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     // Prune messages
     const resultWithoutSystem = pruneMessagesWithoutSystem({ messages: messagesWithoutSystem });
     
-    // Verify that the first message in the pruned context is an assistant message when no system message
+    // Verify that the first message in the pruned context is an assistant message with thinking when no system message
     expect(resultWithoutSystem.context.length).toBeGreaterThan(0);
     expect(resultWithoutSystem.context[0].getType()).toBe('ai');
+    
+    // Verify that the first message has a thinking block
+    const firstMsgContent = resultWithoutSystem.context[0].content as any[];
+    expect(Array.isArray(firstMsgContent)).toBe(true);
+    const hasThinkingBlock = firstMsgContent.some(item => 
+      item && typeof item === 'object' && item.type === 'thinking');
+    expect(hasThinkingBlock).toBe(true);
     
     // Test case with system message
     const messagesWithSystem = [
       new SystemMessage("System instruction"),
       new HumanMessage("Hello"),
-      new AIMessage("First assistant response"),
+      assistantMessageWithToolUse,
+      toolResponseMessage,
       new HumanMessage("Next message"),
-      assistantMessageWithThinking, // Latest message is an assistant message
+      assistantMessageWithThinking, // Latest message is an assistant message with thinking
     ];
     
     // Calculate token counts for each message
@@ -563,7 +600,7 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     
     // Create pruneMessages function with thinking mode enabled
     const pruneMessagesWithSystem = createPruneMessages({
-      maxTokens: 70, // Set a token limit to force some pruning but keep system message
+      maxTokens: 120, // Set a token limit to force some pruning but keep system message
       startIndex: 0,
       tokenCounter,
       indexTokenCountMap: { ...indexTokenCountMapWithSystem },
@@ -573,10 +610,17 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     // Prune messages
     const resultWithSystem = pruneMessagesWithSystem({ messages: messagesWithSystem });
     
-    // Verify that the system message remains first, followed by an assistant message
+    // Verify that the system message remains first, followed by an assistant message with thinking
     expect(resultWithSystem.context.length).toBeGreaterThan(1);
     expect(resultWithSystem.context[0].getType()).toBe('system');
     expect(resultWithSystem.context[1].getType()).toBe('ai');
+    
+    // Verify that the second message has a thinking block
+    const secondMsgContent = resultWithSystem.context[1].content as any[];
+    expect(Array.isArray(secondMsgContent)).toBe(true);
+    const hasThinkingBlockInSecond = secondMsgContent.some(item => 
+      item && typeof item === 'object' && item.type === 'thinking');
+    expect(hasThinkingBlockInSecond).toBe(true);
   });
   
   it('should look for thinking blocks starting from the most recent messages', () => {

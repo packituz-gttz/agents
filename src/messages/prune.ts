@@ -267,25 +267,54 @@ function getMessagesWithinTokenLimit({
       }
     }
     
-    // If the latest message is an assistant message, ensure an assistant message appears early in the context
-    // but maintain system message precedence
+    // If the latest message is an assistant message, ensure an assistant message with thinking appears at the end
+    // of the context (which will become the beginning after reversal)
+    // but maintain system message precedence after reversal
     if (latestMessageIsAssistant && context.length > 0) {
-      // Find the first assistant message in the context
-      const assistantIndex = context.findIndex(msg => msg.getType() === 'ai');
-      if (assistantIndex > 0) {
-        // Check if there's a system message at the beginning
-        const hasSystemFirst = context[0].getType() === 'system';
+      // Find assistant messages with thinking blocks
+      const assistantIndices: number[] = [];
+      for (let i = 0; i < context.length; i++) {
+        const msg = context[i];
+        if (msg.getType() === 'ai') {
+          const hasThinking = Array.isArray(msg.content) && 
+            msg.content.some(item => item && typeof item === 'object' && item.type === 'thinking');
+          
+          if (hasThinking) {
+            assistantIndices.push(i);
+          }
+        }
+      }
+      
+      // If we found assistant messages with thinking blocks
+      if (assistantIndices.length > 0) {
+        // Get the first assistant message with thinking
+        const assistantWithThinkingIndex = assistantIndices[0];
+        const assistantWithThinking = context[assistantWithThinkingIndex];
         
-        // Move the assistant message to the appropriate position
-        const assistantMsg = context[assistantIndex];
-        context.splice(assistantIndex, 1);
+        // Remove it from its current position
+        context.splice(assistantWithThinkingIndex, 1);
         
-        if (hasSystemFirst) {
-          // Insert after the system message
-          context.splice(1, 0, assistantMsg);
+        // Check if there's a system message in the context
+        const systemIndex = context.findIndex(msg => msg.getType() === 'system');
+        const hasSystem = systemIndex !== -1;
+        
+        if (hasSystem) {
+          // We want the system message to be first after reversal
+          // This means we need to put it at the end position before reversal
+          // And the assistant message should be second after reversal
+          // This means we need to put it at the end - 1 position before reversal
+          
+          // First, ensure the system message is at the end (will be first after reversal)
+          const systemMsg = context[systemIndex];
+          context.splice(systemIndex, 1);
+          context.push(systemMsg);
+          
+          // Then, put the assistant message right before the system message (will be second after reversal)
+          context.splice(context.length - 1, 0, assistantWithThinking);
         } else {
-          // Insert at the beginning if no system message
-          context.unshift(assistantMsg);
+          // No system message, so we want assistant to be first after reversal
+          // This means we need to put it at the end position before reversal
+          context.push(assistantWithThinking);
         }
       }
     }
