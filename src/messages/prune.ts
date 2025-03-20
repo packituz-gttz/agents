@@ -1,4 +1,3 @@
-import { concat } from '@langchain/core/utils/stream';
 import { AIMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { ThinkingContentText, MessageContentComplex } from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
@@ -19,6 +18,17 @@ export type PruneMessagesParams = {
 function isIndexInContext(arrayA: BaseMessage[], arrayB: BaseMessage[], targetIndex: number): boolean {
   const startingIndexInA = arrayA.length - arrayB.length;
   return targetIndex >= startingIndexInA;
+}
+
+function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText): MessageContentComplex[] {
+  const content: MessageContentComplex[] = Array.isArray(message.content)
+    ? message.content as MessageContentComplex[]
+    : [{
+      type: ContentTypes.TEXT,
+      text: message.content,
+    }];
+  content.unshift(thinkingBlock);
+  return content;
 }
 
 /**
@@ -194,13 +204,7 @@ export function getMessagesWithinTokenLimit({
   const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
   const newRemainingCount = remainingContextTokens - thinkingTokenCount;
 
-  const content: MessageContentComplex[] = Array.isArray(context[assistantIndex].content)
-    ? context[assistantIndex].content as MessageContentComplex[]
-    : [{
-      type: ContentTypes.TEXT,
-      text: context[assistantIndex].content,
-    }];
-  content.unshift(thinkingBlock);
+  const content: MessageContentComplex[] = addThinkingBlock(context[assistantIndex] as AIMessage, thinkingBlock);
   context[assistantIndex].content = content;
   if (newRemainingCount > 0) {
     result.context = context.reverse();
@@ -243,10 +247,8 @@ export function getMessagesWithinTokenLimit({
   }
 
   if (firstMessageType === 'ai') {
-    newContext[newContext.length - 1] = new AIMessage({
-      content: concat(thinkingMessage.content as MessageContentComplex[], newContext[newContext.length - 1].content as MessageContentComplex[]),
-      tool_calls: concat(firstMessage.tool_calls, thinkingMessage.tool_calls),
-    });
+    const content = addThinkingBlock(firstMessage, thinkingBlock);
+    newContext[newContext.length - 1].content = content;
   } else {
     newContext.push(thinkingMessage);
   }
@@ -299,7 +301,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       }
     }
 
-    // If `currentUsage` is defined, we need to distribute the current total tokensto our `indexTokenCountMap`,
+    // If `currentUsage` is defined, we need to distribute the current total tokens to our `indexTokenCountMap`,
     // for all message index keys before `lastTurnStartIndex`, as it has the most accurate count for those messages.
     // We must distribute it in a weighted manner, so that the total token count is equal to `currentUsage.total_tokens`,
     // relative the manually counted tokens in `indexTokenCountMap`.
