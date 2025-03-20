@@ -61,8 +61,7 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
     try {
       prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
       prevRunStep = graph.getRunStep(prevStepId);
-    } catch (e) {
-      console.error(e);
+    } catch {
       // no previous step
     }
 
@@ -232,8 +231,7 @@ hasToolCallChunks: ${hasToolCallChunks}
     try {
       prevStepId = graph.getStepIdByKey(stepKey, graph.contentData.length - 1);
       prevRunStep = graph.getRunStep(prevStepId);
-    } catch (e) {
-      console.error(e);
+    } catch {
       /** Edge Case: If no previous step exists, create a new message creation step */
       const message_id = getMessageId(stepKey, graph, true) ?? '';
       prevStepId = graph.dispatchRunStep(stepKey, {

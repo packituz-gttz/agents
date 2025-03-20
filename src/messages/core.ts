@@ -155,8 +155,7 @@ export function formatAnthropicMessage(message: AIMessageChunk): AIMessage {
                 input: toolCall.args as unknown as string
               });
             }
-          } catch (e) {
-            console.error('Error parsing input:', e);
+          } catch {
             if (extendedItem.input) {
               acc.push({ type: 'text', text: extendedItem.input });
             }

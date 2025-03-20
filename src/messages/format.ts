@@ -252,8 +252,7 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
           if (typeof _args === 'string') {
             args = JSON.parse(_args);
           }
-        } catch (e) {
-          console.error('Failed to parse args:', e);
+        } catch {
           if (typeof _args === 'string') {
             args = { input: _args };
           }
