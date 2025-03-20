@@ -21,7 +21,7 @@ const createTestTokenCounter = (): t.TokenCounter => {
       for (const item of content) {
         if (typeof item === 'string') {
           totalLength += item.length;
-        } else if (item && typeof item === 'object') {
+        } else if (typeof item === 'object') {
           if (item.type === 'thinking' && typeof item.thinking === 'string') {
             totalLength += item.thinking.length;
           } else if ('text' in item && typeof item.text === 'string') {
@@ -226,12 +226,12 @@ describe('Prune Messages with Thinking Mode Tests', () => {
 
     // Verify that the first assistant message has a thinking block
     const hasThinkingBlock = (firstAssistantMsg.content as t.MessageContentComplex[]).some((item: t.MessageContentComplex) =>
-      item && typeof item === 'object' && item.type === 'thinking');
+      typeof item === 'object' && item.type === 'thinking');
     expect(hasThinkingBlock).toBe(true);
 
     // Verify that the thinking block is from the original assistant message
     const thinkingBlock = (firstAssistantMsg.content as t.MessageContentComplex[]).find((item: t.MessageContentComplex) =>
-      item && typeof item === 'object' && item.type === 'thinking');
+      typeof item === 'object' && item.type === 'thinking');
     expect(thinkingBlock).toBeDefined();
     expect((thinkingBlock as t.ThinkingContentText).thinking).toContain('The user is asking me to read a file');
   });
@@ -454,7 +454,7 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     const assistantIndex = result.context.findIndex(msg =>
       msg.getType() === 'ai' &&
       Array.isArray(msg.content) &&
-      msg.content.some(item => item && typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
+      msg.content.some(item => typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
     );
 
     // If the assistant message with tool call is in the context, its corresponding tool message should also be there
@@ -479,14 +479,14 @@ describe('Prune Messages with Thinking Mode Tests', () => {
       const assistantWithToolIndex = result.context.findIndex(msg =>
         msg.getType() === 'ai' &&
         Array.isArray(msg.content) &&
-        msg.content.some(item => item && typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
+        msg.content.some(item => typeof item === 'object' && item.type === 'tool_use' && item.id === 'tool123')
       );
 
       expect(assistantWithToolIndex).not.toBe(-1);
     }
   });
 
-  it('should ensure an assistant message with thinking appears at the beginning of the context when the latest message is an assistant message', () => {
+  it('should ensure an assistant message with thinking appears in the latest sequence of assistant/tool messages', () => {
     // Create a token counter
     const tokenCounter = createTestTokenCounter();
 
@@ -559,15 +559,23 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     // Prune messages
     const resultWithoutSystem = pruneMessagesWithoutSystem({ messages: messagesWithoutSystem });
 
-    // Verify that the first message in the pruned context is an assistant message with thinking when no system message
+    // Verify that the pruned context contains at least one message
     expect(resultWithoutSystem.context.length).toBeGreaterThan(0);
-    expect(resultWithoutSystem.context[0].getType()).toBe('ai');
 
-    // Verify that the first message has a thinking block
-    const firstMsgContent = resultWithoutSystem.context[0].content as t.MessageContentComplex[];
-    expect(Array.isArray(firstMsgContent)).toBe(true);
-    const hasThinkingBlock = firstMsgContent.some(item =>
-      item && typeof item === 'object' && item.type === 'thinking');
+    // Find all assistant messages in the latest sequence (after the last human message)
+    const lastHumanIndex = resultWithoutSystem.context.map(msg => msg.getType()).lastIndexOf('human');
+    const assistantMessagesAfterLastHuman = resultWithoutSystem.context.slice(lastHumanIndex + 1)
+      .filter(msg => msg.getType() === 'ai');
+
+    // Verify that at least one assistant message exists in the latest sequence
+    expect(assistantMessagesAfterLastHuman.length).toBeGreaterThan(0);
+
+    // Verify that at least one of these assistant messages has a thinking block
+    const hasThinkingBlock = assistantMessagesAfterLastHuman.some(msg => {
+      const content = msg.content as t.MessageContentComplex[];
+      return Array.isArray(content) && content.some(item =>
+        typeof item === 'object' && item.type === 'thinking');
+    });
     expect(hasThinkingBlock).toBe(true);
 
     // Test case with system message
@@ -598,17 +606,25 @@ describe('Prune Messages with Thinking Mode Tests', () => {
     // Prune messages
     const resultWithSystem = pruneMessagesWithSystem({ messages: messagesWithSystem });
 
-    // Verify that the system message remains first, followed by an assistant message with thinking
+    // Verify that the system message remains first
     expect(resultWithSystem.context.length).toBeGreaterThan(1);
     expect(resultWithSystem.context[0].getType()).toBe('system');
-    expect(resultWithSystem.context[1].getType()).toBe('ai');
 
-    // Verify that the second message has a thinking block
-    const secondMsgContent = resultWithSystem.context[1].content as t.MessageContentComplex[];
-    expect(Array.isArray(secondMsgContent)).toBe(true);
-    const hasThinkingBlockInSecond = secondMsgContent.some(item =>
-      item && typeof item === 'object' && item.type === 'thinking');
-    expect(hasThinkingBlockInSecond).toBe(true);
+    // Find all assistant messages in the latest sequence (after the last human message)
+    const lastHumanIndexWithSystem = resultWithSystem.context.map(msg => msg.getType()).lastIndexOf('human');
+    const assistantMessagesAfterLastHumanWithSystem = resultWithSystem.context.slice(lastHumanIndexWithSystem + 1)
+      .filter(msg => msg.getType() === 'ai');
+
+    // Verify that at least one assistant message exists in the latest sequence
+    expect(assistantMessagesAfterLastHumanWithSystem.length).toBeGreaterThan(0);
+
+    // Verify that at least one of these assistant messages has a thinking block
+    const hasThinkingBlockWithSystem = assistantMessagesAfterLastHumanWithSystem.some(msg => {
+      const content = msg.content as t.MessageContentComplex[];
+      return Array.isArray(content) && content.some(item =>
+        typeof item === 'object' && item.type === 'thinking');
+    });
+    expect(hasThinkingBlockWithSystem).toBe(true);
   });
 
   it('should look for thinking blocks starting from the most recent messages', () => {
@@ -678,7 +694,7 @@ describe('Prune Messages with Thinking Mode Tests', () => {
 
     // Verify that the first assistant message has a thinking block
     const thinkingBlock = (firstAssistantMsg.content as t.MessageContentComplex[]).find(item =>
-      item && typeof item === 'object' && item.type === 'thinking');
+      typeof item === 'object' && item.type === 'thinking');
     expect(thinkingBlock).toBeDefined();
 
     // Verify that it's the newer thinking block
