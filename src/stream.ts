@@ -217,7 +217,7 @@ hasToolCallChunks: ${hasToolCallChunks}
       graph.dispatchReasoningDelta(stepId, {
         content: content.map((c) => ({
           type: ContentTypes.THINK,
-          think: (c as t.ThinkingContentText).thinking ?? (c as t.BedrockReasoningContentText).reasoningText?.text ?? '',
+          think: (c as t.ThinkingContentText).thinking ?? (c as Partial<t.BedrockReasoningContentText>).reasoningText?.text ?? '',
         }))});
     }
   }

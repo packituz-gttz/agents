@@ -69,7 +69,7 @@ const modifyContent = ({
   });
 };
 
-type ContentBlock = t.BedrockReasoningContentText | t.MessageDeltaUpdate;
+type ContentBlock = Partial<t.BedrockReasoningContentText> | t.MessageDeltaUpdate;
 
 function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
   const reduced: ContentBlock[] = [];
@@ -80,12 +80,12 @@ function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
     // Merge consecutive 'reasoning_content'
     if (block.type === 'reasoning_content' && lastBlock.type === 'reasoning_content') {
       // append text if exists
-      if (block.reasoningText.text) {
-        lastBlock.reasoningText.text = (lastBlock.reasoningText.text || '') + block.reasoningText.text;
+      if (block.reasoningText?.text != null && block.reasoningText.text) {
+        (lastBlock.reasoningText as t.BedrockReasoningContentText['reasoningText']).text = (lastBlock.reasoningText?.text ?? '') + block.reasoningText.text;
       }
       // preserve the signature if exists
-      if (block.reasoningText.signature) {
-        lastBlock.reasoningText.signature = block.reasoningText.signature;
+      if (block.reasoningText?.signature != null && block.reasoningText.signature) {
+        (lastBlock.reasoningText as t.BedrockReasoningContentText['reasoningText']).signature = block.reasoningText.signature;
       }
     }
     // Merge consecutive 'text'
