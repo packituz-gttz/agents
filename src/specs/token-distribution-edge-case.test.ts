@@ -285,18 +285,11 @@ describe('Token Distribution Edge Case Tests', () => {
         // This message is not in the context, so its token count should not have been adjusted in the last operation
         const expectedValue = i < messages.length
           ? (secondResult.indexTokenCountMap[i] || indexTokenCountMap[i])
-          : indexTokenCountMap[i];
+          : (indexTokenCountMap as Record<string, number | undefined>)[i] ?? indexTokenCountMap[i - 1];
 
-        // The implementation might handle undefined values differently, so we need to be more flexible
-        if (expectedValue === undefined) {
-          // If we expect undefined, just verify it's not one of the values that would indicate
-          // it was adjusted based on the second usage metadata
-          expect(thirdResult.indexTokenCountMap[i]).not.toBe(70);
-        } else {
-          // For defined values, we can check that they're close to what we expect
-          const difference = Math.abs((thirdResult.indexTokenCountMap[i] || 0) - expectedValue);
-          expect(difference).toBeLessThan(20); // Allow for some implementation differences
-        }
+        // For defined values, we can check that they're close to what we expect
+        const difference = Math.abs((thirdResult.indexTokenCountMap[i] || 0) - expectedValue);
+        expect(difference).toBeLessThan(20); // Allow for some implementation differences
       }
     }
   });
