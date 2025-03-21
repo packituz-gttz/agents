@@ -310,7 +310,11 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       // Calculate the sum of tokens only for indices at or after lastCutOffIndex
       const totalIndexTokens = Object.entries(indexTokenCountMap).reduce((sum, [key, value]) => {
         // Convert string key to number and check if it's >= lastCutOffIndex
-        return Number(key) >= lastCutOffIndex ? sum + value : sum;
+        const numericKey = Number(key);
+        if (numericKey === 0 && params.messages[0].getType() === 'system') {
+          return sum + value;
+        }
+        return numericKey >= lastCutOffIndex ? sum + value : sum;
       }, 0);
 
       // Calculate ratio based only on messages that remain in the context
@@ -318,7 +322,10 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
 
       // Apply the ratio adjustment only to messages at or after lastCutOffIndex
       for (const key in indexTokenCountMap) {
-        if (Number(key) >= lastCutOffIndex) {
+        const numericKey = Number(key);
+        if (numericKey === 0 && params.messages[0].getType() === 'system') {
+          indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+        } else if (numericKey >= lastCutOffIndex) {
           // Only adjust token counts for messages still in the context
           indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
         }
