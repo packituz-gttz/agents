@@ -75,10 +75,10 @@ function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
   const reduced: ContentBlock[] = [];
 
   for (const block of blocks) {
-    const lastBlock = reduced[reduced.length - 1];
+    const lastBlock = reduced[reduced.length - 1] as ContentBlock | undefined;
 
     // Merge consecutive 'reasoning_content'
-    if (block.type === 'reasoning_content' && lastBlock.type === 'reasoning_content') {
+    if (block.type === 'reasoning_content' && lastBlock?.type === 'reasoning_content') {
       // append text if exists
       if (block.reasoningText?.text != null && block.reasoningText.text) {
         (lastBlock.reasoningText as t.BedrockReasoningContentText['reasoningText']).text = (lastBlock.reasoningText?.text ?? '') + block.reasoningText.text;
@@ -89,7 +89,7 @@ function reduceBlocks(blocks: ContentBlock[]): ContentBlock[] {
       }
     }
     // Merge consecutive 'text'
-    else if (block.type === 'text' && lastBlock.type === 'text') {
+    else if (block.type === 'text' && lastBlock?.type === 'text') {
       lastBlock.text += block.text;
     }
     // add a new block as it's a different type or first element
