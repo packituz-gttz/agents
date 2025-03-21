@@ -15,7 +15,7 @@ export type PruneMessagesParams = {
   startType?: ReturnType<BaseMessage['getType']>;
 }
 
-function isIndexInContext(arrayA: BaseMessage[], arrayB: BaseMessage[], targetIndex: number): boolean {
+function isIndexInContext(arrayA: unknown[], arrayB: unknown[], targetIndex: number): boolean {
   const startingIndexInA = arrayA.length - arrayB.length;
   return targetIndex >= startingIndexInA;
 }
@@ -94,7 +94,7 @@ export function getMessagesWithinTokenLimit({
    *
    * This may be confusing to read, but it is done to ensure the context is in the correct order for the model.
    * */
-  let context: BaseMessage[] = [];
+  let context: Array<BaseMessage | undefined> = [];
 
   let thinkingStartIndex = -1;
   let thinkingEndIndex = -1;
@@ -142,12 +142,12 @@ export function getMessagesWithinTokenLimit({
       }
     }
 
-    if (thinkingEndIndex > -1 && context[context.length - 1].getType() === 'tool') {
+    if (thinkingEndIndex > -1 && context[context.length - 1]?.getType() === 'tool') {
       startType = 'ai';
     }
 
     if (startType != null && startType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startType);
+      const requiredTypeIndex = context.findIndex(msg => msg?.getType() === startType);
 
       if (requiredTypeIndex > 0) {
         context = context.slice(requiredTypeIndex);
@@ -169,7 +169,7 @@ export function getMessagesWithinTokenLimit({
 
   if (prunedMemory.length === 0 || thinkingEndIndex < 0 || (thinkingStartIndex > -1 && isIndexInContext(_messages, context, thinkingStartIndex))) {
     // we reverse at this step to ensure the context is in the correct order for the model, and we need to work backwards
-    result.context = context.reverse();
+    result.context = context.reverse() as BaseMessage[];
     return result;
   }
 
@@ -187,7 +187,7 @@ export function getMessagesWithinTokenLimit({
   let assistantIndex = -1;
   for (let i = 0; i < context.length; i++) {
     const currentMessage = context[i];
-    const type = currentMessage.getType();
+    const type = currentMessage?.getType();
     if (type === 'ai') {
       assistantIndex = i;
     }
@@ -203,15 +203,14 @@ export function getMessagesWithinTokenLimit({
   thinkingStartIndex = originalLength - 1 - assistantIndex;
   const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
   const newRemainingCount = remainingContextTokens - thinkingTokenCount;
-
   const content: MessageContentComplex[] = addThinkingBlock(context[assistantIndex] as AIMessage, thinkingBlock);
-  context[assistantIndex].content = content;
+  (context[assistantIndex] as AIMessage).content = content;
   if (newRemainingCount > 0) {
-    result.context = context.reverse();
+    result.context = context.reverse() as BaseMessage[];
     return result;
   }
 
-  const thinkingMessage: AIMessage = context[assistantIndex];
+  const thinkingMessage: AIMessage = context[assistantIndex] as AIMessage;
   // now we need to an additional round of pruning but making the thinking block fit
   const newThinkingMessageTokenCount = (indexTokenCountMap[thinkingStartIndex] ?? 0) + thinkingTokenCount;
   remainingContextTokens = initialContextTokens - newThinkingMessageTokenCount;
