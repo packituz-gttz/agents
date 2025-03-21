@@ -1,8 +1,10 @@
 import { AIMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
-import type { ThinkingContentText, MessageContentComplex } from '@/types/stream';
+import type { ThinkingContentText, MessageContentComplex, ReasoningContentText } from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
-import { ContentTypes } from '@/common';
+import { ContentTypes, Providers } from '@/common';
+
 export type PruneMessagesFactoryParams = {
+  provider?: Providers;
   maxTokens: number;
   startIndex: number;
   tokenCounter: TokenCounter;
@@ -20,7 +22,7 @@ function isIndexInContext(arrayA: unknown[], arrayB: unknown[], targetIndex: num
   return targetIndex >= startingIndexInA;
 }
 
-function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText): MessageContentComplex[] {
+function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText | ReasoningContentText): MessageContentComplex[] {
   const content: MessageContentComplex[] = Array.isArray(message.content)
     ? message.content as MessageContentComplex[]
     : [{
@@ -65,8 +67,8 @@ export function getMessagesWithinTokenLimit({
   indexTokenCountMap,
   startType: _startType,
   thinkingEnabled,
-  /** We may need to use this when recalculating */
   tokenCounter,
+  reasoningType = ContentTypes.THINKING,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
@@ -74,6 +76,7 @@ export function getMessagesWithinTokenLimit({
   tokenCounter: TokenCounter;
   startType?: string;
   thinkingEnabled?: boolean;
+  reasoningType?: ContentTypes.THINKING | ContentTypes.REASONING_CONTENT;
 }): {
   context: BaseMessage[];
   remainingContextTokens: number;
@@ -98,7 +101,7 @@ export function getMessagesWithinTokenLimit({
 
   let thinkingStartIndex = -1;
   let thinkingEndIndex = -1;
-  let thinkingBlock: ThinkingContentText | undefined;
+  let thinkingBlock: ThinkingContentText | ReasoningContentText | undefined;
   const endIndex = instructions != null ? 1 : 0;
   const prunedMemory: BaseMessage[] = [];
 
@@ -116,7 +119,7 @@ export function getMessagesWithinTokenLimit({
         thinkingEndIndex = currentIndex;
       }
       if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && messageType === 'ai' && Array.isArray(poppedMessage.content)) {
-        thinkingBlock = (poppedMessage.content.find((content) => content.type === ContentTypes.THINKING)) as ThinkingContentText | undefined;
+        thinkingBlock = (poppedMessage.content.find((content) => content.type === reasoningType)) as ThinkingContentText | undefined;
         thinkingStartIndex = thinkingBlock != null ? currentIndex : -1;
       }
       /** False start, the latest message was not part of a multi-assistant/tool sequence of messages */
@@ -346,6 +349,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       startType: params.startType,
       thinkingEnabled: factoryParams.thinkingEnabled,
       tokenCounter: factoryParams.tokenCounter,
+      reasoningType: factoryParams.provider === Providers.BEDROCK ? ContentTypes.REASONING_CONTENT : ContentTypes.THINKING,
     });
     lastCutOffIndex = Math.max(params.messages.length - context.length, 0);
 
