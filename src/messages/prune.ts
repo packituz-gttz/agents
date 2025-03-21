@@ -74,7 +74,7 @@ export function getMessagesWithinTokenLimit({
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number | undefined>;
   tokenCounter: TokenCounter;
-  startType?: string;
+  startType?: string | string[];
   thinkingEnabled?: boolean;
   reasoningType?: ContentTypes.THINKING | ContentTypes.REASONING_CONTENT;
 }): {
@@ -145,15 +145,27 @@ export function getMessagesWithinTokenLimit({
       }
     }
 
-    if (thinkingEndIndex > -1 && context[context.length - 1]?.getType() === 'tool') {
-      startType = 'ai';
+    if (context[context.length - 1]?.getType() === 'tool') {
+      startType = ['ai', 'human'];
     }
 
-    if (startType != null && startType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg?.getType() === startType);
+    if (startType != null && startType.length > 0 && context.length > 0) {
+      let requiredTypeIndex = -1;
+
+      let totalTokens = 0;
+      for (let i = context.length - 1; i >= 0; i--) {
+        const currentType = context[i]?.getType() ?? '';
+        if (Array.isArray(startType) ? startType.includes(currentType) : currentType === startType) {
+          requiredTypeIndex = i;
+          break;
+        }
+        const originalIndex = originalLength - 1 - i;
+        totalTokens += indexTokenCountMap[originalIndex] ?? 0;
+      }
 
       if (requiredTypeIndex > 0) {
-        context = context.slice(requiredTypeIndex);
+        currentTokenCount -= totalTokens;
+        context = context.slice(0, requiredTypeIndex);
       }
     }
   }
