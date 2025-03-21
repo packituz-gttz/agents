@@ -318,7 +318,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
 
       // Calculate ratio based only on messages that remain in the context
       const ratio = currentUsage.total_tokens / totalIndexTokens;
-      const isRatioSafe = ratio >= 1/3 && ratio <= 2.10;
+      const isRatioSafe = ratio >= 1/3 && ratio <= 2.5;
 
       // Apply the ratio adjustment only to messages at or after lastCutOffIndex, and only if the ratio is safe
       if (isRatioSafe) {
