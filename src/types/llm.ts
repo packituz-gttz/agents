@@ -35,16 +35,23 @@ export type AzureClientOptions = (Partial<OpenAIChatInput> & Partial<AzureOpenAI
     } & BaseChatModelParams & {
         configuration?: OAIClientOptions;
     });
-
+export type ThinkingConfig = AnthropicInput['thinking'];
 export type ChatOpenAIToolType = BindToolsInput | OpenAIClient.ChatCompletionTool;
 export type CommonToolType = StructuredTool | ChatOpenAIToolType;
-
+export type AnthropicReasoning = {
+  thinking?: ThinkingConfig | boolean;
+  thinkingBudget?: number;
+};
 export type OpenAIClientOptions = ChatOpenAIFields;
 export type OllamaClientOptions = ChatOllamaInput;
 export type AnthropicClientOptions = AnthropicInput;
 export type MistralAIClientOptions = ChatMistralAIInput;
 export type VertexAIClientOptions = ChatVertexAIInput;
 export type BedrockClientOptions = BedrockChatFields;
+export type BedrockAnthropicInput = ChatBedrockConverseInput & {
+  additionalModelRequestFields?: ChatBedrockConverseInput['additionalModelRequestFields'] &
+    AnthropicReasoning;
+};
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 export type GoogleClientOptions = GoogleGenerativeAIChatInput;
 export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
