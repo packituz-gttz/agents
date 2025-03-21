@@ -318,15 +318,18 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
 
       // Calculate ratio based only on messages that remain in the context
       const ratio = currentUsage.total_tokens / totalIndexTokens;
+      const isRatioSafe = ratio >= 1/3 && ratio <= 2.10;
 
-      // Apply the ratio adjustment only to messages at or after lastCutOffIndex
-      for (const key in indexTokenCountMap) {
-        const numericKey = Number(key);
-        if (numericKey === 0 && params.messages[0].getType() === 'system') {
-          indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
-        } else if (numericKey >= lastCutOffIndex) {
-          // Only adjust token counts for messages still in the context
-          indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+      // Apply the ratio adjustment only to messages at or after lastCutOffIndex, and only if the ratio is safe
+      if (isRatioSafe) {
+        for (const key in indexTokenCountMap) {
+          const numericKey = Number(key);
+          if (numericKey === 0 && params.messages[0].getType() === 'system') {
+            indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+          } else if (numericKey >= lastCutOffIndex) {
+            // Only adjust token counts for messages still in the context
+            indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
+          }
         }
       }
     }
