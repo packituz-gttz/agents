@@ -123,10 +123,14 @@ export class Run<T extends t.BaseGraphState> {
     if (this.Graph.systemMessage && tokenCounter) {
       instructionTokens += tokenCounter(this.Graph.systemMessage);
     }
-    if (instructionTokens > 0) {
-      this.Graph.indexTokenCountMap = shiftIndexTokenCountMap(streamOptions?.indexTokenCountMap ?? {}, instructionTokens);
+    const tokenMap = streamOptions?.indexTokenCountMap ?? {};
+    if (this.Graph.systemMessage  && instructionTokens > 0) {
+      this.Graph.indexTokenCountMap = shiftIndexTokenCountMap(tokenMap, instructionTokens);
+    } else if (instructionTokens > 0) {
+      tokenMap[0] = tokenMap[0] + instructionTokens;
+      this.Graph.indexTokenCountMap = tokenMap;
     } else {
-      this.Graph.indexTokenCountMap = streamOptions?.indexTokenCountMap ?? {};
+      this.Graph.indexTokenCountMap = tokenMap;
     }
 
     this.Graph.maxContextTokens = streamOptions?.maxContextTokens;

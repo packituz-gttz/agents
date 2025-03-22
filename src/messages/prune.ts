@@ -358,15 +358,16 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     // relative the manually counted tokens in `indexTokenCountMap`.
     // EDGE CASE: when the resulting context gets pruned, we should not distribute the usage for messages that are not in the context.
     if (currentUsage) {
-      // Calculate the sum of tokens only for indices at or after lastCutOffIndex
-      const totalIndexTokens = Object.entries(indexTokenCountMap).reduce((sum, [key, value]) => {
-        // Convert string key to number and check if it's >= lastCutOffIndex
-        const numericKey = Number(key);
-        if (numericKey === 0 && params.messages[0].getType() === 'system') {
-          return sum + value;
+      let totalIndexTokens = 0;
+      if (params.messages[0].getType() === 'system') {
+        totalIndexTokens += indexTokenCountMap[0];
+      }
+      for (let i = lastCutOffIndex; i < params.messages.length; i++) {
+        if (i === 0 && params.messages[0].getType() === 'system') {
+          continue;
         }
-        return numericKey >= lastCutOffIndex ? sum + value : sum;
-      }, 0);
+        totalIndexTokens += indexTokenCountMap[i];
+      }
 
       // Calculate ratio based only on messages that remain in the context
       const ratio = currentUsage.total_tokens / totalIndexTokens;
@@ -374,14 +375,12 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
 
       // Apply the ratio adjustment only to messages at or after lastCutOffIndex, and only if the ratio is safe
       if (isRatioSafe) {
-        for (const key in indexTokenCountMap) {
-          const numericKey = Number(key);
-          if (numericKey === 0 && params.messages[0].getType() === 'system') {
-            indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
-          } else if (numericKey >= lastCutOffIndex) {
-            // Only adjust token counts for messages still in the context
-            indexTokenCountMap[key] = Math.round(indexTokenCountMap[key] * ratio);
-          }
+        if (params.messages[0].getType() === 'system' && lastCutOffIndex !== 0) {
+          indexTokenCountMap[0] = Math.round(indexTokenCountMap[0] * ratio);
+        }
+
+        for (let i = lastCutOffIndex; i < params.messages.length; i++) {
+          indexTokenCountMap[i] = Math.round(indexTokenCountMap[i] * ratio);
         }
       }
     }
