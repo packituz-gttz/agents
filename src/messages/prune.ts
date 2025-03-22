@@ -341,6 +341,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       totalTokens = currentUsage.total_tokens;
     }
 
+    const newOutputs = new Set<number>();
     for (let i = lastTurnStartIndex; i < params.messages.length; i++) {
       const message = params.messages[i];
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -349,6 +350,9 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       } else if (indexTokenCountMap[i] === undefined) {
         indexTokenCountMap[i] = factoryParams.tokenCounter(message);
+        if (currentUsage) {
+          newOutputs.add(i);
+        }
         totalTokens += indexTokenCountMap[i];
       }
     }
@@ -366,6 +370,9 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
         if (i === 0 && params.messages[0].getType() === 'system') {
           continue;
         }
+        if (newOutputs.has(i)) {
+          continue;
+        }
         totalIndexTokens += indexTokenCountMap[i];
       }
 
@@ -380,13 +387,16 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
         }
 
         for (let i = lastCutOffIndex; i < params.messages.length; i++) {
+          if (newOutputs.has(i)) {
+            continue;
+          }
           indexTokenCountMap[i] = Math.round(indexTokenCountMap[i] * ratio);
         }
       }
     }
 
     lastTurnStartIndex = params.messages.length;
-    if (totalTokens <= factoryParams.maxTokens) {
+    if (lastCutOffIndex === 0 && totalTokens <= factoryParams.maxTokens) {
       return { context: params.messages, indexTokenCountMap };
     }
 
