@@ -54,6 +54,13 @@ export function calculateTotalTokens(usage: Partial<UsageMetadata>): UsageMetada
   };
 }
 
+export type PruningResult = {
+  context: BaseMessage[];
+  remainingContextTokens: number;
+  messagesToRefine: BaseMessage[];
+  thinkingStartIndex?: number;
+};
+
 /**
  * Processes an array of messages and returns a context of messages that fit within a specified token limit.
  * It iterates over the messages from newest to oldest, adding them to the context until the token limit is reached.
@@ -68,20 +75,18 @@ export function getMessagesWithinTokenLimit({
   startType: _startType,
   thinkingEnabled,
   tokenCounter,
+  thinkingStartIndex: _thinkingStartIndex = -1,
   reasoningType = ContentTypes.THINKING,
 }: {
   messages: BaseMessage[];
   maxContextTokens: number;
   indexTokenCountMap: Record<string, number | undefined>;
-  tokenCounter: TokenCounter;
   startType?: string | string[];
   thinkingEnabled?: boolean;
+  tokenCounter: TokenCounter;
+  thinkingStartIndex?: number;
   reasoningType?: ContentTypes.THINKING | ContentTypes.REASONING_CONTENT;
-}): {
-  context: BaseMessage[];
-  remainingContextTokens: number;
-  messagesToRefine: BaseMessage[];
-} {
+}): PruningResult {
   // Every reply is primed with <|start|>assistant<|message|>, so we
   // start with 3 tokens for the label after all messages have been counted.
   let currentTokenCount = 3;
@@ -99,11 +104,18 @@ export function getMessagesWithinTokenLimit({
    * */
   let context: Array<BaseMessage | undefined> = [];
 
-  let thinkingStartIndex = -1;
+  let thinkingStartIndex = _thinkingStartIndex;
   let thinkingEndIndex = -1;
   let thinkingBlock: ThinkingContentText | ReasoningContentText | undefined;
   const endIndex = instructions != null ? 1 : 0;
   const prunedMemory: BaseMessage[] = [];
+
+  if (_thinkingStartIndex > -1) {
+    const thinkingMessageContent = _messages[_thinkingStartIndex]?.content;
+    if (Array.isArray(thinkingMessageContent)) {
+      thinkingBlock = thinkingMessageContent.find((content) => content.type === reasoningType) as ThinkingContentText | undefined;
+    }
+  }
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
@@ -138,7 +150,7 @@ export function getMessagesWithinTokenLimit({
         currentTokenCount += tokenCount;
       } else {
         prunedMemory.push(poppedMessage);
-        if (thinkingEndIndex > -1) {
+        if (thinkingEndIndex > -1 && thinkingStartIndex < 0) {
           continue;
         }
         break;
@@ -176,11 +188,15 @@ export function getMessagesWithinTokenLimit({
   }
 
   remainingContextTokens -= currentTokenCount;
-  const result = {
+  const result: PruningResult = {
     remainingContextTokens,
     context: [] as BaseMessage[],
     messagesToRefine: prunedMemory,
   };
+
+  if (thinkingStartIndex > -1) {
+    result.thinkingStartIndex = thinkingStartIndex;
+  }
 
   if (prunedMemory.length === 0 || thinkingEndIndex < 0 || (thinkingStartIndex > -1 && isIndexInContext(_messages, context, thinkingStartIndex))) {
     // we reverse at this step to ensure the context is in the correct order for the model, and we need to work backwards
@@ -285,6 +301,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
   let lastTurnStartIndex = factoryParams.startIndex;
   let lastCutOffIndex = 0;
   let totalTokens = (Object.values(indexTokenCountMap)).reduce((a, b) => a + b, 0);
+  let runThinkingStartIndex = -1;
   return function pruneMessages(params: PruneMessagesParams): {
     context: BaseMessage[];
     indexTokenCountMap: Record<string, number>;
@@ -354,7 +371,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       return { context: params.messages, indexTokenCountMap };
     }
 
-    const { context } = getMessagesWithinTokenLimit({
+    const { context, thinkingStartIndex } = getMessagesWithinTokenLimit({
       maxContextTokens: factoryParams.maxTokens,
       messages: params.messages,
       indexTokenCountMap,
@@ -362,7 +379,9 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       thinkingEnabled: factoryParams.thinkingEnabled,
       tokenCounter: factoryParams.tokenCounter,
       reasoningType: factoryParams.provider === Providers.BEDROCK ? ContentTypes.REASONING_CONTENT : ContentTypes.THINKING,
+      thinkingStartIndex: factoryParams.thinkingEnabled === true ? runThinkingStartIndex : undefined,
     });
+    runThinkingStartIndex = factoryParams.thinkingEnabled === true ? thinkingStartIndex ?? -1 : -1;
     /** The index is the first value of `context`, index relative to `params.messages` */
     lastCutOffIndex = Math.max(params.messages.length - (context.length + (context[0]?.getType() === 'system' ? 1 : 0)), 0);
 
