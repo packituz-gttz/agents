@@ -1,7 +1,7 @@
 // src/specs/prune.test.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, SystemMessage, BaseMessage, ToolMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
@@ -509,6 +509,187 @@ describe('Prune Messages Tests', () => {
       // The total of all values in indexTokenCountMap should equal the total_tokens from usageMetadata
       const totalTokens = Object.values(result.indexTokenCountMap).reduce((a, b) => a + b, 0);
       expect(totalTokens).toBe(75);
+    });
+  });
+
+  describe('Tool Message Handling', () => {
+    it('should ensure context does not start with a tool message by finding an AI message', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new AIMessage('AI message 1'),
+        new ToolMessage({ content: 'Tool result 1', tool_call_id: 'tool1' }),
+        new AIMessage('AI message 2'),
+        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' })
+      ];
+
+      const indexTokenCountMap = {
+        0: 17, // System instruction
+        1: 12, // AI message 1
+        2: 13, // Tool result 1
+        3: 12, // AI message 2
+        4: 13  // Tool result 2
+      };
+
+      // Create a pruneMessages function with a token limit that will only include the last few messages
+      const pruneMessages = createPruneMessages({
+        maxTokens: 58, // Only enough for system + last 3 messages + 3, but should not include a parent-less tool message
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+
+      const result = pruneMessages({ messages });
+
+      // The context should include the system message, AI message 2, and Tool result 2
+      // It should NOT start with Tool result 2 alone
+      expect(result.context.length).toBe(3);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[3]); // AI message 2
+      expect(result.context[2]).toBe(messages[4]); // Tool result 2
+    });
+
+    it('should ensure context does not start with a tool message by finding a human message', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new HumanMessage('Human message 1'),
+        new AIMessage('AI message 1'),
+        new ToolMessage({ content: 'Tool result 1', tool_call_id: 'tool1' }),
+        new HumanMessage('Human message 2'),
+        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' })
+      ];
+
+      const indexTokenCountMap = {
+        0: 17, // System instruction
+        1: 15, // Human message 1
+        2: 12, // AI message 1
+        3: 13, // Tool result 1
+        4: 15, // Human message 2
+        5: 13  // Tool result 2
+      };
+
+      // Create a pruneMessages function with a token limit that will only include the last few messages
+      const pruneMessages = createPruneMessages({
+        maxTokens: 48, // Only enough for system + last 2 messages
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+
+      const result = pruneMessages({ messages });
+
+      // The context should include the system message, Human message 2, and Tool result 2
+      // It should NOT start with Tool result 2 alone
+      expect(result.context.length).toBe(3);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[4]); // Human message 2
+      expect(result.context[2]).toBe(messages[5]); // Tool result 2
+    });
+
+    it('should handle the case where a tool message is followed by an AI message', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new HumanMessage('Human message'),
+        new AIMessage('AI message with tool use'),
+        new ToolMessage({ content: 'Tool result', tool_call_id: 'tool1' }),
+        new AIMessage('AI message after tool')
+      ];
+
+      const indexTokenCountMap = {
+        0: 17, // System instruction
+        1: 13, // Human message
+        2: 22, // AI message with tool use
+        3: 11, // Tool result
+        4: 19  // AI message after tool
+      };
+
+      const pruneMessages = createPruneMessages({
+        maxTokens: 50,
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+
+      const result = pruneMessages({ messages });
+
+      expect(result.context.length).toBe(2);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[4]); // AI message after tool
+    });
+
+    it('should handle the case where a tool message is followed by a human message', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new HumanMessage('Human message 1'),
+        new AIMessage('AI message with tool use'),
+        new ToolMessage({ content: 'Tool result', tool_call_id: 'tool1' }),
+        new HumanMessage('Human message 2')
+      ];
+
+      const indexTokenCountMap = {
+        0: 17, // System instruction
+        1: 15, // Human message 1
+        2: 22, // AI message with tool use
+        3: 11, // Tool result
+        4: 15  // Human message 2
+      };
+
+      const pruneMessages = createPruneMessages({
+        maxTokens: 46,
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+
+      const result = pruneMessages({ messages });
+
+      expect(result.context.length).toBe(2);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[4]); // Human message 2
+    });
+
+    it('should handle complex sequence with multiple tool messages', () => {
+      const tokenCounter = createTestTokenCounter();
+      const messages = [
+        new SystemMessage('System instruction'),
+        new HumanMessage('Human message 1'),
+        new AIMessage('AI message 1 with tool use'),
+        new ToolMessage({ content: 'Tool result 1', tool_call_id: 'tool1' }),
+        new AIMessage('AI message 2 with tool use'),
+        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' }),
+        new AIMessage('AI message 3 with tool use'),
+        new ToolMessage({ content: 'Tool result 3', tool_call_id: 'tool3' })
+      ];
+
+      const indexTokenCountMap = {
+        0: 17, // System instruction
+        1: 15, // Human message 1
+        2: 26, // AI message 1 with tool use
+        3: 13, // Tool result 1
+        4: 26, // AI message 2 with tool use
+        5: 13, // Tool result 2
+        6: 26, // AI message 3 with tool use
+        7: 13  // Tool result 3
+      };
+
+      const pruneMessages = createPruneMessages({
+        maxTokens: 111,
+        startIndex: 0,
+        tokenCounter,
+        indexTokenCountMap: { ...indexTokenCountMap }
+      });
+
+      const result = pruneMessages({ messages });
+
+      expect(result.context.length).toBe(5);
+      expect(result.context[0]).toBe(messages[0]); // System message
+      expect(result.context[1]).toBe(messages[4]); // AI message 2 with tool use
+      expect(result.context[2]).toBe(messages[5]); // Tool result 2
+      expect(result.context[3]).toBe(messages[6]); // AI message 3 with tool use
+      expect(result.context[4]).toBe(messages[7]); // Tool result 3
     });
   });
 

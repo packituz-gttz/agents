@@ -156,7 +156,7 @@ export function getMessagesWithinTokenLimit({
       for (let i = context.length - 1; i >= 0; i--) {
         const currentType = context[i]?.getType() ?? '';
         if (Array.isArray(startType) ? startType.includes(currentType) : currentType === startType) {
-          requiredTypeIndex = i;
+          requiredTypeIndex = i + 1;
           break;
         }
         const originalIndex = originalLength - 1 - i;
@@ -363,7 +363,8 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       tokenCounter: factoryParams.tokenCounter,
       reasoningType: factoryParams.provider === Providers.BEDROCK ? ContentTypes.REASONING_CONTENT : ContentTypes.THINKING,
     });
-    lastCutOffIndex = Math.max(params.messages.length - context.length, 0);
+    /** The index is the first value of `context`, index relative to `params.messages` */
+    lastCutOffIndex = Math.max(params.messages.length - (context.length + (context[0]?.getType() === 'system' ? 1 : 0)), 0);
 
     return { context, indexTokenCountMap };
   };
