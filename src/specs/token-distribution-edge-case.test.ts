@@ -243,9 +243,9 @@ describe('Token Distribution Edge Case Tests', () => {
 
     // Second usage metadata update
     const secondUsageMetadata: Partial<UsageMetadata> = {
-      input_tokens: 40,
-      output_tokens: 30,
-      total_tokens: 70
+      input_tokens: 30,
+      output_tokens: 20,
+      total_tokens: 50
     };
 
     // Apply second usage metadata with extended messages
