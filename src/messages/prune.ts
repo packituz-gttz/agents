@@ -22,15 +22,22 @@ function isIndexInContext(arrayA: unknown[], arrayB: unknown[], targetIndex: num
   return targetIndex >= startingIndexInA;
 }
 
-function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText | ReasoningContentText): MessageContentComplex[] {
+function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText | ReasoningContentText): AIMessage {
   const content: MessageContentComplex[] = Array.isArray(message.content)
     ? message.content as MessageContentComplex[]
     : [{
       type: ContentTypes.TEXT,
       text: message.content,
     }];
+  /** Edge case, the message already has the thinking block */
+  if (content[0].type === thinkingBlock.type) {
+    return message;
+  }
   content.unshift(thinkingBlock);
-  return content;
+  return new AIMessage({
+    ...message,
+    content
+  });
 }
 
 /**
@@ -111,7 +118,7 @@ export function getMessagesWithinTokenLimit({
   const prunedMemory: BaseMessage[] = [];
 
   if (_thinkingStartIndex > -1) {
-    const thinkingMessageContent = _messages[_thinkingStartIndex]?.content;
+    const thinkingMessageContent = messages[_thinkingStartIndex]?.content;
     if (Array.isArray(thinkingMessageContent)) {
       thinkingBlock = thinkingMessageContent.find((content) => content.type === reasoningType) as ThinkingContentText | undefined;
     }
@@ -234,8 +241,8 @@ export function getMessagesWithinTokenLimit({
   thinkingStartIndex = originalLength - 1 - assistantIndex;
   const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
   const newRemainingCount = remainingContextTokens - thinkingTokenCount;
-  const content: MessageContentComplex[] = addThinkingBlock(context[assistantIndex] as AIMessage, thinkingBlock);
-  (context[assistantIndex] as AIMessage).content = content;
+  const newMessage = addThinkingBlock(context[assistantIndex] as AIMessage, thinkingBlock);
+  context[assistantIndex] = newMessage;
   if (newRemainingCount > 0) {
     result.context = context.reverse() as BaseMessage[];
     return result;
@@ -266,19 +273,32 @@ export function getMessagesWithinTokenLimit({
   const firstMessage: AIMessage = newContext[newContext.length - 1];
   const firstMessageType = newContext[newContext.length - 1].getType();
   if (firstMessageType === 'tool') {
-    startType = 'ai';
+    startType = ['ai', 'human'];
   }
 
-  if (startType != null && startType && newContext.length > 0) {
-    const requiredTypeIndex = newContext.findIndex(msg => msg.getType() === startType);
+  if (startType != null && startType.length > 0 && newContext.length > 0) {
+    let requiredTypeIndex = -1;
+
+    let totalTokens = 0;
+    for (let i = newContext.length - 1; i >= 0; i--) {
+      const currentType = newContext[i]?.getType() ?? '';
+      if (Array.isArray(startType) ? startType.includes(currentType) : currentType === startType) {
+        requiredTypeIndex = i + 1;
+        break;
+      }
+      const originalIndex = originalLength - 1 - i;
+      totalTokens += indexTokenCountMap[originalIndex] ?? 0;
+    }
+
     if (requiredTypeIndex > 0) {
-      newContext = newContext.slice(requiredTypeIndex);
+      currentTokenCount -= totalTokens;
+      newContext = newContext.slice(0, requiredTypeIndex);
     }
   }
 
   if (firstMessageType === 'ai') {
-    const content = addThinkingBlock(firstMessage, thinkingBlock);
-    newContext[newContext.length - 1].content = content;
+    const newMessage = addThinkingBlock(firstMessage, thinkingBlock);
+    newContext[newContext.length - 1] = newMessage;
   } else {
     newContext.push(thinkingMessage);
   }
