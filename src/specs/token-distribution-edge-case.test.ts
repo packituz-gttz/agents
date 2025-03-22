@@ -235,9 +235,9 @@ describe('Token Distribution Edge Case Tests', () => {
     });
 
     // Add two more messages
+    messages.push(new HumanMessage('Message 4'));
     const extendedMessages = [
       ...messages,
-      new HumanMessage('Message 4'),
       new AIMessage('Response 4')
     ];
 
@@ -257,6 +257,7 @@ describe('Token Distribution Edge Case Tests', () => {
     // The context should include the system message and some of the latest messages
     expect(thirdResult.context.length).toBeGreaterThan(0);
     expect(thirdResult.context[0].content).toBe('System instruction');
+    expect(thirdResult.context[1].content).toBe('Response 4');
 
     // Find which messages are in the final context
     const contextMessageIndices = thirdResult.context.map(msg => {
@@ -282,14 +283,12 @@ describe('Token Distribution Edge Case Tests', () => {
     // Verify that messages not in the context have their original token counts or previously adjusted values
     for (let i = 0; i < extendedMessages.length; i++) {
       if (!contextMessageIndices.includes(i)) {
-        // This message is not in the context, so its token count should not have been adjusted in the last operation
         const expectedValue = i < messages.length
           ? (secondResult.indexTokenCountMap[i] || indexTokenCountMap[i])
-          : (indexTokenCountMap as Record<string, number | undefined>)[i] ?? indexTokenCountMap[i - 1];
+          : (indexTokenCountMap as Record<string, number | undefined>)[i] ?? 0;
 
-        // For defined values, we can check that they're close to what we expect
         const difference = Math.abs((thirdResult.indexTokenCountMap[i] || 0) - expectedValue);
-        expect(difference).toBeLessThan(20); // Allow for some implementation differences
+        expect(difference).toBe(0);
       }
     }
   });

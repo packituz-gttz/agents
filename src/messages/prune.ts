@@ -383,7 +383,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     });
     runThinkingStartIndex = thinkingStartIndex ?? -1;
     /** The index is the first value of `context`, index relative to `params.messages` */
-    lastCutOffIndex = Math.max(params.messages.length - (context.length + (context[0]?.getType() === 'system' ? 1 : 0)), 0);
+    lastCutOffIndex = Math.max(params.messages.length - (context.length - (context[0]?.getType() === 'system' ? 1 : 0)), 0);
 
     return { context, indexTokenCountMap };
   };
