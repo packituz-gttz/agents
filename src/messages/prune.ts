@@ -381,7 +381,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       reasoningType: factoryParams.provider === Providers.BEDROCK ? ContentTypes.REASONING_CONTENT : ContentTypes.THINKING,
       thinkingStartIndex: factoryParams.thinkingEnabled === true ? runThinkingStartIndex : undefined,
     });
-    runThinkingStartIndex = factoryParams.thinkingEnabled === true ? thinkingStartIndex ?? -1 : -1;
+    runThinkingStartIndex = thinkingStartIndex ?? -1;
     /** The index is the first value of `context`, index relative to `params.messages` */
     lastCutOffIndex = Math.max(params.messages.length - (context.length + (context[0]?.getType() === 'system' ? 1 : 0)), 0);
 
