@@ -5,10 +5,14 @@ import { HumanMessage, BaseMessage } from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
-import { ToolEndHandler, ModelEndHandler, createMetadataAggregator } from '@/events';
+import {
+  ToolEndHandler,
+  ModelEndHandler,
+  createMetadataAggregator,
+} from '@/events';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
-import { GraphEvents } from '@/common';
+import { GraphEvents, Providers } from '@/common';
 import { Run } from '@/run';
 
 const conversationHistory: BaseMessage[] = [];
@@ -23,49 +27,79 @@ async function testStandardStreaming(): Promise<void> {
     [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP_COMPLETED]: {
-      handle: (event: GraphEvents.ON_RUN_STEP_COMPLETED, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP_COMPLETED,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP_COMPLETED ======');
         // console.dir(data, { depth: null });
-        aggregateContent({ event, data: data as unknown as { result: t.ToolEndEvent } });
-      }
+        aggregateContent({
+          event,
+          data: data as unknown as { result: t.ToolEndEvent },
+        });
+      },
     },
     [GraphEvents.ON_RUN_STEP]: {
-      handle: (event: GraphEvents.ON_RUN_STEP, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.RunStep });
-      }
+      },
     },
     [GraphEvents.ON_RUN_STEP_DELTA]: {
-      handle: (event: GraphEvents.ON_RUN_STEP_DELTA, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP_DELTA,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP_DELTA ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.RunStepDeltaEvent });
-      }
+      },
     },
     [GraphEvents.ON_MESSAGE_DELTA]: {
-      handle: (event: GraphEvents.ON_MESSAGE_DELTA, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_MESSAGE_DELTA,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_MESSAGE_DELTA ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.MessageDeltaEvent });
-      }
+      },
     },
     [GraphEvents.ON_REASONING_DELTA]: {
-      handle: (event: GraphEvents.ON_REASONING_DELTA, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_REASONING_DELTA,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_REASONING_DELTA ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.ReasoningDeltaEvent });
-      }
+      },
     },
     [GraphEvents.TOOL_START]: {
-      handle: (_event: string, data: t.StreamEventData, metadata?: Record<string, unknown>): void => {
+      handle: (
+        _event: string,
+        data: t.StreamEventData,
+        metadata?: Record<string, unknown>
+      ): void => {
         console.log('====== TOOL_START ======');
         // console.dir(data, { depth: null });
-      }
+      },
     },
   };
 
   const llmConfig = getLLMConfig(provider);
+  if (provider === Providers.ANTHROPIC) {
+    (llmConfig as t.AnthropicClientOptions).clientOptions = {
+      defaultHeaders: {
+        'anthropic-beta':
+          'token-efficient-tools-2025-02-19,output-128k-2025-02-19,prompt-caching-2024-07-31',
+      },
+    };
+  }
 
   const run = await Run.create<t.IState>({
     runId: 'test-run-id',
@@ -74,7 +108,8 @@ async function testStandardStreaming(): Promise<void> {
       llmConfig,
       // tools: [new TavilySearchResults()],
       reasoningKey: 'reasoning',
-      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
+      instructions:
+        'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
     returnContent: true,
@@ -107,18 +142,26 @@ async function testStandardStreaming(): Promise<void> {
   // console.dir(finalContentParts, { depth: null });
   console.log('\n\n====================\n\n');
   console.dir(contentParts, { depth: null });
-  // const { handleLLMEnd, collected } = createMetadataAggregator();
-  // const titleResult = await run.generateTitle({
-  //   inputText: userMessage,
-  //   contentParts,
-  //   chainOptions: {
-  //     callbacks: [{
-  //       handleLLMEnd,
-  //     }],
-  //   },
-  // });
-  // console.log('Generated Title:', titleResult);
-  // console.log('Collected metadata:', collected);
+  const { handleLLMEnd, collected } = createMetadataAggregator();
+  const titleOptions: t.RunTitleOptions = {
+    inputText: userMessage,
+    contentParts,
+    chainOptions: {
+      callbacks: [
+        {
+          handleLLMEnd,
+        },
+      ],
+    },
+  };
+  if (provider === Providers.ANTHROPIC) {
+    titleOptions.clientOptions = {
+      model: 'claude-3-5-haiku-latest',
+    };
+  }
+  const titleResult = await run.generateTitle(titleOptions);
+  console.log('Generated Title:', titleResult);
+  console.log('Collected metadata:', collected);
 }
 
 process.on('unhandledRejection', (reason, promise) => {

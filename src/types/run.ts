@@ -2,8 +2,13 @@
 import type * as z from 'zod';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { StructuredTool } from '@langchain/core/tools';
-import type { BaseCallbackHandler, CallbackHandlerMethods } from '@langchain/core/callbacks/base';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import type {
+  BaseCallbackHandler,
+  CallbackHandlerMethods,
+} from '@langchain/core/callbacks/base';
 import type * as graph from '@/graphs/Graph';
+import type * as s from '@/types/stream';
 import type * as e from '@/common/enum';
 import type * as g from '@/types/graph';
 import type * as l from '@/types/llm';
@@ -18,6 +23,15 @@ export type BaseGraphConfig = {
 };
 export type StandardGraphConfig = BaseGraphConfig &
   Omit<g.StandardGraphInput, 'provider' | 'clientOptions'>;
+
+export type RunTitleOptions = {
+  inputText: string;
+  contentParts: (s.MessageContentComplex | undefined)[];
+  titlePrompt?: string;
+  skipLanguage?: boolean;
+  clientOptions?: l.ClientOptions;
+  chainOptions?: Partial<RunnableConfig> | undefined;
+};
 
 export interface AgentStateChannels {
   messages: BaseMessage[];
@@ -48,12 +62,17 @@ export type TaskManagerGraphConfig = {
 
 export type RunConfig = {
   runId: string;
-  graphConfig: StandardGraphConfig | CollaborativeGraphConfig | TaskManagerGraphConfig;
+  graphConfig:
+    | StandardGraphConfig
+    | CollaborativeGraphConfig
+    | TaskManagerGraphConfig;
   customHandlers?: Record<string, g.EventHandler>;
   returnContent?: boolean;
 };
 
-export type ProvidedCallbacks = (BaseCallbackHandler | CallbackHandlerMethods)[] | undefined;
+export type ProvidedCallbacks =
+  | (BaseCallbackHandler | CallbackHandlerMethods)[]
+  | undefined;
 
 export type TokenCounter = (message: BaseMessage) => number;
 export type EventStreamOptions = {
@@ -63,4 +82,4 @@ export type EventStreamOptions = {
   maxContextTokens?: number;
   tokenCounter?: TokenCounter;
   indexTokenCountMap?: Record<string, number>;
-}
+};
