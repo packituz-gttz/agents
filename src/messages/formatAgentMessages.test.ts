@@ -1,4 +1,9 @@
-import { HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  ToolMessage,
+} from '@langchain/core/messages';
 import type { TPayload } from '@/types';
 import { formatAgentMessages } from './format';
 import { ContentTypes } from '@/common';
@@ -16,7 +21,9 @@ describe('formatAgentMessages', () => {
   });
 
   it('should handle system messages', () => {
-    const payload = [{ role: 'system', content: 'You are a helpful assistant.' }];
+    const payload = [
+      { role: 'system', content: 'You are a helpful assistant.' },
+    ];
     const result = formatAgentMessages(payload);
     expect(result.messages).toHaveLength(1);
     expect(result.messages[0]).toBeInstanceOf(SystemMessage);
@@ -97,7 +104,9 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    expect(() => formatAgentMessages(payload)).toThrow('Invalid tool call structure');
+    expect(() => formatAgentMessages(payload)).toThrow(
+      'Invalid tool call structure'
+    );
   });
 
   it('should handle tool calls with non-JSON args', () => {
@@ -105,7 +114,11 @@ describe('formatAgentMessages', () => {
       {
         role: 'assistant',
         content: [
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Checking...', tool_call_ids: ['123'] },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Checking...',
+            tool_call_ids: ['123'],
+          },
           {
             type: ContentTypes.TOOL_CALL,
             tool_call: {
@@ -120,7 +133,9 @@ describe('formatAgentMessages', () => {
     ];
     const result = formatAgentMessages(payload);
     expect(result.messages).toHaveLength(2);
-    expect((result.messages[0] as AIMessage).tool_calls?.[0].args).toStrictEqual({ input: 'non-json-string' });
+    expect(
+      (result.messages[0] as AIMessage).tool_calls?.[0].args
+    ).toStrictEqual({ input: 'non-json-string' });
   });
 
   it('should handle complex tool calls with multiple steps', () => {
@@ -139,7 +154,8 @@ describe('formatAgentMessages', () => {
               id: 'search_1',
               name: 'search',
               args: '{"query":"weather in New York"}',
-              output: 'The weather in New York is currently sunny with a temperature of 75°F.',
+              output:
+                'The weather in New York is currently sunny with a temperature of 75°F.',
             },
           },
           {
@@ -156,7 +172,10 @@ describe('formatAgentMessages', () => {
               output: '23.89°C',
             },
           },
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Here\'s your answer.' },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Here\'s your answer.',
+          },
         ],
       },
     ];
@@ -171,7 +190,9 @@ describe('formatAgentMessages', () => {
     expect(result.messages[4]).toBeInstanceOf(AIMessage);
 
     // Check first AIMessage
-    expect(result.messages[0].content).toBe('I\'ll search for that information.');
+    expect(result.messages[0].content).toBe(
+      'I\'ll search for that information.'
+    );
     expect((result.messages[0] as AIMessage).tool_calls).toHaveLength(1);
     expect((result.messages[0] as AIMessage).tool_calls?.[0]).toEqual({
       id: 'search_1',
@@ -183,11 +204,13 @@ describe('formatAgentMessages', () => {
     expect((result.messages[1] as ToolMessage).tool_call_id).toBe('search_1');
     expect(result.messages[1].name).toBe('search');
     expect(result.messages[1].content).toBe(
-      'The weather in New York is currently sunny with a temperature of 75°F.',
+      'The weather in New York is currently sunny with a temperature of 75°F.'
     );
 
     // Check second AIMessage
-    expect(result.messages[2].content).toBe('Now, I\'ll convert the temperature.');
+    expect(result.messages[2].content).toBe(
+      'Now, I\'ll convert the temperature.'
+    );
     expect((result.messages[2] as AIMessage).tool_calls).toHaveLength(1);
     expect((result.messages[2] as AIMessage).tool_calls?.[0]).toEqual({
       id: 'convert_1',
@@ -211,11 +234,18 @@ describe('formatAgentMessages', () => {
       { role: 'user', content: 'Hello' },
       {
         role: 'assistant',
-        content: [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Hi there!' }],
+        content: [
+          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Hi there!' },
+        ],
       },
       {
         role: 'assistant',
-        content: [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'How can I help you?' }],
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'How can I help you?',
+          },
+        ],
       },
       { role: 'user', content: 'What\'s the weather?' },
       {
@@ -240,7 +270,10 @@ describe('formatAgentMessages', () => {
       {
         role: 'assistant',
         content: [
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Here\'s the weather information.' },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Here\'s the weather information.',
+          },
         ],
       },
     ];
@@ -270,13 +303,18 @@ describe('formatAgentMessages', () => {
     expect(result.messages[3].content).toBe('Let me check that for you.');
     expect(result.messages[4].content).toBe('Sunny, 75°F');
     expect(result.messages[5].content).toStrictEqual([
-      { [ContentTypes.TEXT]: 'Here\'s the weather information.', type: ContentTypes.TEXT },
+      {
+        [ContentTypes.TEXT]: 'Here\'s the weather information.',
+        type: ContentTypes.TEXT,
+      },
     ]);
 
     // Check that there are no consecutive AIMessages
     const messageTypes = result.messages.map((message) => message.constructor);
     for (let i = 0; i < messageTypes.length - 1; i++) {
-      expect(messageTypes[i] === AIMessage && messageTypes[i + 1] === AIMessage).toBe(false);
+      expect(
+        messageTypes[i] === AIMessage && messageTypes[i + 1] === AIMessage
+      ).toBe(false);
     }
 
     // Additional check to ensure the consecutive assistant messages were combined
@@ -289,7 +327,10 @@ describe('formatAgentMessages', () => {
         role: 'assistant',
         content: [
           { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Initial response' },
-          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Reasoning about the problem...' },
+          {
+            type: ContentTypes.THINK,
+            [ContentTypes.THINK]: 'Reasoning about the problem...',
+          },
           { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Final answer' },
         ],
       },
@@ -299,7 +340,9 @@ describe('formatAgentMessages', () => {
 
     expect(result.messages).toHaveLength(1);
     expect(result.messages[0]).toBeInstanceOf(AIMessage);
-    expect(result.messages[0].content).toEqual('Initial response\nFinal answer');
+    expect(result.messages[0].content).toEqual(
+      'Initial response\nFinal answer'
+    );
   });
 
   it('should join TEXT content as string when THINK content type is present', () => {
@@ -307,10 +350,22 @@ describe('formatAgentMessages', () => {
       {
         role: 'assistant',
         content: [
-          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Analyzing the problem...' },
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'First part of response' },
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Second part of response' },
-          { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Final part of response' },
+          {
+            type: ContentTypes.THINK,
+            [ContentTypes.THINK]: 'Analyzing the problem...',
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'First part of response',
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Second part of response',
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'Final part of response',
+          },
         ],
       },
     ];
@@ -321,9 +376,11 @@ describe('formatAgentMessages', () => {
     expect(result.messages[0]).toBeInstanceOf(AIMessage);
     expect(typeof result.messages[0].content).toBe('string');
     expect(result.messages[0].content).toBe(
-      'First part of response\nSecond part of response\nFinal part of response',
+      'First part of response\nSecond part of response\nFinal part of response'
     );
-    expect(result.messages[0].content).not.toContain('Analyzing the problem...');
+    expect(result.messages[0].content).not.toContain(
+      'Analyzing the problem...'
+    );
   });
 
   it('should exclude ERROR type content parts', () => {
@@ -351,10 +408,13 @@ describe('formatAgentMessages', () => {
       { type: ContentTypes.TEXT, [ContentTypes.TEXT]: 'Final answer' },
     ]);
 
-    const hasErrorContent = Array.isArray(result.messages[0].content) && result.messages[0].content.some(
-      (item) =>
-        item.type === ContentTypes.ERROR || JSON.stringify(item).includes('An error occurred'),
-    );
+    const hasErrorContent =
+      Array.isArray(result.messages[0].content) &&
+      result.messages[0].content.some(
+        (item) =>
+          item.type === ContentTypes.ERROR ||
+          JSON.stringify(item).includes('An error occurred')
+      );
     expect(hasErrorContent).toBe(false);
   });
   it('should handle indexTokenCountMap and return updated map', () => {
@@ -364,7 +424,7 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 5,  // 5 tokens for "Hello"
+      0: 5, // 5 tokens for "Hello"
       1: 10, // 10 tokens for "Hi there!"
     };
 
@@ -401,8 +461,8 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 10,  // 10 tokens for "What's the weather?"
-      1: 50,  // 50 tokens for the assistant message with tool call
+      0: 10, // 10 tokens for "What's the weather?"
+      1: 50, // 50 tokens for the assistant message with tool call
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -410,11 +470,14 @@ describe('formatAgentMessages', () => {
     // The original message at index 1 should be split into two messages
     expect(result.messages).toHaveLength(3);
     expect(result.indexTokenCountMap).toBeDefined();
-    expect(result.indexTokenCountMap?.[0]).toBe(10);  // User message stays the same
+    expect(result.indexTokenCountMap?.[0]).toBe(10); // User message stays the same
 
     // The assistant message tokens should be distributed across the resulting messages
-    const totalAssistantTokens = Object.values(result.indexTokenCountMap || {})
-      .reduce((sum, count) => sum + count, 0) - 10; // Subtract user message tokens
+    const totalAssistantTokens =
+      Object.values(result.indexTokenCountMap || {}).reduce(
+        (sum, count) => sum + count,
+        0
+      ) - 10; // Subtract user message tokens
 
     expect(totalAssistantTokens).toBe(50); // Should match the original token count
   });
@@ -462,7 +525,7 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 100,  // 100 tokens for the complex assistant message
+      0: 100, // 100 tokens for the complex assistant message
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -472,8 +535,10 @@ describe('formatAgentMessages', () => {
     expect(result.indexTokenCountMap).toBeDefined();
 
     // The sum of all token counts should equal the original
-    const totalTokens = Object.values(result.indexTokenCountMap || {})
-      .reduce((sum, count) => sum + count, 0);
+    const totalTokens = Object.values(result.indexTokenCountMap || {}).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
     expect(totalTokens).toBe(100);
 
@@ -497,7 +562,7 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 60,  // 60 tokens for the message with filtered content
+      0: 60, // 60 tokens for the message with filtered content
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -524,7 +589,7 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 40,  // 40 tokens for the message with filtered content
+      0: 40, // 40 tokens for the message with filtered content
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -563,8 +628,8 @@ describe('formatAgentMessages', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 15,  // 15 tokens for the user message
-      1: 45,  // 45 tokens for the assistant message with tool call
+      0: 15, // 15 tokens for the user message
+      1: 45, // 45 tokens for the assistant message with tool call
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -581,10 +646,146 @@ describe('formatAgentMessages', () => {
     expect(result.messages[2]).toBeInstanceOf(ToolMessage);
 
     // The sum of all token counts should equal the original total
-    const totalTokens = Object.values(result.indexTokenCountMap || {})
-      .reduce((sum, count) => sum + count, 0);
+    const totalTokens = Object.values(result.indexTokenCountMap || {}).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
     expect(totalTokens).toBe(60); // 15 + 45
+  });
+
+  it('should handle an AI message with 5 tool calls in a single message', () => {
+    const payload = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]: 'I\'ll perform multiple operations for you.',
+            tool_call_ids: ['tool_1', 'tool_2', 'tool_3', 'tool_4', 'tool_5'],
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_1',
+              name: 'search',
+              args: '{"query":"latest news"}',
+              output: 'Found several news articles.',
+            },
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_2',
+              name: 'check_weather',
+              args: '{"location":"New York"}',
+              output: 'Sunny, 75°F',
+            },
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_3',
+              name: 'calculate',
+              args: '{"expression":"356 * 24"}',
+              output: '8544',
+            },
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_4',
+              name: 'translate',
+              args: '{"text":"Hello world","source":"en","target":"fr"}',
+              output: 'Bonjour le monde',
+            },
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_5',
+              name: 'fetch_data',
+              args: '{"endpoint":"/api/users","params":{"limit":5}}',
+              output:
+                '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"},{"id":3,"name":"Charlie"},{"id":4,"name":"David"},{"id":5,"name":"Eve"}]}',
+            },
+          },
+        ],
+      },
+    ];
+
+    const result = formatAgentMessages(payload);
+
+    // Should have 6 messages: 1 AIMessage and 5 ToolMessages
+    expect(result.messages).toHaveLength(6);
+
+    // Check message types in the correct sequence
+    expect(result.messages[0]).toBeInstanceOf(AIMessage); // Initial message with all tool calls
+    expect(result.messages[1]).toBeInstanceOf(ToolMessage); // Tool 1 response
+    expect(result.messages[2]).toBeInstanceOf(ToolMessage); // Tool 2 response
+    expect(result.messages[3]).toBeInstanceOf(ToolMessage); // Tool 3 response
+    expect(result.messages[4]).toBeInstanceOf(ToolMessage); // Tool 4 response
+    expect(result.messages[5]).toBeInstanceOf(ToolMessage); // Tool 5 response
+
+    // Check AIMessage has all 5 tool calls
+    expect(result.messages[0].content).toBe(
+      'I\'ll perform multiple operations for you.'
+    );
+    expect((result.messages[0] as AIMessage).tool_calls).toHaveLength(5);
+
+    // Verify each tool call in the AIMessage
+    expect((result.messages[0] as AIMessage).tool_calls?.[0]).toEqual({
+      id: 'tool_1',
+      name: 'search',
+      args: { query: 'latest news' },
+    });
+
+    expect((result.messages[0] as AIMessage).tool_calls?.[1]).toEqual({
+      id: 'tool_2',
+      name: 'check_weather',
+      args: { location: 'New York' },
+    });
+
+    expect((result.messages[0] as AIMessage).tool_calls?.[2]).toEqual({
+      id: 'tool_3',
+      name: 'calculate',
+      args: { expression: '356 * 24' },
+    });
+
+    expect((result.messages[0] as AIMessage).tool_calls?.[3]).toEqual({
+      id: 'tool_4',
+      name: 'translate',
+      args: { text: 'Hello world', source: 'en', target: 'fr' },
+    });
+
+    expect((result.messages[0] as AIMessage).tool_calls?.[4]).toEqual({
+      id: 'tool_5',
+      name: 'fetch_data',
+      args: { endpoint: '/api/users', params: { limit: 5 } },
+    });
+
+    // Check each ToolMessage
+    expect((result.messages[1] as ToolMessage).tool_call_id).toBe('tool_1');
+    expect(result.messages[1].name).toBe('search');
+    expect(result.messages[1].content).toBe('Found several news articles.');
+
+    expect((result.messages[2] as ToolMessage).tool_call_id).toBe('tool_2');
+    expect(result.messages[2].name).toBe('check_weather');
+    expect(result.messages[2].content).toBe('Sunny, 75°F');
+
+    expect((result.messages[3] as ToolMessage).tool_call_id).toBe('tool_3');
+    expect(result.messages[3].name).toBe('calculate');
+    expect(result.messages[3].content).toBe('8544');
+
+    expect((result.messages[4] as ToolMessage).tool_call_id).toBe('tool_4');
+    expect(result.messages[4].name).toBe('translate');
+    expect(result.messages[4].content).toBe('Bonjour le monde');
+
+    expect((result.messages[5] as ToolMessage).tool_call_id).toBe('tool_5');
+    expect(result.messages[5].name).toBe('fetch_data');
+    expect(result.messages[5].content).toBe(
+      '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"},{"id":3,"name":"Charlie"},{"id":4,"name":"David"},{"id":5,"name":"Eve"}]}'
+    );
   });
 
   it('should demonstrate how messages can be filtered out, reducing count', () => {
@@ -594,16 +795,22 @@ describe('formatAgentMessages', () => {
       {
         role: 'assistant',
         content: [
-          { type: ContentTypes.THINK, [ContentTypes.THINK]: 'Thinking about response...' },
-          { type: ContentTypes.ERROR, [ContentTypes.ERROR]: 'Error in processing' },
+          {
+            type: ContentTypes.THINK,
+            [ContentTypes.THINK]: 'Thinking about response...',
+          },
+          {
+            type: ContentTypes.ERROR,
+            [ContentTypes.ERROR]: 'Error in processing',
+          },
           { type: ContentTypes.AGENT_UPDATE, update: 'Working on it...' },
         ],
       },
     ];
 
     const indexTokenCountMap = {
-      0: 10,  // 10 tokens for the user message
-      1: 30,  // 30 tokens for the assistant message that will be filtered out
+      0: 10, // 10 tokens for the user message
+      1: 30, // 30 tokens for the assistant message that will be filtered out
     };
 
     const result = formatAgentMessages(payload, indexTokenCountMap);
@@ -621,8 +828,10 @@ describe('formatAgentMessages', () => {
     expect(result.indexTokenCountMap?.[0]).toBe(10);
 
     // The total tokens should be just the user message tokens
-    const totalTokens = Object.values(result.indexTokenCountMap || {})
-      .reduce((sum, count) => sum + count, 0);
+    const totalTokens = Object.values(result.indexTokenCountMap || {}).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
     expect(totalTokens).toBe(10);
   });
