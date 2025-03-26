@@ -87,7 +87,7 @@ describe('formatAgentMessages', () => {
     expect(result.messages[0].content).toHaveLength(2);
   });
 
-  it('should throw an error for invalid tool call structure', () => {
+  it('should heal invalid tool call structure by creating a preceding AIMessage', () => {
     const payload = [
       {
         role: 'assistant',
@@ -104,9 +104,26 @@ describe('formatAgentMessages', () => {
         ],
       },
     ];
-    expect(() => formatAgentMessages(payload)).toThrow(
-      'Invalid tool call structure'
-    );
+    const result = formatAgentMessages(payload);
+
+    // Should have 2 messages: an AIMessage and a ToolMessage
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]).toBeInstanceOf(AIMessage);
+    expect(result.messages[1]).toBeInstanceOf(ToolMessage);
+
+    // The AIMessage should have an empty content and the tool_call
+    expect(result.messages[0].content).toBe('');
+    expect((result.messages[0] as AIMessage).tool_calls).toHaveLength(1);
+    expect((result.messages[0] as AIMessage).tool_calls?.[0]).toEqual({
+      id: '123',
+      name: 'search',
+      args: { query: 'weather' },
+    });
+
+    // The ToolMessage should have the correct properties
+    expect((result.messages[1] as ToolMessage).tool_call_id).toBe('123');
+    expect(result.messages[1].name).toBe('search');
+    expect(result.messages[1].content).toBe('The weather is sunny.');
   });
 
   it('should handle tool calls with non-JSON args', () => {
@@ -785,6 +802,68 @@ describe('formatAgentMessages', () => {
     expect(result.messages[5].name).toBe('fetch_data');
     expect(result.messages[5].content).toBe(
       '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"},{"id":3,"name":"Charlie"},{"id":4,"name":"David"},{"id":5,"name":"Eve"}]}'
+    );
+  });
+
+  it('should heal tool call structure with thinking content', () => {
+    const payload = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.THINK,
+            [ContentTypes.THINK]:
+              'I\'ll add this agreement as an observation to our existing troubleshooting task in the project memory system.',
+          },
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tooluse_Zz-mw_wHTrWTvDHaCbfaZg',
+              name: 'add_observations_mcp_project-memory',
+              args: '{"observations":[{"entityName":"MCP_Tool_Error_Troubleshooting","contents":["Agreement established: Document all future tests in the project memory system to maintain a comprehensive troubleshooting log","This will provide a structured record of the entire troubleshooting process and help identify patterns in the error behavior"]}]}',
+              type: 'tool_call',
+              progress: 1,
+              output:
+                '[\n  {\n    "entityName": "MCP_Tool_Error_Troubleshooting",\n    "addedObservations": [\n      {\n        "content": "Agreement established: Document all future tests in the project memory system to maintain a comprehensive troubleshooting log",\n        "timestamp": "2025-03-26T00:46:42.154Z"\n      },\n      {\n        "content": "This will provide a structured record of the entire troubleshooting process and help identify patterns in the error behavior",\n        "timestamp": "2025-03-26T00:46:42.154Z"\n      }\n    ]\n  }\n]',
+            },
+          },
+          {
+            type: ContentTypes.TEXT,
+            [ContentTypes.TEXT]:
+              '\n\nI\'ve successfully added our agreement to the project memory system. The observation has been recorded in the "MCP_Tool_Error_Troubleshooting" entity with the current timestamp.\n\nGoing forward, I will:\n\n1. Document each test we perform\n2. Record the methodology and results\n3. Update the project memory with our findings\n4. Establish appropriate relationships between tests and related components\n5. Provide a summary of what we\'ve learned from each test\n\nThis structured approach will help us build a comprehensive knowledge base of the error behavior and our troubleshooting process, which may prove valuable for resolving similar issues in the future or for other developers facing similar challenges.\n\nWhat test would you like to perform next in our troubleshooting process?',
+          },
+        ],
+      },
+    ];
+
+    const result = formatAgentMessages(payload);
+
+    // Should have 3 messages: an AIMessage with empty content, a ToolMessage, and a final AIMessage with the text
+    expect(result.messages).toHaveLength(3);
+    expect(result.messages[0]).toBeInstanceOf(AIMessage);
+    expect(result.messages[1]).toBeInstanceOf(ToolMessage);
+    expect(result.messages[2]).toBeInstanceOf(AIMessage);
+
+    // The first AIMessage should have an empty content and the tool_call
+    expect(result.messages[0].content).toBe('');
+    expect((result.messages[0] as AIMessage).tool_calls).toHaveLength(1);
+    expect((result.messages[0] as AIMessage).tool_calls?.[0].name).toBe(
+      'add_observations_mcp_project-memory'
+    );
+
+    // The ToolMessage should have the correct properties
+    expect((result.messages[1] as ToolMessage).tool_call_id).toBe(
+      'tooluse_Zz-mw_wHTrWTvDHaCbfaZg'
+    );
+    expect(result.messages[1].name).toBe('add_observations_mcp_project-memory');
+    expect(result.messages[1].content).toContain(
+      'MCP_Tool_Error_Troubleshooting'
+    );
+
+    // The final AIMessage should contain the text response
+    expect(typeof result.messages[2].content).toBe('string');
+    expect((result.messages[2].content as string).trim()).toContain(
+      'I\'ve successfully added our agreement to the project memory system'
     );
   });
 

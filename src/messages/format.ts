@@ -1,8 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ToolMessage, BaseMessage , HumanMessage, AIMessage, SystemMessage, getBufferString } from '@langchain/core/messages';
+import {
+  ToolMessage,
+  BaseMessage,
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  getBufferString,
+} from '@langchain/core/messages';
 import type { MessageContentImageUrl } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
-import type { MessageContentComplex, ToolCallPart, TPayload, TMessage } from '@/types';
+import type {
+  MessageContentComplex,
+  ToolCallPart,
+  TPayload,
+  TMessage,
+} from '@/types';
 import { Providers, ContentTypes } from '@/common';
 
 interface VisionMessageParams {
@@ -22,7 +34,11 @@ interface VisionMessageParams {
  * @param {VisionMessageParams} params - The parameters for formatting.
  * @returns {Object} - The formatted message.
  */
-export const formatVisionMessage = ({ message, image_urls, endpoint }: VisionMessageParams): {
+export const formatVisionMessage = ({
+  message,
+  image_urls,
+  endpoint,
+}: VisionMessageParams): {
   role: string;
   content: MessageContentComplex[];
   name?: string;
@@ -36,20 +52,20 @@ export const formatVisionMessage = ({ message, image_urls, endpoint }: VisionMes
     [key: string]: any;
   } = {
     ...message,
-    content: [] as MessageContentComplex[]
+    content: [] as MessageContentComplex[],
   };
 
   if (endpoint === Providers.ANTHROPIC) {
     result.content = [
       ...image_urls,
-      { type: ContentTypes.TEXT, text: message.content }
+      { type: ContentTypes.TEXT, text: message.content },
     ] as MessageContentComplex[];
     return result;
   }
 
   result.content = [
     { type: ContentTypes.TEXT, text: message.content },
-    ...image_urls
+    ...image_urls,
   ] as MessageContentComplex[];
 
   return result;
@@ -92,8 +108,12 @@ export const formatMessage = ({
   userName,
   assistantName,
   endpoint,
-  langChain = false
-}: FormatMessageParams): FormattedMessage | HumanMessage | AIMessage | SystemMessage => {
+  langChain = false,
+}: FormatMessageParams):
+  | FormattedMessage
+  | HumanMessage
+  | AIMessage
+  | SystemMessage => {
   // eslint-disable-next-line prefer-const
   let { role: _role, _name, sender, text, content: _content, lc_id } = message;
   if (lc_id && lc_id[2] && !langChain) {
@@ -104,7 +124,11 @@ export const formatMessage = ({
     };
     _role = roleMapping[lc_id[2]] || _role;
   }
-  const role = _role ?? (sender != null && sender && sender.toLowerCase() === 'user' ? 'user' : 'assistant');
+  const role =
+    _role ??
+    (sender != null && sender && sender.toLowerCase() === 'user'
+      ? 'user'
+      : 'assistant');
   const content = _content ?? text ?? '';
   const formattedMessage: FormattedMessage = {
     role,
@@ -116,7 +140,10 @@ export const formatMessage = ({
     return formatVisionMessage({
       message: {
         ...formattedMessage,
-        content: typeof formattedMessage.content === 'string' ? formattedMessage.content : ''
+        content:
+          typeof formattedMessage.content === 'string'
+            ? formattedMessage.content
+            : '',
       },
       image_urls,
       endpoint,
@@ -131,14 +158,21 @@ export const formatMessage = ({
     formattedMessage.name = userName;
   }
 
-  if (assistantName != null && assistantName && formattedMessage.role === 'assistant') {
+  if (
+    assistantName != null &&
+    assistantName &&
+    formattedMessage.role === 'assistant'
+  ) {
     formattedMessage.name = assistantName;
   }
 
   if (formattedMessage.name != null && formattedMessage.name) {
     // Conform to API regex: ^[a-zA-Z0-9_-]{1,64}$
     // https://community.openai.com/t/the-format-of-the-name-field-in-the-documentation-is-incorrect/175684/2
-    formattedMessage.name = formattedMessage.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    formattedMessage.name = formattedMessage.name.replace(
+      /[^a-zA-Z0-9_-]/g,
+      '_'
+    );
 
     if (formattedMessage.name.length > 64) {
       formattedMessage.name = formattedMessage.name.substring(0, 64);
@@ -170,7 +204,11 @@ export const formatLangChainMessages = (
   formatOptions: Omit<FormatMessageParams, 'message' | 'langChain'>
 ): Array<HumanMessage | AIMessage | SystemMessage> => {
   return messages.map((msg) => {
-    const formatted = formatMessage({ ...formatOptions, message: msg, langChain: true });
+    const formatted = formatMessage({
+      ...formatOptions,
+      message: msg,
+      langChain: true,
+    });
     return formatted as HumanMessage | AIMessage | SystemMessage;
   });
 };
@@ -193,7 +231,9 @@ interface LangChainMessage {
  * @param {LangChainMessage} message - The message object to format.
  * @returns {Record<string, any>} The formatted LangChain message.
  */
-export const formatFromLangChain = (message: LangChainMessage): Record<string, any> => {
+export const formatFromLangChain = (
+  message: LangChainMessage
+): Record<string, any> => {
   const kwargs = message.lc_kwargs ?? message.kwargs ?? {};
   const { additional_kwargs = {}, ...message_kwargs } = kwargs;
   return {
@@ -207,7 +247,9 @@ export const formatFromLangChain = (message: LangChainMessage): Record<string, a
  * @param message The message to format
  * @returns Array of formatted messages
  */
-function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | ToolMessage> {
+function formatAssistantMessage(
+  message: Partial<TMessage>
+): Array<AIMessage | ToolMessage> {
   const formattedMessages: Array<AIMessage | ToolMessage> = [];
   let currentContent: MessageContentComplex[] = [];
   let lastAIMessage: AIMessage | null = null;
@@ -227,7 +269,8 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
             }
             return acc;
           }, '');
-          content = `${content}\n${part[ContentTypes.TEXT] ?? part.text ?? ''}`.trim();
+          content =
+            `${content}\n${part[ContentTypes.TEXT] ?? part.text ?? ''}`.trim();
           lastAIMessage = new AIMessage({ content });
           formattedMessages.push(lastAIMessage);
           currentContent = [];
@@ -240,11 +283,17 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
         formattedMessages.push(lastAIMessage);
       } else if (part.type === ContentTypes.TOOL_CALL) {
         if (!lastAIMessage) {
-          throw new Error('Invalid tool call structure: No preceding AIMessage with tool_call_ids');
+          // "Heal" the payload by creating an AIMessage to precede the tool call
+          lastAIMessage = new AIMessage({ content: '' });
+          formattedMessages.push(lastAIMessage);
         }
 
         // Note: `tool_calls` list is defined when constructed by `AIMessage` class, and outputs should be excluded from it
-        const { output, args: _args, ..._tool_call } = (part.tool_call as ToolCallPart);
+        const {
+          output,
+          args: _args,
+          ..._tool_call
+        } = part.tool_call as ToolCallPart;
         const tool_call: ToolCallPart = _tool_call;
         // TODO: investigate; args as dictionary may need to be providers-or-tool-specific
         let args: any = _args;
@@ -269,12 +318,15 @@ function formatAssistantMessage(message: Partial<TMessage>): Array<AIMessage | T
             tool_call_id: tool_call.id ?? '',
             name: tool_call.name,
             content: output || '',
-          }),
+          })
         );
       } else if (part.type === ContentTypes.THINK) {
         hasReasoning = true;
         continue;
-      } else if (part.type === ContentTypes.ERROR || part.type === ContentTypes.AGENT_UPDATE) {
+      } else if (
+        part.type === ContentTypes.ERROR ||
+        part.type === ContentTypes.AGENT_UPDATE
+      ) {
         continue;
       } else {
         currentContent.push(part);
@@ -318,7 +370,9 @@ export const formatAgentMessages = (
   messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>;
   indexTokenCountMap?: Record<number, number>;
 } => {
-  const messages: Array<HumanMessage | AIMessage | SystemMessage | ToolMessage> = [];
+  const messages: Array<
+    HumanMessage | AIMessage | SystemMessage | ToolMessage
+  > = [];
   // If indexTokenCountMap is provided, create a new map to track the updated indices
   const updatedIndexTokenCountMap: Record<number, number> = {};
   // Keep track of the mapping from original payload indices to result indices
@@ -330,13 +384,17 @@ export const formatAgentMessages = (
     // Q: Store the current length of messages to track where this payload message starts in the result?
     // const startIndex = messages.length;
     if (typeof message.content === 'string') {
-      message.content = [{ type: ContentTypes.TEXT, [ContentTypes.TEXT]: message.content }];
+      message.content = [
+        { type: ContentTypes.TEXT, [ContentTypes.TEXT]: message.content },
+      ];
     }
     if (message.role !== 'assistant') {
-      messages.push(formatMessage({
-        message: message as MessageInput,
-        langChain: true
-      }) as HumanMessage | AIMessage | SystemMessage);
+      messages.push(
+        formatMessage({
+          message: message as MessageInput,
+          langChain: true,
+        }) as HumanMessage | AIMessage | SystemMessage
+      );
 
       // Update the index mapping for this message
       indexMapping[i] = [messages.length - 1];
@@ -441,7 +499,11 @@ export const formatAgentMessages = (
 
   // Update the token count map if it was provided
   if (indexTokenCountMap) {
-    for (let originalIndex = 0; originalIndex < payload.length; originalIndex++) {
+    for (
+      let originalIndex = 0;
+      originalIndex < payload.length;
+      originalIndex++
+    ) {
       const resultIndices = indexMapping[originalIndex] || [];
       const tokenCount = indexTokenCountMap[originalIndex];
 
@@ -456,7 +518,8 @@ export const formatAgentMessages = (
           resultIndices.forEach((resultIndex, idx) => {
             if (idx === resultIndices.length - 1) {
               // Give any remainder to the last message
-              updatedIndexTokenCountMap[resultIndex] = tokenCount - (countPerMessage * (resultIndices.length - 1));
+              updatedIndexTokenCountMap[resultIndex] =
+                tokenCount - countPerMessage * (resultIndices.length - 1);
             } else {
               updatedIndexTokenCountMap[resultIndex] = countPerMessage;
             }
@@ -468,7 +531,9 @@ export const formatAgentMessages = (
 
   return {
     messages,
-    indexTokenCountMap: indexTokenCountMap ? updatedIndexTokenCountMap : undefined
+    indexTokenCountMap: indexTokenCountMap
+      ? updatedIndexTokenCountMap
+      : undefined,
   };
 };
 
@@ -477,7 +542,9 @@ export const formatAgentMessages = (
  * @param {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} payload - The array of messages to format.
  * @returns {Array<HumanMessage | AIMessage | SystemMessage | ToolMessage>} - The array of formatted LangChain messages, including ToolMessages for tool calls.
  */
-export const formatContentStrings = (payload: Array<BaseMessage>): Array<BaseMessage> => {
+export const formatContentStrings = (
+  payload: Array<BaseMessage>
+): Array<BaseMessage> => {
   // Create a copy of the payload to avoid modifying the original
   const result = [...payload];
 

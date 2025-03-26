@@ -74,7 +74,9 @@ describe('formatAgentMessages with tools parameter', () => {
 
     // The content should be a string representation of both messages
     expect(typeof result.messages[1].content).toBe('string');
-    expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
+    expect(result.messages[1].content).toEqual(
+      'AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F'
+    );
   });
 
   it('should convert tool messages to string when tool is not in the allowed set', () => {
@@ -113,7 +115,9 @@ describe('formatAgentMessages with tools parameter', () => {
 
     // The content should be a string representation of both messages
     expect(typeof result.messages[1].content).toBe('string');
-    expect(result.messages[1].content).toEqual('AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F');
+    expect(result.messages[1].content).toEqual(
+      'AI: Let me check the weather for you.\nTool: check_weather, Sunny, 75°F'
+    );
   });
 
   it('should not convert tool messages when tool is in the allowed set', () => {
@@ -154,7 +158,10 @@ describe('formatAgentMessages with tools parameter', () => {
 
   it('should handle multiple tool calls with mixed allowed/disallowed tools', () => {
     const payload: TPayload = [
-      { role: 'user', content: 'Tell me about the weather and calculate something' },
+      {
+        role: 'user',
+        content: 'Tell me about the weather and calculate something',
+      },
       {
         role: 'assistant',
         content: [
@@ -202,9 +209,13 @@ describe('formatAgentMessages with tools parameter', () => {
 
     // The content should include all parts
     expect(typeof result.messages[1].content).toBe('string');
-    expect(result.messages[1].content).toContain('Let me check the weather first.');
+    expect(result.messages[1].content).toContain(
+      'Let me check the weather first.'
+    );
     expect(result.messages[1].content).toContain('Sunny, 75°F');
-    expect(result.messages[1].content).toContain('Now let me calculate something for you.');
+    expect(result.messages[1].content).toContain(
+      'Now let me calculate something for you.'
+    );
     expect(result.messages[1].content).toContain('2');
   });
 
@@ -233,14 +244,18 @@ describe('formatAgentMessages with tools parameter', () => {
     ];
 
     const indexTokenCountMap = {
-      0: 10,  // 10 tokens for user message
-      1: 40,  // 40 tokens for assistant message with tool call
+      0: 10, // 10 tokens for user message
+      1: 40, // 40 tokens for assistant message with tool call
     };
 
     // Provide a set of allowed tools that doesn't include 'check_weather'
     const allowedTools = new Set(['search', 'calculator']);
 
-    const result = formatAgentMessages(payload, indexTokenCountMap, allowedTools);
+    const result = formatAgentMessages(
+      payload,
+      indexTokenCountMap,
+      allowedTools
+    );
 
     // Should have 2 messages and 2 entries in the token count map
     expect(result.messages).toHaveLength(2);
@@ -251,6 +266,39 @@ describe('formatAgentMessages with tools parameter', () => {
 
     // All assistant message tokens should be assigned to the single AIMessage
     expect(result.indexTokenCountMap?.[1]).toBe(40);
+  });
+
+  it('should heal invalid tool call structure when converting to string', () => {
+    const payload: TPayload = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              id: 'tool_1',
+              name: 'check_weather',
+              args: '{"location":"New York"}',
+              output: 'Sunny, 75°F',
+            },
+          },
+        ],
+      },
+    ];
+
+    // Provide a set of allowed tools that doesn't include 'check_weather'
+    const allowedTools = new Set(['search', 'calculator']);
+
+    const result = formatAgentMessages(payload, undefined, allowedTools);
+
+    // Should convert to a single AIMessage with string content
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toBeInstanceOf(AIMessage);
+
+    // The content should be a string representation of the tool message
+    expect(typeof result.messages[0].content).toBe('string');
+    expect(result.messages[0].content).toContain('check_weather');
+    expect(result.messages[0].content).toContain('Sunny, 75°F');
   });
 
   it('should handle complex sequences with multiple tool calls', () => {
@@ -313,7 +361,10 @@ describe('formatAgentMessages with tools parameter', () => {
           },
         ],
       },
-      { role: 'assistant', content: 'Here\'s your answer based on all that information.' },
+      {
+        role: 'assistant',
+        content: 'Here\'s your answer based on all that information.',
+      },
     ];
 
     // Allow search and calculator but not check_weather
@@ -328,7 +379,7 @@ describe('formatAgentMessages with tools parameter', () => {
 
     // Check the types of messages
     expect(result.messages[0]).toBeInstanceOf(HumanMessage);
-    expect(result.messages[1]).toBeInstanceOf(AIMessage);  // Search message
+    expect(result.messages[1]).toBeInstanceOf(AIMessage); // Search message
     expect(result.messages[2]).toBeInstanceOf(ToolMessage); // Search tool response
     expect(result.messages[3]).toBeInstanceOf(AIMessage); // Converted weather+calculator message
     expect(result.messages[4]).toBeInstanceOf(AIMessage); // Final message
