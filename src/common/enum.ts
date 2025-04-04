@@ -67,7 +67,7 @@ export enum GraphEvents {
   PROMPT_START = 'on_prompt_start',
 
   /** Emitted when a prompt completes its processing. */
-  PROMPT_END = 'on_prompt_end'
+  PROMPT_END = 'on_prompt_end',
 }
 
 export enum Providers {
@@ -77,6 +77,7 @@ export enum Providers {
   BEDROCK = 'bedrock',
   ANTHROPIC = 'anthropic',
   MISTRALAI = 'mistralai',
+  MISTRAL = 'mistral',
   OLLAMA = 'ollama',
   GOOGLE = 'google',
   AZURE = 'azureOpenAI',
@@ -104,7 +105,7 @@ export enum CommonEvents {
 
 export enum StepTypes {
   TOOL_CALLS = 'tool_calls',
-  MESSAGE_CREATION = 'message_creation'
+  MESSAGE_CREATION = 'message_creation',
 }
 
 export enum ContentTypes {
@@ -162,5 +163,5 @@ export enum Constants {
 
 export enum EnvVar {
   CODE_API_KEY = 'LIBRECHAT_CODE_API_KEY',
-  CODE_BASEURL = 'LIBRECHAT_CODE_BASEURL'
+  CODE_BASEURL = 'LIBRECHAT_CODE_BASEURL',
 }

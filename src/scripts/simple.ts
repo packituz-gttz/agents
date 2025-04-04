@@ -92,6 +92,22 @@ async function testStandardStreaming(): Promise<void> {
   };
 
   const llmConfig = getLLMConfig(provider);
+  if (
+    'configuration' in llmConfig &&
+    (llmConfig as t.OpenAIClientOptions).configuration != null
+  ) {
+    const openAIConfig = llmConfig as t.OpenAIClientOptions;
+    if (openAIConfig.configuration) {
+      openAIConfig.configuration.fetch = (
+        url: RequestInfo,
+        init?: RequestInit
+      ) => {
+        console.log('Fetching:', url);
+        return fetch(url, init);
+      };
+    }
+  }
+
   if (provider === Providers.ANTHROPIC) {
     (llmConfig as t.AnthropicClientOptions).clientOptions = {
       defaultHeaders: {
