@@ -8,9 +8,20 @@ import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
-import { ChatOpenAI, AzureChatOpenAI, ClientOptions as OAIClientOptions } from '@langchain/openai';
-import type { BindToolsInput, BaseChatModelParams } from '@langchain/core/language_models/chat_models';
-import type { ChatOpenAIFields, OpenAIChatInput, AzureOpenAIInput } from '@langchain/openai';
+import {
+  ChatOpenAI,
+  AzureChatOpenAI,
+  ClientOptions as OAIClientOptions,
+} from '@langchain/openai';
+import type {
+  BindToolsInput,
+  BaseChatModelParams,
+} from '@langchain/core/language_models/chat_models';
+import type {
+  ChatOpenAIFields,
+  OpenAIChatInput,
+  AzureOpenAIInput,
+} from '@langchain/openai';
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
@@ -27,16 +38,19 @@ import type { ChatOpenRouterCallOptions } from '@/llm/openrouter/llm';
 import { ChatOpenRouter } from '@/llm/openrouter/llm';
 import { Providers } from '@/common';
 
-export type AzureClientOptions = (Partial<OpenAIChatInput> & Partial<AzureOpenAIInput> & {
-        openAIApiKey?: string;
-        openAIApiVersion?: string;
-        openAIBasePath?: string;
-        deploymentName?: string;
-    } & BaseChatModelParams & {
-        configuration?: OAIClientOptions;
-    });
+export type AzureClientOptions = Partial<OpenAIChatInput> &
+  Partial<AzureOpenAIInput> & {
+    openAIApiKey?: string;
+    openAIApiVersion?: string;
+    openAIBasePath?: string;
+    deploymentName?: string;
+  } & BaseChatModelParams & {
+    configuration?: OAIClientOptions;
+  };
 export type ThinkingConfig = AnthropicInput['thinking'];
-export type ChatOpenAIToolType = BindToolsInput | OpenAIClient.ChatCompletionTool;
+export type ChatOpenAIToolType =
+  | BindToolsInput
+  | OpenAIClient.ChatCompletionTool;
 export type CommonToolType = StructuredTool | ChatOpenAIToolType;
 export type AnthropicReasoning = {
   thinking?: ThinkingConfig | boolean;
@@ -58,17 +72,17 @@ export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
 export type XAIClientOptions = ChatXAIInput;
 
 export type ClientOptions =
-| OpenAIClientOptions
-| AzureClientOptions
-| OllamaClientOptions
-| AnthropicClientOptions
-| MistralAIClientOptions
-| VertexAIClientOptions
-| BedrockClientOptions
-| BedrockConverseClientOptions
-| GoogleClientOptions
-| DeepSeekClientOptions
-| XAIClientOptions;
+  | OpenAIClientOptions
+  | AzureClientOptions
+  | OllamaClientOptions
+  | AnthropicClientOptions
+  | MistralAIClientOptions
+  | VertexAIClientOptions
+  | BedrockClientOptions
+  | BedrockConverseClientOptions
+  | GoogleClientOptions
+  | DeepSeekClientOptions
+  | XAIClientOptions;
 
 export type LLMConfig = {
   provider: Providers;
@@ -83,6 +97,7 @@ export type ProviderOptionsMap = {
   [Providers.DEEPSEEK]: DeepSeekClientOptions;
   [Providers.ANTHROPIC]: AnthropicClientOptions;
   [Providers.MISTRALAI]: MistralAIClientOptions;
+  [Providers.MISTRAL]: MistralAIClientOptions;
   [Providers.OPENROUTER]: ChatOpenRouterCallOptions;
   [Providers.BEDROCK_LEGACY]: BedrockClientOptions;
   [Providers.BEDROCK]: BedrockConverseClientOptions;
@@ -97,6 +112,7 @@ export type ChatModelMap = {
   [Providers.VERTEXAI]: ChatVertexAI;
   [Providers.ANTHROPIC]: ChatAnthropic;
   [Providers.MISTRALAI]: ChatMistralAI;
+  [Providers.MISTRAL]: ChatMistralAI;
   [Providers.OPENROUTER]: ChatOpenRouter;
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
@@ -112,4 +128,4 @@ export type ChatModelInstance = ChatModelMap[Providers];
 
 export type ModelWithTools = ChatModelInstance & {
   bindTools(tools: CommonToolType[]): Runnable;
-}
+};
