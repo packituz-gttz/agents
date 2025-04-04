@@ -59,7 +59,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     model: 'llama3.2',
     streaming: true,
     streamUsage: true,
-    baseUrl: 'http://host.docker.internal:11434'
+    baseUrl: 'http://host.docker.internal:11434',
   },
   [Providers.DEEPSEEK]: {
     provider: Providers.DEEPSEEK,
@@ -73,11 +73,23 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streaming: true,
     streamUsage: true,
   },
-  [Providers.MISTRALAI]: {
-    provider: Providers.MISTRALAI,
-    model: 'mistral-large-latest',
+  // [Providers.MISTRALAI]: {
+  //   provider: Providers.MISTRALAI,
+  //   model: 'mistral-large-latest',
+  //   streaming: true,
+  //   streamUsage: true,
+  // },
+  [Providers.MISTRAL]: {
+    provider: Providers.OPENAI,
     streaming: true,
-    streamUsage: true,
+    streamUsage: false,
+    // model: 'codestral-latest',
+    model: 'mistral-large-latest',
+    openAIApiKey: '12OGQ62FIijUbjaloc5o3IpSYHQNV9Py',
+    configuration: {
+      baseURL: 'https://api.mistral.ai/v1',
+      defaultHeaders: {},
+    },
   },
   [Providers.VERTEXAI]: {
     provider: Providers.VERTEXAI,
@@ -112,7 +124,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     apiKey: process.env.PERPLEXITY_API_KEY,
     configuration: {
       baseURL: 'https://api.perplexity.ai/',
-    }
+    },
   },
 };
 
