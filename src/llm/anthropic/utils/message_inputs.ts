@@ -187,7 +187,7 @@ function _formatContent(content: MessageContent): string | Record<string, any>[]
           try {
             contentPartCopy.input = JSON.parse(contentPartCopy.input);
           } catch {
-            // no-op
+            contentPartCopy.input = {};
           }
         }
 
