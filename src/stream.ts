@@ -487,10 +487,14 @@ export function createContentAggregator(): t.ContentAggregatorResult {
         | (Omit<t.ToolCallContent, 'tool_call'> & { tool_call?: ToolCall })
         | undefined;
 
-      const args = finalUpdate
+      const toolCallArgs =
+        (contentPart.tool_call.args as unknown as string | undefined) ?? '';
+      let args = finalUpdate
         ? contentPart.tool_call.args
-        : (existingContent?.tool_call?.args || '') +
-          (contentPart.tool_call.args ?? '');
+        : (existingContent?.tool_call?.args ?? '');
+      if (!finalUpdate && typeof args === 'string' && args !== toolCallArgs) {
+        args += toolCallArgs;
+      }
 
       const id =
         getNonEmptyValue([
@@ -551,10 +555,7 @@ export function createContentAggregator(): t.ContentAggregatorResult {
           const contentPart: t.MessageContentComplex = {
             type: ContentTypes.TOOL_CALL,
             tool_call: {
-              args:
-                (typeof toolCall.args === 'string'
-                  ? toolCall.args
-                  : JSON.stringify(toolCall.args)) || '',
+              args: toolCall.args,
               name: toolCall.name,
               id: toolCallId,
             },
