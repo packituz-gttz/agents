@@ -15,7 +15,11 @@ function getNonEmptyValue(possibleValues: string[]): string | undefined {
   return undefined;
 }
 
-export const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>, returnExistingId = false): string | undefined => {
+export const getMessageId = (
+  stepKey: string,
+  graph: Graph<t.BaseGraphState>,
+  returnExistingId = false
+): string | undefined => {
   const messageId = graph.messageIdsByStepKey.get(stepKey);
   if (messageId != null && messageId) {
     return returnExistingId ? messageId : undefined;
@@ -33,7 +37,11 @@ export const getMessageId = (stepKey: string, graph: Graph<t.BaseGraphState>, re
   return message_id;
 };
 
-export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string, unknown>, graph?: Graph): void => {
+export const handleToolCalls = (
+  toolCalls?: ToolCall[],
+  metadata?: Record<string, unknown>,
+  graph?: Graph
+): void => {
   if (!graph || !metadata) {
     console.warn(`Graph or metadata not found in ${event} event`);
     return;
@@ -67,19 +75,28 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
 
     const dispatchToolCallIds = (lastMessageStepId: string): void => {
       graph.dispatchMessageDelta(lastMessageStepId, {
-        content: [{
-          type: 'text',
-          text: '',
-          tool_call_ids: [toolCallId],
-        }],
+        content: [
+          {
+            type: 'text',
+            text: '',
+            tool_call_ids: [toolCallId],
+          },
+        ],
       });
     };
-      /* If the previous step exists and is a message creation */
-    if (prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION) {
+    /* If the previous step exists and is a message creation */
+    if (
+      prevStepId &&
+      prevRunStep &&
+      prevRunStep.type === StepTypes.MESSAGE_CREATION
+    ) {
       dispatchToolCallIds(prevStepId);
       graph.messageStepHasToolCalls.set(prevStepId, true);
       /* If the previous step doesn't exist or is not a message creation */
-    } else if (!prevRunStep || prevRunStep.type !== StepTypes.MESSAGE_CREATION) {
+    } else if (
+      !prevRunStep ||
+      prevRunStep.type !== StepTypes.MESSAGE_CREATION
+    ) {
       const messageId = getMessageId(stepKey, graph, true) ?? '';
       const stepId = graph.dispatchRunStep(stepKey, {
         type: StepTypes.MESSAGE_CREATION,
@@ -99,7 +116,12 @@ export const handleToolCalls = (toolCalls?: ToolCall[], metadata?: Record<string
 };
 
 export class ChatModelStreamHandler implements t.EventHandler {
-  handle(event: string, data: t.StreamEventData, metadata?: Record<string, unknown>, graph?: Graph): void {
+  handle(
+    event: string,
+    data: t.StreamEventData,
+    metadata?: Record<string, unknown>,
+    graph?: Graph
+  ): void {
     if (!graph) {
       throw new Error('Graph not found');
     }
@@ -112,17 +134,27 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     const chunk = data.chunk as Partial<AIMessageChunk>;
-    const content = (chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined) ?? chunk.content;
+    const content =
+      (chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined) ??
+      chunk.content;
     this.handleReasoning(chunk, graph);
 
     let hasToolCalls = false;
-    if (chunk.tool_calls && chunk.tool_calls.length > 0 && chunk.tool_calls.every((tc) => tc.id != null && tc.id !== '')) {
+    if (
+      chunk.tool_calls &&
+      chunk.tool_calls.length > 0 &&
+      chunk.tool_calls.every((tc) => tc.id != null && tc.id !== '')
+    ) {
       hasToolCalls = true;
       handleToolCalls(chunk.tool_calls, metadata, graph);
     }
 
-    const hasToolCallChunks = (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) ?? false;
-    const isEmptyContent = typeof content === 'undefined' || !content.length || typeof content === 'string' && !content;
+    const hasToolCallChunks =
+      (chunk.tool_call_chunks && chunk.tool_call_chunks.length > 0) ?? false;
+    const isEmptyContent =
+      typeof content === 'undefined' ||
+      !content.length ||
+      (typeof content === 'string' && !content);
     const isEmptyChunk = isEmptyContent && !hasToolCallChunks;
     const chunkId = chunk.id ?? '';
     if (isEmptyChunk && chunkId && chunkId.startsWith('msg')) {
@@ -141,11 +173,17 @@ export class ChatModelStreamHandler implements t.EventHandler {
 
     const stepKey = graph.getStepKey(metadata);
 
-    if (hasToolCallChunks
-      && chunk.tool_call_chunks
-      && chunk.tool_call_chunks.length
-      && typeof chunk.tool_call_chunks[0]?.index === 'number') {
-      this.handleToolCallChunks({ graph, stepKey, toolCallChunks: chunk.tool_call_chunks });
+    if (
+      hasToolCallChunks &&
+      chunk.tool_call_chunks &&
+      chunk.tool_call_chunks.length &&
+      typeof chunk.tool_call_chunks[0]?.index === 'number'
+    ) {
+      this.handleToolCallChunks({
+        graph,
+        stepKey,
+        toolCallChunks: chunk.tool_call_chunks,
+      });
     }
 
     if (isEmptyContent) {
@@ -165,7 +203,6 @@ export class ChatModelStreamHandler implements t.EventHandler {
     const stepId = graph.getStepIdByKey(stepKey);
     const runStep = graph.getRunStep(stepId);
     if (!runStep) {
-
       console.warn(`\n
 ==============================================================
 
@@ -187,38 +224,53 @@ hasToolCallChunks: ${hasToolCallChunks}
     /* Note: tool call chunks may have non-empty content that matches the current tool chunk generation */
     if (typeof content === 'string' && runStep.type === StepTypes.TOOL_CALLS) {
       return;
-    } else if (hasToolCallChunks && (chunk.tool_call_chunks?.some((tc) => tc.args === content) ?? false)) {
+    } else if (
+      hasToolCallChunks &&
+      (chunk.tool_call_chunks?.some((tc) => tc.args === content) ?? false)
+    ) {
       return;
     } else if (typeof content === 'string') {
       if (graph.currentTokenType === ContentTypes.TEXT) {
         graph.dispatchMessageDelta(stepId, {
-          content: [{
-            type: ContentTypes.TEXT,
-            text: content,
-          }],
+          content: [
+            {
+              type: ContentTypes.TEXT,
+              text: content,
+            },
+          ],
         });
       } else {
         graph.dispatchReasoningDelta(stepId, {
-          content: [{
-            type: ContentTypes.THINK,
-            think: content,
-          }],
+          content: [
+            {
+              type: ContentTypes.THINK,
+              think: content,
+            },
+          ],
         });
       }
-    } else if (content.every((c) => c.type?.startsWith(ContentTypes.TEXT) ?? false)) {
+    } else if (
+      content.every((c) => c.type?.startsWith(ContentTypes.TEXT) ?? false)
+    ) {
       graph.dispatchMessageDelta(stepId, {
         content,
       });
-    } else if (content.every(
-      (c) =>
-        (c.type?.startsWith(ContentTypes.THINKING) ?? false) ||
-      (c.type?.startsWith(ContentTypes.REASONING_CONTENT) ?? false)
-    )) {
+    } else if (
+      content.every(
+        (c) =>
+          (c.type?.startsWith(ContentTypes.THINKING) ?? false) ||
+          (c.type?.startsWith(ContentTypes.REASONING_CONTENT) ?? false)
+      )
+    ) {
       graph.dispatchReasoningDelta(stepId, {
         content: content.map((c) => ({
           type: ContentTypes.THINK,
-          think: (c as t.ThinkingContentText).thinking ?? (c as Partial<t.BedrockReasoningContentText>).reasoningText?.text ?? '',
-        }))});
+          think:
+            (c as t.ThinkingContentText).thinking ??
+            (c as Partial<t.BedrockReasoningContentText>).reasoningText?.text ??
+            '',
+        })),
+      });
     }
   }
   handleToolCallChunks = ({
@@ -228,7 +280,7 @@ hasToolCallChunks: ${hasToolCallChunks}
   }: {
     graph: Graph;
     stepKey: string;
-    toolCallChunks: ToolCallChunk[],
+    toolCallChunks: ToolCallChunk[];
   }): void => {
     let prevStepId: string;
     let prevRunStep: t.RunStep | undefined;
@@ -251,7 +303,9 @@ hasToolCallChunks: ${hasToolCallChunks}
 
     /** Edge Case: Tool Call Run Step or `tool_call_ids` never dispatched */
     const tool_calls: ToolCall[] | undefined =
-      prevStepId && prevRunStep && prevRunStep.type === StepTypes.MESSAGE_CREATION
+      prevStepId &&
+      prevRunStep &&
+      prevRunStep.type === StepTypes.MESSAGE_CREATION
         ? []
         : undefined;
 
@@ -262,7 +316,11 @@ hasToolCallChunks: ${hasToolCallChunks}
       }
       if (toolCallChunk.id === '') {
         toolCallChunk.id = undefined;
-      } else if (tool_calls != null && toolCallChunk.id != null && toolCallChunk.name != null) {
+      } else if (
+        tool_calls != null &&
+        toolCallChunk.id != null &&
+        toolCallChunk.name != null
+      ) {
         tool_calls.push({
           args: {},
           id: toolCallChunk.id,
@@ -273,14 +331,18 @@ hasToolCallChunks: ${hasToolCallChunks}
     }
 
     let stepId: string = _stepId;
-    const alreadyDispatched = prevRunStep?.type === StepTypes.MESSAGE_CREATION && graph.messageStepHasToolCalls.has(prevStepId);
+    const alreadyDispatched =
+      prevRunStep?.type === StepTypes.MESSAGE_CREATION &&
+      graph.messageStepHasToolCalls.has(prevStepId);
     if (!alreadyDispatched && tool_calls?.length === toolCallChunks.length) {
       graph.dispatchMessageDelta(prevStepId, {
-        content: [{
-          type: ContentTypes.TEXT,
-          text: '',
-          tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
-        }],
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            text: '',
+            tool_call_ids: tool_calls.map((tc) => tc.id ?? ''),
+          },
+        ],
       });
       graph.messageStepHasToolCalls.set(prevStepId, true);
       stepId = graph.dispatchRunStep(stepKey, {
@@ -294,21 +356,45 @@ hasToolCallChunks: ${hasToolCallChunks}
     });
   };
   handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
-    let reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined;
-    if (Array.isArray(chunk.content) && (chunk.content[0]?.type === 'thinking' || chunk.content[0]?.type === 'reasoning_content')) {
+    let reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as
+      | string
+      | undefined;
+    if (
+      Array.isArray(chunk.content) &&
+      (chunk.content[0]?.type === 'thinking' ||
+        chunk.content[0]?.type === 'reasoning_content')
+    ) {
       reasoning_content = 'valid';
     }
-    if (reasoning_content != null && reasoning_content && (chunk.content == null || chunk.content === '' || reasoning_content === 'valid')) {
+    if (
+      reasoning_content != null &&
+      reasoning_content &&
+      (chunk.content == null ||
+        chunk.content === '' ||
+        reasoning_content === 'valid')
+    ) {
       graph.currentTokenType = ContentTypes.THINK;
       graph.tokenTypeSwitch = 'reasoning';
       return;
-    } else if (graph.tokenTypeSwitch === 'reasoning' && graph.currentTokenType !== ContentTypes.TEXT && chunk.content != null && chunk.content !== '') {
+    } else if (
+      graph.tokenTypeSwitch === 'reasoning' &&
+      graph.currentTokenType !== ContentTypes.TEXT &&
+      chunk.content != null &&
+      chunk.content !== ''
+    ) {
       graph.currentTokenType = ContentTypes.TEXT;
       graph.tokenTypeSwitch = 'content';
-    } else if (chunk.content != null && typeof chunk.content === 'string' && chunk.content.includes('<think>')) {
+    } else if (
+      chunk.content != null &&
+      typeof chunk.content === 'string' &&
+      chunk.content.includes('<think>')
+    ) {
       graph.currentTokenType = ContentTypes.THINK;
       graph.tokenTypeSwitch = 'content';
-    } else if (graph.lastToken != null && graph.lastToken.includes('</think>')) {
+    } else if (
+      graph.lastToken != null &&
+      graph.lastToken.includes('</think>')
+    ) {
       graph.currentTokenType = ContentTypes.TEXT;
       graph.tokenTypeSwitch = 'content';
     }
@@ -327,7 +413,7 @@ export function createContentAggregator(): t.ContentAggregatorResult {
   const updateContent = (
     index: number,
     contentPart: t.MessageContentComplex,
-    finalUpdate = false,
+    finalUpdate = false
   ): void => {
     const partType = contentPart.type ?? '';
     if (!partType) {
@@ -382,21 +468,40 @@ export function createContentAggregator(): t.ContentAggregatorResult {
       };
 
       contentParts[index] = update;
-    } else if (partType === ContentTypes.IMAGE_URL && 'image_url' in contentPart) {
-      const currentContent = contentParts[index] as { type: 'image_url'; image_url: string };
+    } else if (
+      partType === ContentTypes.IMAGE_URL &&
+      'image_url' in contentPart
+    ) {
+      const currentContent = contentParts[index] as {
+        type: 'image_url';
+        image_url: string;
+      };
       contentParts[index] = {
         ...currentContent,
       };
-    } else if (partType === ContentTypes.TOOL_CALL && 'tool_call' in contentPart) {
-      const existingContent = contentParts[index] as Omit<t.ToolCallContent, 'tool_call'> & { tool_call?: ToolCall } | undefined;
+    } else if (
+      partType === ContentTypes.TOOL_CALL &&
+      'tool_call' in contentPart
+    ) {
+      const existingContent = contentParts[index] as
+        | (Omit<t.ToolCallContent, 'tool_call'> & { tool_call?: ToolCall })
+        | undefined;
 
       const args = finalUpdate
         ? contentPart.tool_call.args
-        : (existingContent?.tool_call?.args || '') + (contentPart.tool_call.args ?? '');
+        : (existingContent?.tool_call?.args || '') +
+          (contentPart.tool_call.args ?? '');
 
-      const id = getNonEmptyValue([contentPart.tool_call.id, existingContent?.tool_call?.id]) ?? '';
+      const id =
+        getNonEmptyValue([
+          contentPart.tool_call.id,
+          existingContent?.tool_call?.id,
+        ]) ?? '';
       const name =
-        getNonEmptyValue([contentPart.tool_call.name, existingContent?.tool_call?.name]) ?? '';
+        getNonEmptyValue([
+          contentPart.tool_call.name,
+          existingContent?.tool_call?.name,
+        ]) ?? '';
 
       const newToolCall: ToolCall & t.PartMetadata = {
         id,
@@ -417,22 +522,45 @@ export function createContentAggregator(): t.ContentAggregatorResult {
     }
   };
 
-  const aggregateContent = ({ event, data }: {
+  const aggregateContent = ({
+    event,
+    data,
+  }: {
     event: GraphEvents;
-    data: t.RunStep | t.AgentUpdate | t.MessageDeltaEvent | t.RunStepDeltaEvent | { result: t.ToolEndEvent };
+    data:
+      | t.RunStep
+      | t.AgentUpdate
+      | t.MessageDeltaEvent
+      | t.RunStepDeltaEvent
+      | { result: t.ToolEndEvent };
   }): void => {
-
     if (event === GraphEvents.ON_RUN_STEP) {
       const runStep = data as t.RunStep;
       stepMap.set(runStep.id, runStep);
 
       // Store tool call IDs if present
-      if (runStep.stepDetails.type === StepTypes.TOOL_CALLS && runStep.stepDetails.tool_calls) {
-        runStep.stepDetails.tool_calls.forEach((toolCall) => {
+      if (
+        runStep.stepDetails.type === StepTypes.TOOL_CALLS &&
+        runStep.stepDetails.tool_calls
+      ) {
+        (runStep.stepDetails.tool_calls as ToolCall[]).forEach((toolCall) => {
           const toolCallId = toolCall.id ?? '';
           if ('id' in toolCall && toolCallId) {
             toolCallIdMap.set(runStep.id, toolCallId);
           }
+          const contentPart: t.MessageContentComplex = {
+            type: ContentTypes.TOOL_CALL,
+            tool_call: {
+              args:
+                (typeof toolCall.args === 'string'
+                  ? toolCall.args
+                  : JSON.stringify(toolCall.args)) || '',
+              name: toolCall.name,
+              id: toolCallId,
+            },
+          };
+
+          updateContent(runStep.index, contentPart);
         });
       }
     } else if (event === GraphEvents.ON_MESSAGE_DELTA) {
@@ -450,7 +578,10 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
         updateContent(runStep.index, contentPart);
       }
-    } else if (event === GraphEvents.ON_AGENT_UPDATE && (data as t.AgentUpdate | undefined)?.agent_update) {
+    } else if (
+      event === GraphEvents.ON_AGENT_UPDATE &&
+      (data as t.AgentUpdate | undefined)?.agent_update
+    ) {
       const contentPart = data as t.AgentUpdate;
       updateContent(contentPart.agent_update.index, contentPart);
     } else if (event === GraphEvents.ON_REASONING_DELTA) {
@@ -480,7 +611,6 @@ export function createContentAggregator(): t.ContentAggregatorResult {
         runStepDelta.delta.type === StepTypes.TOOL_CALLS &&
         runStepDelta.delta.tool_calls
       ) {
-
         runStepDelta.delta.tool_calls.forEach((toolCallDelta) => {
           const toolCallId = toolCallIdMap.get(runStepDelta.id);
 
@@ -503,7 +633,9 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
       const runStep = stepMap.get(stepId);
       if (!runStep) {
-        console.warn('No run step or runId found for completed tool call event');
+        console.warn(
+          'No run step or runId found for completed tool call event'
+        );
         return;
       }
 
@@ -514,7 +646,6 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
       updateContent(runStep.index, contentPart, true);
     }
-
   };
 
   return { contentParts, aggregateContent, stepMap };
