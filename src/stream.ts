@@ -484,17 +484,19 @@ export function createContentAggregator(): t.ContentAggregatorResult {
       'tool_call' in contentPart
     ) {
       const existingContent = contentParts[index] as
-        | (Omit<t.ToolCallContent, 'tool_call'> & { tool_call?: ToolCall })
+        | (Omit<t.ToolCallContent, 'tool_call'> & {
+            tool_call?: t.ToolCallPart;
+          })
         | undefined;
 
-      const toolCallArgs =
-        (contentPart.tool_call.args as unknown as string | undefined) ?? '';
-      let args = finalUpdate
-        ? contentPart.tool_call.args
-        : (existingContent?.tool_call?.args ?? '');
-      if (!finalUpdate && typeof args === 'string' && args !== toolCallArgs) {
-        args += toolCallArgs;
-      }
+      const toolCallArgs = (contentPart.tool_call as t.ToolCallPart).args;
+      /** When args are a valid object, they are likely already invoked */
+      const args =
+        finalUpdate ||
+        typeof existingContent?.tool_call?.args === 'object' ||
+        typeof toolCallArgs === 'object'
+          ? contentPart.tool_call.args
+          : (existingContent?.tool_call?.args ?? '') + (toolCallArgs ?? '');
 
       const id =
         getNonEmptyValue([
