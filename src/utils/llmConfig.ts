@@ -85,7 +85,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: false,
     // model: 'codestral-latest',
     model: 'mistral-large-latest',
-    openAIApiKey: '12OGQ62FIijUbjaloc5o3IpSYHQNV9Py',
+    openAIApiKey: process.env.MISTRAL_API_KEY,
     configuration: {
       baseURL: 'https://api.mistral.ai/v1',
       defaultHeaders: {},
