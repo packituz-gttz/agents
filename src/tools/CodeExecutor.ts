@@ -10,26 +10,33 @@ import { EnvVar, Constants } from '@/common';
 config();
 
 export const imageExtRegex = /\.(jpg|jpeg|png|gif|webp)$/i;
-export const getCodeBaseURL = (): string => getEnvironmentVariable(EnvVar.CODE_BASEURL) ?? Constants.OFFICIAL_CODE_BASEURL;
+export const getCodeBaseURL = (): string =>
+  getEnvironmentVariable(EnvVar.CODE_BASEURL) ??
+  Constants.OFFICIAL_CODE_BASEURL;
 
-const imageMessage = ' - the image is already displayed to the user';
-const otherMessage = ' - the file is already downloaded by the user';
+const imageMessage = 'Image is already displayed to the user';
+const otherMessage = 'File is already downloaded by the user';
+const accessMessage =
+  'IMPORTANT: Files accessed via session ID are READ-ONLY snapshots. Any modifications MUST be saved as NEW files with different names. The original files cannot be modified in-place. To access these files in future executions, you MUST provide this session_id as a parameter. Without the session_id, previously generated files will not be accessible in subsequent executions.';
+const emptyOutputMessage =
+  'stdout: Empty. Ensure you\'re writing output explicitly.\n';
 
 const CodeExecutionToolSchema = z.object({
-  lang: z.enum([
-    'py',
-    'js',
-    'ts',
-    'c',
-    'cpp',
-    'java',
-    'php',
-    'rs',
-    'go',
-    'd',
-    'f90',
-    'r',
-  ])
+  lang: z
+    .enum([
+      'py',
+      'js',
+      'ts',
+      'c',
+      'cpp',
+      'java',
+      'php',
+      'rs',
+      'go',
+      'd',
+      'f90',
+      'r',
+    ])
     .describe('The programming language or runtime to execute the code in.'),
   code: z.string()
     .describe(`The complete, self-contained code to execute, without any truncation or minimization.
@@ -42,14 +49,36 @@ const CodeExecutionToolSchema = z.object({
 - js: use the \`console\` or \`process\` methods for all outputs.
 - r: IMPORTANT: No X11 display available. ALL graphics MUST use Cairo library (library(Cairo)).
 - Other languages: use appropriate output functions.`),
-  args: z.array(z.string()).optional()
-    .describe('Additional arguments to execute the code with. This should only be used if the input code requires additional arguments to run.'),
+  session_id: z
+    .string()
+    .optional()
+    .describe(
+      `Optional: Session ID from a previous execution to access generated files.
+- Files load into /mnt/data/ (current working directory)
+- Use relative paths ONLY
+- Files are READ-ONLY - cannot be modified in-place
+- To modify: read original file, write to NEW filename
+`.trim()
+    ),
+  args: z
+    .array(z.string())
+    .optional()
+    .describe(
+      'Additional arguments to execute the code with. This should only be used if the input code requires additional arguments to run.'
+    ),
 });
 
-const EXEC_ENDPOINT = `${getCodeBaseURL()}/exec`;
+const baseEndpoint = getCodeBaseURL();
+const EXEC_ENDPOINT = `${baseEndpoint}/exec`;
 
-function createCodeExecutionTool(params: t.CodeExecutionToolParams = {}): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
-  const apiKey = params[EnvVar.CODE_API_KEY] ?? params.apiKey ?? getEnvironmentVariable(EnvVar.CODE_API_KEY) ?? '';
+function createCodeExecutionTool(
+  params: t.CodeExecutionToolParams = {}
+): DynamicStructuredTool<typeof CodeExecutionToolSchema> {
+  const apiKey =
+    params[EnvVar.CODE_API_KEY] ??
+    params.apiKey ??
+    getEnvironmentVariable(EnvVar.CODE_API_KEY) ??
+    '';
   if (!apiKey) {
     throw new Error('No API key provided for code execution tool.');
   }
@@ -64,13 +93,61 @@ Usage:
 `.trim();
 
   return tool<typeof CodeExecutionToolSchema>(
-    async ({ lang, code, ...rest }) => {
+    async ({ lang, code, session_id, ...rest }) => {
       const postData = {
         lang,
         code,
         ...rest,
         ...params,
       };
+
+      if (session_id != null && session_id.length > 0) {
+        try {
+          const filesEndpoint = `${baseEndpoint}/files/${session_id}?detail=full`;
+          const fetchOptions: RequestInit = {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'LibreChat/1.0',
+              'X-API-Key': apiKey,
+            },
+          };
+
+          if (process.env.PROXY != null && process.env.PROXY !== '') {
+            fetchOptions.agent = new HttpsProxyAgent(process.env.PROXY);
+          }
+
+          const response = await fetch(filesEndpoint, fetchOptions);
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch files for session: ${response.status}`
+            );
+          }
+
+          const files = await response.json();
+          if (Array.isArray(files) && files.length > 0) {
+            const fileReferences: t.CodeEnvFile[] = files.map((file) => {
+              // Extract the ID from the file name (part after session ID prefix and before extension)
+              const nameParts = file.name.split('/');
+              const id = nameParts.length > 1 ? nameParts[1].split('.')[0] : '';
+
+              return {
+                session_id,
+                id,
+                name: file.metadata['original-filename'],
+              };
+            });
+
+            if (!postData.files) {
+              postData.files = fileReferences;
+            } else if (Array.isArray(postData.files)) {
+              postData.files = [...postData.files, ...fileReferences];
+            }
+          }
+        } catch {
+          // eslint-disable-next-line no-console
+          console.warn(`Failed to fetch files for session: ${session_id}`);
+        }
+      }
 
       try {
         const fetchOptions: RequestInit = {
@@ -96,7 +173,7 @@ Usage:
         if (result.stdout) {
           formattedOutput += `stdout:\n${result.stdout}\n`;
         } else {
-          formattedOutput += 'stdout: Empty. Ensure you\'re writing output explicitly.\n';
+          formattedOutput += emptyOutputMessage;
         }
         if (result.stderr) formattedOutput += `stderr:\n${result.stderr}\n`;
         if (result.files && result.files.length > 0) {
@@ -104,24 +181,30 @@ Usage:
 
           const fileCount = result.files.length;
           for (let i = 0; i < fileCount; i++) {
-            const filename = result.files[i].name;
-            const isImage = imageExtRegex.test(filename);
-            formattedOutput += isImage ? `${filename}${imageMessage}` : `${filename}${otherMessage}`;
+            const file = result.files[i];
+            const isImage = imageExtRegex.test(file.name);
+            formattedOutput += `- /mnt/data/${file.name} | ${isImage ? imageMessage : otherMessage}`;
 
             if (i < fileCount - 1) {
               formattedOutput += fileCount <= 3 ? ', ' : ',\n';
             }
           }
 
-          return [formattedOutput.trim(), {
-            session_id: result.session_id,
-            files: result.files,
-          }];
+          formattedOutput += `\nsession_id: ${result.session_id}\n\n${accessMessage}`;
+          return [
+            formattedOutput.trim(),
+            {
+              session_id: result.session_id,
+              files: result.files,
+            },
+          ];
         }
 
         return [formattedOutput.trim(), { session_id: result.session_id }];
       } catch (error) {
-        return [`Execution error:\n\n${(error as Error | undefined)?.message}`, {}];
+        throw new Error(
+          `Execution error:\n\n${(error as Error | undefined)?.message}`
+        );
       }
     },
     {
