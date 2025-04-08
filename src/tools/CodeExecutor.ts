@@ -17,7 +17,7 @@ export const getCodeBaseURL = (): string =>
 const imageMessage = 'Image is already displayed to the user';
 const otherMessage = 'File is already downloaded by the user';
 const accessMessage =
-  'IMPORTANT: Files accessed via session ID are READ-ONLY snapshots. Any modifications MUST be saved as NEW files with different names. The original files cannot be modified in-place. To access these files in future executions, you MUST provide this session_id as a parameter. Without the session_id, previously generated files will not be accessible in subsequent executions.';
+  'Note: Files are READ-ONLY snapshots. Save any changes as NEW files with different names. Original files CANNOT be modified in-place. To access these files again, you MUST include the `session_id` in future sessions. Without it, previously generated files will be inaccessible.';
 const emptyOutputMessage =
   'stdout: Empty. Ensure you\'re writing output explicitly.\n';
 
@@ -53,10 +53,10 @@ const CodeExecutionToolSchema = z.object({
     .string()
     .optional()
     .describe(
-      `Optional: Session ID from a previous execution to access generated files.
-- Files load into /mnt/data/ (current working directory)
+      `Session ID from a previous response to access generated files.
+- Files load into the current working directory ("/mnt/data/")
 - Use relative paths ONLY
-- Files are READ-ONLY - cannot be modified in-place
+- Files are READ-ONLY and cannot be modified in-place
 - To modify: read original file, write to NEW filename
 `.trim()
     ),
