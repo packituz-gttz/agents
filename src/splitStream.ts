@@ -2,7 +2,19 @@ import { nanoid } from 'nanoid';
 import type * as t from '@/types';
 import { ContentTypes, GraphEvents, StepTypes } from '@/common';
 
-export const SEPARATORS = ['.', '?', '!', '۔', '。', '‥', ';', '¡', '¿', '\n', '```'];
+export const SEPARATORS = [
+  '.',
+  '?',
+  '!',
+  '۔',
+  '。',
+  '‥',
+  ';',
+  '¡',
+  '¿',
+  '\n',
+  '```',
+];
 
 export class SplitStreamHandler {
   private inCodeBlock = false;
@@ -28,12 +40,12 @@ export class SplitStreamHandler {
     reasoningKey,
     blockThreshold,
   }: {
-      runId: string,
-      accumulate?: boolean,
-      handlers: t.SplitStreamHandlers
-      blockThreshold?: number,
-      reasoningKey?: 'reasoning_content' | 'reasoning',
-    }) {
+    runId: string;
+    accumulate?: boolean;
+    handlers: t.SplitStreamHandlers;
+    blockThreshold?: number;
+    reasoningKey?: 'reasoning_content' | 'reasoning';
+  }) {
     this.runId = runId;
     this.handlers = handlers;
     if (reasoningKey) {
@@ -51,7 +63,9 @@ export class SplitStreamHandler {
     }
     return undefined;
   };
-  createMessageStep = (type?: ContentTypes.TEXT | ContentTypes.THINK): [string, string] => {
+  createMessageStep = (
+    type?: ContentTypes.TEXT | ContentTypes.THINK
+  ): [string, string] => {
     if (type != null && this.currentType !== type) {
       this.currentType = type;
     }
@@ -70,23 +84,35 @@ export class SplitStreamHandler {
       stepDetails,
       // usage: null,
     };
-    this.handlers?.[GraphEvents.ON_RUN_STEP]?.({ event: GraphEvents.ON_RUN_STEP, data: runStep });
+    this.handlers?.[GraphEvents.ON_RUN_STEP]?.({
+      event: GraphEvents.ON_RUN_STEP,
+      data: runStep,
+    });
   };
   dispatchMessageDelta = (stepId: string, delta: t.MessageDelta): void => {
     const messageDelta: t.MessageDeltaEvent = {
       id: stepId,
       delta,
     };
-    this.handlers?.[GraphEvents.ON_MESSAGE_DELTA]?.({ event: GraphEvents.ON_MESSAGE_DELTA, data: messageDelta });
+    this.handlers?.[GraphEvents.ON_MESSAGE_DELTA]?.({
+      event: GraphEvents.ON_MESSAGE_DELTA,
+      data: messageDelta,
+    });
   };
   dispatchReasoningDelta = (stepId: string, delta: t.ReasoningDelta): void => {
     const reasoningDelta: t.ReasoningDeltaEvent = {
       id: stepId,
       delta,
     };
-    this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({ event: GraphEvents.ON_REASONING_DELTA, data: reasoningDelta });
+    this.handlers?.[GraphEvents.ON_REASONING_DELTA]?.({
+      event: GraphEvents.ON_REASONING_DELTA,
+      data: reasoningDelta,
+    });
   };
-  handleContent = (content: string, _type: ContentTypes.TEXT | ContentTypes.THINK): void => {
+  handleContent = (
+    content: string,
+    _type: ContentTypes.TEXT | ContentTypes.THINK
+  ): void => {
     let type = _type;
     if (this.inThinkBlock && type === ContentTypes.TEXT) {
       type = ContentTypes.THINK;
@@ -112,17 +138,21 @@ export class SplitStreamHandler {
     const stepId = this.currentStepId ?? '';
     if (type === ContentTypes.THINK) {
       this.dispatchReasoningDelta(stepId, {
-        content: [{
-          type: ContentTypes.THINK,
-          think: content,
-        }],
+        content: [
+          {
+            type: ContentTypes.THINK,
+            think: content,
+          },
+        ],
       });
     } else {
       this.dispatchMessageDelta(stepId, {
-        content: [{
-          type: ContentTypes.TEXT,
-          text: content,
-        }],
+        content: [
+          {
+            type: ContentTypes.TEXT,
+            text: content,
+          },
+        ],
       });
     }
 
@@ -131,7 +161,10 @@ export class SplitStreamHandler {
       return;
     }
 
-    if (this.currentLength > this.blockThreshold && SEPARATORS.some(sep => content.includes(sep))) {
+    if (
+      this.currentLength > this.blockThreshold &&
+      SEPARATORS.some((sep) => content.includes(sep))
+    ) {
       const [newStepId, newMessageId] = this.createMessageStep(type);
       this.dispatchRunStep(newStepId, {
         type: StepTypes.MESSAGE_CREATION,
@@ -141,11 +174,14 @@ export class SplitStreamHandler {
       });
     }
   };
-  getDeltaContent(chunk: t.CustomChunk): string {
-    return chunk.choices?.[0]?.delta.content ?? '';
+  getDeltaContent(chunk?: t.CustomChunk): string {
+    return (chunk?.choices?.[0]?.delta as t.CustomChunkDelta)?.content ?? '';
   }
-  getReasoningDelta(chunk: t.CustomChunk): string {
-    return chunk.choices?.[0]?.delta[this.reasoningKey] ?? '';
+  getReasoningDelta(chunk?: t.CustomChunk): string {
+    return (
+      (chunk?.choices?.[0]?.delta as t.CustomChunkDelta)?.[this.reasoningKey] ??
+      ''
+    );
   }
   handle(chunk?: t.CustomChunk): void {
     if (!chunk) {
@@ -173,8 +209,12 @@ export class SplitStreamHandler {
     const message_id = this.getMessageId() ?? '';
 
     if (!message_id) {
-      const initialContentType = this.inThinkBlock ? ContentTypes.THINK : ContentTypes.TEXT;
-      const initialType = reasoning_content ? ContentTypes.THINK : initialContentType;
+      const initialContentType = this.inThinkBlock
+        ? ContentTypes.THINK
+        : ContentTypes.TEXT;
+      const initialType = reasoning_content
+        ? ContentTypes.THINK
+        : initialContentType;
       const [stepId, message_id] = this.createMessageStep(initialType);
       this.dispatchRunStep(stepId, {
         type: StepTypes.MESSAGE_CREATION,

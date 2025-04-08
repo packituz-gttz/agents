@@ -1,12 +1,22 @@
 // src/types/stream.ts
 import type OpenAITypes from 'openai';
-import type { MessageContentImageUrl, MessageContentText, ToolMessage, BaseMessage } from '@langchain/core/messages';
+import type {
+  MessageContentImageUrl,
+  MessageContentText,
+  ToolMessage,
+  BaseMessage,
+} from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { LLMResult, Generation } from '@langchain/core/outputs';
 import type { ToolEndEvent } from '@/types/tools';
 import { StepTypes, ContentTypes, GraphEvents } from '@/common/enum';
 
-export type HandleLLMEnd = (output: LLMResult, runId: string, parentRunId?: string, tags?: string[]) => void;
+export type HandleLLMEnd = (
+  output: LLMResult,
+  runId: string,
+  parentRunId?: string,
+  tags?: string[]
+) => void;
 
 export type MetadataAggregatorResult = {
   handleLLMEnd: HandleLLMEnd;
@@ -15,7 +25,7 @@ export type MetadataAggregatorResult = {
 
 export type StreamGeneration = Generation & {
   text?: string;
-  message?: BaseMessage
+  message?: BaseMessage;
 };
 
 /** Event names are of the format: on_[runnable_type]_(start|stream|end).
@@ -58,10 +68,10 @@ export type RunStep = {
   stepDetails: StepDetails;
   usage?: null | object;
   // {
-    // Define usage structure if it's ever non-null
-    // prompt_tokens: number; // #new
-    // completion_tokens: number; // #new
-    // total_tokens: number; // #new
+  // Define usage structure if it's ever non-null
+  // prompt_tokens: number; // #new
+  // completion_tokens: number; // #new
+  // total_tokens: number; // #new
   // };
 };
 
@@ -80,9 +90,7 @@ export interface RunStepDeltaEvent {
   delta: ToolCallDelta;
 }
 
-export type StepDetails =
-  | MessageCreationDetails
-  | ToolCallsDetails;
+export type StepDetails = MessageCreationDetails | ToolCallsDetails;
 
 export type StepCompleted = ToolCallCompleted;
 
@@ -93,13 +101,19 @@ export type MessageCreationDetails = {
   };
 };
 
-export type ToolEndData = { input: string | Record<string, unknown>, output?: ToolMessage };
+export type ToolEndData = {
+  input: string | Record<string, unknown>;
+  output?: ToolMessage;
+};
 export type ToolErrorData = {
-  id: string,
-  name: string,
-  error?: Error,
+  id: string;
+  name: string;
+  error?: Error;
 } & Pick<ToolEndData, 'input'>;
-export type ToolEndCallback = (data: ToolEndData, metadata?: Record<string, unknown>) => void;
+export type ToolEndCallback = (
+  data: ToolEndData,
+  metadata?: Record<string, unknown>
+) => void;
 
 export type ProcessedToolCall = {
   name: string;
@@ -138,14 +152,16 @@ export type ToolCallDelta = {
   tool_calls?: ToolCallChunk[]; // #new
 };
 
-export type AgentToolCall = {
-  id: string; // #new
-  type: 'function'; // #new
-  function: {
-    name: string; // #new
-    arguments: string | object; // JSON string // #new
-  };
-} | ToolCall;
+export type AgentToolCall =
+  | {
+      id: string; // #new
+      type: 'function'; // #new
+      function: {
+        name: string; // #new
+        arguments: string | object; // JSON string // #new
+      };
+    }
+  | ToolCall;
 
 export interface ExtendedMessageContent {
   type?: string;
@@ -162,7 +178,7 @@ export type AgentUpdate = {
     index: number;
     runId: string;
     agentId: string;
-  }
+  };
 };
 
 /**
@@ -221,8 +237,12 @@ export interface ReasoningDelta {
   content?: MessageContentComplex[];
 }
 
-export type MessageDeltaUpdate = { type: ContentTypes.TEXT; text: string; tool_call_ids?: string[] };
-export type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string; };
+export type MessageDeltaUpdate = {
+  type: ContentTypes.TEXT;
+  text: string;
+  tool_call_ids?: string[];
+};
+export type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string };
 
 export type ContentType = 'text' | 'image_url' | 'tool_call' | 'think' | string;
 
@@ -243,7 +263,7 @@ export type ThinkingContentText = {
 export type BedrockReasoningContentText = {
   type: ContentTypes.REASONING_CONTENT;
   index?: number;
-  reasoningText: { text?: string; signature?: string; }
+  reasoningText: { text?: string; signature?: string };
 };
 
 /**
@@ -273,13 +293,22 @@ export type ToolCallContent = {
   tool_call?: ToolCallPart;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type MessageContentComplex = (ThinkingContentText | AgentUpdate | ToolCallContent | ReasoningContentText | MessageContentText | MessageContentImageUrl | (Record<string, any> & {
-  type?: 'text' | 'image_url' | 'think' | 'thinking' | string;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-}) | (Record<string, any> & {
-  type?: never;
-})) & {
+export type MessageContentComplex = (
+  | ThinkingContentText
+  | AgentUpdate
+  | ToolCallContent
+  | ReasoningContentText
+  | MessageContentText
+  | MessageContentImageUrl
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | (Record<string, any> & {
+      type?: 'text' | 'image_url' | 'think' | 'thinking' | string;
+    })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | (Record<string, any> & {
+      type?: never;
+    })
+) & {
   tool_call_ids?: string[];
 };
 
@@ -291,26 +320,58 @@ export interface TMessage {
 
 export type TPayload = Array<Partial<TMessage>>;
 
-export type CustomChunk = Partial<OpenAITypes.ChatCompletionChunk> & {
-  choices?: Partial<Array<Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice> & {
-    delta?: Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice.Delta> & {
+export type CustomChunkDelta =
+  | null
+  | undefined
+  | (Partial<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice.Delta> & {
       reasoning?: string | null;
       reasoning_content?: string | null;
-    };
-  }>>;
-}
+    });
+export type CustomChunkChoice = Partial<
+  Omit<OpenAITypes.Chat.Completions.ChatCompletionChunk.Choice, 'delta'> & {
+    delta?: CustomChunkDelta;
+  }
+>;
+export type CustomChunk = Partial<OpenAITypes.ChatCompletionChunk> & {
+  choices?: Partial<Array<CustomChunkChoice>>;
+};
 
 export type SplitStreamHandlers = Partial<{
-  [GraphEvents.ON_RUN_STEP]: ({ event, data}: { event: GraphEvents, data: RunStep }) => void;
-  [GraphEvents.ON_MESSAGE_DELTA]: ({ event, data}: { event: GraphEvents, data: MessageDeltaEvent }) => void;
-  [GraphEvents.ON_REASONING_DELTA]: ({ event, data}: { event: GraphEvents, data: ReasoningDeltaEvent }) => void;
-}>
+  [GraphEvents.ON_RUN_STEP]: ({
+    event,
+    data,
+  }: {
+    event: GraphEvents;
+    data: RunStep;
+  }) => void;
+  [GraphEvents.ON_MESSAGE_DELTA]: ({
+    event,
+    data,
+  }: {
+    event: GraphEvents;
+    data: MessageDeltaEvent;
+  }) => void;
+  [GraphEvents.ON_REASONING_DELTA]: ({
+    event,
+    data,
+  }: {
+    event: GraphEvents;
+    data: ReasoningDeltaEvent;
+  }) => void;
+}>;
 
-export type ContentAggregator = ({ event, data }: {
+export type ContentAggregator = ({
+  event,
+  data,
+}: {
   event: GraphEvents;
-  data: RunStep | MessageDeltaEvent | RunStepDeltaEvent | {
-      result: ToolEndEvent;
-  };
+  data:
+    | RunStep
+    | MessageDeltaEvent
+    | RunStepDeltaEvent
+    | {
+        result: ToolEndEvent;
+      };
 }) => void;
 export type ContentAggregatorResult = {
   stepMap: Map<string, RunStep | undefined>;
