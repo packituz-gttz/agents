@@ -17,7 +17,7 @@ export const getCodeBaseURL = (): string =>
 const imageMessage = 'Image is already displayed to the user';
 const otherMessage = 'File is already downloaded by the user';
 const accessMessage =
-  'Note: Files are READ-ONLY snapshots. Save any changes as NEW files with different names. Original files CANNOT be modified in-place. To access these files again, you MUST include the `session_id` in future sessions. Without it, previously generated files will be inaccessible.';
+  'Note: Files are READ-ONLY. Save changes to NEW filenames. To access these files in future executions, provide the `session_id` as a parameter (not in your code).';
 const emptyOutputMessage =
   'stdout: Empty. Ensure you\'re writing output explicitly.\n';
 
@@ -41,6 +41,7 @@ const CodeExecutionToolSchema = z.object({
   code: z.string()
     .describe(`The complete, self-contained code to execute, without any truncation or minimization.
 - The environment is stateless; variables and imports don't persist between executions.
+- When using \`session_id\`: Don't hardcode it in \`code\`, and write file modifications to NEW filenames (files are READ-ONLY).
 - Input code **IS ALREADY** displayed to the user, so **DO NOT** repeat it in your response unless asked.
 - Output code **IS NOT** displayed to the user, so **DO** write all desired output explicitly.
 - IMPORTANT: You MUST explicitly print/output ALL results you want the user to see.
