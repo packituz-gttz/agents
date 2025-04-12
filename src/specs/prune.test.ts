@@ -1,7 +1,13 @@
 // src/specs/prune.test.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage, ToolMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+  ToolMessage,
+} from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
@@ -15,7 +21,10 @@ const createTestTokenCounter = (): t.TokenCounter => {
   // This simple token counter just counts characters as tokens for predictable testing
   return (message: BaseMessage): number => {
     // Use type assertion to help TypeScript understand the type
-    const content = message.content as string | Array<t.MessageContentComplex | string> | undefined;
+    const content = message.content as
+      | string
+      | Array<t.MessageContentComplex | string>
+      | undefined;
 
     // Handle string content
     if (typeof content === 'string') {
@@ -57,7 +66,7 @@ function calculateTotalTokens(usage: Partial<UsageMetadata>): UsageMetadata {
   return {
     input_tokens: totalInputTokens,
     output_tokens: totalOutputTokens,
-    total_tokens: totalInputTokens + totalOutputTokens
+    total_tokens: totalInputTokens + totalOutputTokens,
   };
 }
 
@@ -81,15 +90,21 @@ function getMessagesWithinTokenLimit({
   // start with 3 tokens for the label after all messages have been counted.
   let summaryIndex = -1;
   let currentTokenCount = 3;
-  const instructions = _messages[0]?.getType() === 'system' ? _messages[0] : undefined;
-  const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] : 0;
+  const instructions =
+    _messages[0]?.getType() === 'system' ? _messages[0] : undefined;
+  const instructionsTokenCount =
+    instructions != null ? indexTokenCountMap[0] : 0;
   let remainingContextTokens = maxContextTokens - instructionsTokenCount;
   const messages = [..._messages];
   const context: BaseMessage[] = [];
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
-    while (messages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > 1) {
+    while (
+      messages.length > 0 &&
+      currentTokenCount < remainingContextTokens &&
+      currentIndex > 1
+    ) {
       currentIndex--;
       if (messages.length === 1 && instructions) {
         break;
@@ -99,7 +114,7 @@ function getMessagesWithinTokenLimit({
 
       const tokenCount = indexTokenCountMap[currentIndex] || 0;
 
-      if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
+      if (currentTokenCount + tokenCount <= remainingContextTokens) {
         context.push(poppedMessage);
         currentTokenCount += tokenCount;
       } else {
@@ -109,8 +124,10 @@ function getMessagesWithinTokenLimit({
     }
 
     // If startType is specified, discard messages until we find one of the required type
-    if (startType && context.length > 0) {
-      const requiredTypeIndex = context.findIndex(msg => msg.getType() === startType);
+    if (startType != null && startType && context.length > 0) {
+      const requiredTypeIndex = context.findIndex(
+        (msg) => msg.getType() === startType
+      );
 
       if (requiredTypeIndex > 0) {
         // If we found a message of the required type, discard all messages before it
@@ -152,8 +169,8 @@ describe('Prune Messages Tests', () => {
         output_tokens: 50,
         input_token_details: {
           cache_creation: 10,
-          cache_read: 5
-        }
+          cache_read: 5,
+        },
       };
 
       const result = calculateTotalTokens(usage);
@@ -166,7 +183,7 @@ describe('Prune Messages Tests', () => {
     it('should handle missing fields gracefully', () => {
       const usage: Partial<UsageMetadata> = {
         input_tokens: 100,
-        output_tokens: 50
+        output_tokens: 50,
       };
 
       const result = calculateTotalTokens(usage);
@@ -192,19 +209,19 @@ describe('Prune Messages Tests', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new HumanMessage('Hello'),
-        new AIMessage('Hi there')
+        new AIMessage('Hi there'),
       ];
 
       const indexTokenCountMap = {
         0: 17, // "System instruction"
-        1: 5,  // "Hello"
-        2: 8   // "Hi there"
+        1: 5, // "Hello"
+        2: 8, // "Hi there"
       };
 
       const result = getMessagesWithinTokenLimit({
         messages,
         maxContextTokens: 100,
-        indexTokenCountMap
+        indexTokenCountMap,
       });
 
       expect(result.context.length).toBe(3);
@@ -220,22 +237,22 @@ describe('Prune Messages Tests', () => {
         new HumanMessage('Message 1'),
         new AIMessage('Response 1'),
         new HumanMessage('Message 2'),
-        new AIMessage('Response 2')
+        new AIMessage('Response 2'),
       ];
 
       const indexTokenCountMap = {
         0: 17, // "System instruction"
-        1: 9,  // "Message 1"
+        1: 9, // "Message 1"
         2: 10, // "Response 1"
-        3: 9,  // "Message 2"
-        4: 10  // "Response 2"
+        3: 9, // "Message 2"
+        4: 10, // "Response 2"
       };
 
       // Set a limit that can only fit the system message and the last two messages
       const result = getMessagesWithinTokenLimit({
         messages,
         maxContextTokens: 40,
-        indexTokenCountMap
+        indexTokenCountMap,
       });
 
       // Should include system message and the last two messages
@@ -255,20 +272,20 @@ describe('Prune Messages Tests', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new HumanMessage('Hello'),
-        new AIMessage('Hi there')
+        new AIMessage('Hi there'),
       ];
 
       const indexTokenCountMap = {
         0: 17, // "System instruction"
-        1: 5,  // "Hello"
-        2: 8   // "Hi there"
+        1: 5, // "Hello"
+        2: 8, // "Hi there"
       };
 
       // Set a limit that can only fit the system message
       const result = getMessagesWithinTokenLimit({
         messages,
         maxContextTokens: 20,
-        indexTokenCountMap
+        indexTokenCountMap,
       });
 
       expect(result.context.length).toBe(1);
@@ -283,7 +300,7 @@ describe('Prune Messages Tests', () => {
         new AIMessage('AI message 1'),
         new HumanMessage('Human message 1'),
         new AIMessage('AI message 2'),
-        new HumanMessage('Human message 2')
+        new HumanMessage('Human message 2'),
       ];
 
       const indexTokenCountMap = {
@@ -291,7 +308,7 @@ describe('Prune Messages Tests', () => {
         1: 12, // "AI message 1"
         2: 15, // "Human message 1"
         3: 12, // "AI message 2"
-        4: 15  // "Human message 2"
+        4: 15, // "Human message 2"
       };
 
       // Set a limit that can fit all messages
@@ -299,7 +316,7 @@ describe('Prune Messages Tests', () => {
         messages,
         maxContextTokens: 100,
         indexTokenCountMap,
-        startType: 'human'
+        startType: 'human',
       });
 
       // All messages should be included since we're under the token limit
@@ -318,13 +335,13 @@ describe('Prune Messages Tests', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new AIMessage('AI message 1'),
-        new AIMessage('AI message 2')
+        new AIMessage('AI message 2'),
       ];
 
       const indexTokenCountMap = {
         0: 17, // "System instruction"
         1: 12, // "AI message 1"
-        2: 12  // "AI message 2"
+        2: 12, // "AI message 2"
       };
 
       // Set a limit that can fit all messages
@@ -332,7 +349,7 @@ describe('Prune Messages Tests', () => {
         messages,
         maxContextTokens: 100,
         indexTokenCountMap,
-        startType: 'human'
+        startType: 'human',
       });
 
       // Should include all messages since no human messages exist to start from
@@ -373,20 +390,20 @@ describe('Prune Messages Tests', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new HumanMessage('Hello'),
-        new AIMessage('Hi there')
+        new AIMessage('Hi there'),
       ];
 
       const indexTokenCountMap = {
         0: tokenCounter(messages[0]),
         1: tokenCounter(messages[1]),
-        2: tokenCounter(messages[2])
+        2: tokenCounter(messages[2]),
       };
 
       const pruneMessages = createPruneMessages({
         maxTokens: 100,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap
+        indexTokenCountMap,
       });
 
       const result = pruneMessages({ messages });
@@ -402,7 +419,7 @@ describe('Prune Messages Tests', () => {
         new HumanMessage('Message 1'),
         new AIMessage('Response 1'),
         new HumanMessage('Message 2'),
-        new AIMessage('Response 2')
+        new AIMessage('Response 2'),
       ];
 
       const indexTokenCountMap = {
@@ -410,7 +427,7 @@ describe('Prune Messages Tests', () => {
         1: tokenCounter(messages[1]),
         2: tokenCounter(messages[2]),
         3: tokenCounter(messages[3]),
-        4: tokenCounter(messages[4])
+        4: tokenCounter(messages[4]),
       };
 
       // Set a limit that can only fit the system message and the last two messages
@@ -418,7 +435,7 @@ describe('Prune Messages Tests', () => {
         maxTokens: 40,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap
+        indexTokenCountMap,
       });
 
       const result = pruneMessages({ messages });
@@ -437,7 +454,7 @@ describe('Prune Messages Tests', () => {
         new AIMessage('AI message 1'),
         new HumanMessage('Human message 1'),
         new AIMessage('AI message 2'),
-        new HumanMessage('Human message 2')
+        new HumanMessage('Human message 2'),
       ];
 
       const indexTokenCountMap = {
@@ -445,7 +462,7 @@ describe('Prune Messages Tests', () => {
         1: tokenCounter(messages[1]),
         2: tokenCounter(messages[2]),
         3: tokenCounter(messages[3]),
-        4: tokenCounter(messages[4])
+        4: tokenCounter(messages[4]),
       };
 
       // Set a limit that can fit all messages
@@ -453,12 +470,12 @@ describe('Prune Messages Tests', () => {
         maxTokens: 100,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({
         messages,
-        startType: 'human'
+        startType: 'human',
       });
 
       // All messages should be included since we're under the token limit
@@ -475,39 +492,42 @@ describe('Prune Messages Tests', () => {
       const messages = [
         new SystemMessage('System instruction'),
         new HumanMessage('Hello'),
-        new AIMessage('Hi there')
+        new AIMessage('Hi there'),
       ];
 
       const indexTokenCountMap = {
         0: tokenCounter(messages[0]),
         1: tokenCounter(messages[1]),
-        2: tokenCounter(messages[2])
+        2: tokenCounter(messages[2]),
       };
 
       const pruneMessages = createPruneMessages({
         maxTokens: 100,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       // Provide usage metadata that indicates different token counts
       const usageMetadata: Partial<UsageMetadata> = {
         input_tokens: 50,
         output_tokens: 25,
-        total_tokens: 75
+        total_tokens: 75,
       };
 
       const result = pruneMessages({
         messages,
-        usageMetadata
+        usageMetadata,
       });
 
       // The function should have updated the indexTokenCountMap based on the usage metadata
       expect(result.indexTokenCountMap).not.toEqual(indexTokenCountMap);
 
       // The total of all values in indexTokenCountMap should equal the total_tokens from usageMetadata
-      const totalTokens = Object.values(result.indexTokenCountMap).reduce((a, b) => a + b, 0);
+      const totalTokens = Object.values(result.indexTokenCountMap).reduce(
+        (a = 0, b = 0) => a + b,
+        0
+      );
       expect(totalTokens).toBe(75);
     });
   });
@@ -520,7 +540,7 @@ describe('Prune Messages Tests', () => {
         new AIMessage('AI message 1'),
         new ToolMessage({ content: 'Tool result 1', tool_call_id: 'tool1' }),
         new AIMessage('AI message 2'),
-        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' })
+        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' }),
       ];
 
       const indexTokenCountMap = {
@@ -528,7 +548,7 @@ describe('Prune Messages Tests', () => {
         1: 12, // AI message 1
         2: 13, // Tool result 1
         3: 12, // AI message 2
-        4: 13  // Tool result 2
+        4: 13, // Tool result 2
       };
 
       // Create a pruneMessages function with a token limit that will only include the last few messages
@@ -536,7 +556,7 @@ describe('Prune Messages Tests', () => {
         maxTokens: 58, // Only enough for system + last 3 messages + 3, but should not include a parent-less tool message
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({ messages });
@@ -557,7 +577,7 @@ describe('Prune Messages Tests', () => {
         new AIMessage('AI message 1'),
         new ToolMessage({ content: 'Tool result 1', tool_call_id: 'tool1' }),
         new HumanMessage('Human message 2'),
-        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' })
+        new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' }),
       ];
 
       const indexTokenCountMap = {
@@ -566,7 +586,7 @@ describe('Prune Messages Tests', () => {
         2: 12, // AI message 1
         3: 13, // Tool result 1
         4: 15, // Human message 2
-        5: 13  // Tool result 2
+        5: 13, // Tool result 2
       };
 
       // Create a pruneMessages function with a token limit that will only include the last few messages
@@ -574,7 +594,7 @@ describe('Prune Messages Tests', () => {
         maxTokens: 48, // Only enough for system + last 2 messages
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({ messages });
@@ -594,7 +614,7 @@ describe('Prune Messages Tests', () => {
         new HumanMessage('Human message'),
         new AIMessage('AI message with tool use'),
         new ToolMessage({ content: 'Tool result', tool_call_id: 'tool1' }),
-        new AIMessage('AI message after tool')
+        new AIMessage('AI message after tool'),
       ];
 
       const indexTokenCountMap = {
@@ -602,14 +622,14 @@ describe('Prune Messages Tests', () => {
         1: 13, // Human message
         2: 22, // AI message with tool use
         3: 11, // Tool result
-        4: 19  // AI message after tool
+        4: 19, // AI message after tool
       };
 
       const pruneMessages = createPruneMessages({
         maxTokens: 50,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({ messages });
@@ -626,7 +646,7 @@ describe('Prune Messages Tests', () => {
         new HumanMessage('Human message 1'),
         new AIMessage('AI message with tool use'),
         new ToolMessage({ content: 'Tool result', tool_call_id: 'tool1' }),
-        new HumanMessage('Human message 2')
+        new HumanMessage('Human message 2'),
       ];
 
       const indexTokenCountMap = {
@@ -634,14 +654,14 @@ describe('Prune Messages Tests', () => {
         1: 15, // Human message 1
         2: 22, // AI message with tool use
         3: 11, // Tool result
-        4: 15  // Human message 2
+        4: 15, // Human message 2
       };
 
       const pruneMessages = createPruneMessages({
         maxTokens: 46,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({ messages });
@@ -661,7 +681,7 @@ describe('Prune Messages Tests', () => {
         new AIMessage('AI message 2 with tool use'),
         new ToolMessage({ content: 'Tool result 2', tool_call_id: 'tool2' }),
         new AIMessage('AI message 3 with tool use'),
-        new ToolMessage({ content: 'Tool result 3', tool_call_id: 'tool3' })
+        new ToolMessage({ content: 'Tool result 3', tool_call_id: 'tool3' }),
       ];
 
       const indexTokenCountMap = {
@@ -672,14 +692,14 @@ describe('Prune Messages Tests', () => {
         4: 26, // AI message 2 with tool use
         5: 13, // Tool result 2
         6: 26, // AI message 3 with tool use
-        7: 13  // Tool result 3
+        7: 13, // Tool result 3
       };
 
       const pruneMessages = createPruneMessages({
         maxTokens: 111,
         startIndex: 0,
         tokenCounter,
-        indexTokenCountMap: { ...indexTokenCountMap }
+        indexTokenCountMap: { ...indexTokenCountMap },
       });
 
       const result = pruneMessages({ messages });
@@ -712,15 +732,16 @@ describe('Prune Messages Tests', () => {
       // Override the model to use a fake LLM
       run.Graph?.overrideTestModel(['This is a test response'], 1);
 
-      const messages = [
-        new HumanMessage('Hello, how are you?')
-      ];
+      const messages = [new HumanMessage('Hello, how are you?')];
 
       const indexTokenCountMap = {
-        0: tokenCounter(messages[0])
+        0: tokenCounter(messages[0]),
       };
 
-      const config: Partial<RunnableConfig> & { version: 'v1' | 'v2'; streamMode: string } = {
+      const config: Partial<RunnableConfig> & {
+        version: 'v1' | 'v2';
+        streamMode: string;
+      } = {
         configurable: {
           thread_id: 'test-thread',
         },
@@ -728,15 +749,11 @@ describe('Prune Messages Tests', () => {
         version: 'v2' as const,
       };
 
-      await run.processStream(
-        { messages },
-        config,
-        {
-          maxContextTokens: 1000,
-          indexTokenCountMap,
-          tokenCounter,
-        }
-      );
+      await run.processStream({ messages }, config, {
+        maxContextTokens: 1000,
+        indexTokenCountMap,
+        tokenCounter,
+      });
 
       const finalMessages = run.getRunMessages();
       expect(finalMessages).toBeDefined();

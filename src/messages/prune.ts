@@ -1,5 +1,13 @@
-import { AIMessage, BaseMessage, UsageMetadata } from '@langchain/core/messages';
-import type { ThinkingContentText, MessageContentComplex, ReasoningContentText } from '@/types/stream';
+import {
+  AIMessage,
+  BaseMessage,
+  UsageMetadata,
+} from '@langchain/core/messages';
+import type {
+  ThinkingContentText,
+  MessageContentComplex,
+  ReasoningContentText,
+} from '@/types/stream';
 import type { TokenCounter } from '@/types/run';
 import { ContentTypes, Providers } from '@/common';
 
@@ -8,27 +16,36 @@ export type PruneMessagesFactoryParams = {
   maxTokens: number;
   startIndex: number;
   tokenCounter: TokenCounter;
-  indexTokenCountMap: Record<string, number>;
+  indexTokenCountMap: Record<string, number | undefined>;
   thinkingEnabled?: boolean;
 };
 export type PruneMessagesParams = {
   messages: BaseMessage[];
   usageMetadata?: Partial<UsageMetadata>;
   startType?: ReturnType<BaseMessage['getType']>;
-}
+};
 
-function isIndexInContext(arrayA: unknown[], arrayB: unknown[], targetIndex: number): boolean {
+function isIndexInContext(
+  arrayA: unknown[],
+  arrayB: unknown[],
+  targetIndex: number
+): boolean {
   const startingIndexInA = arrayA.length - arrayB.length;
   return targetIndex >= startingIndexInA;
 }
 
-function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText | ReasoningContentText): AIMessage {
+function addThinkingBlock(
+  message: AIMessage,
+  thinkingBlock: ThinkingContentText | ReasoningContentText
+): AIMessage {
   const content: MessageContentComplex[] = Array.isArray(message.content)
-    ? message.content as MessageContentComplex[]
-    : [{
-      type: ContentTypes.TEXT,
-      text: message.content,
-    }];
+    ? (message.content as MessageContentComplex[])
+    : [
+      {
+        type: ContentTypes.TEXT,
+        text: message.content,
+      },
+    ];
   /** Edge case, the message already has the thinking block */
   if (content[0].type === thinkingBlock.type) {
     return message;
@@ -36,7 +53,7 @@ function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText
   content.unshift(thinkingBlock);
   return new AIMessage({
     ...message,
-    content
+    content,
   });
 }
 
@@ -46,7 +63,9 @@ function addThinkingBlock(message: AIMessage, thinkingBlock: ThinkingContentText
  * @param usage The usage metadata object containing token information
  * @returns An object containing the total input and output tokens
  */
-export function calculateTotalTokens(usage: Partial<UsageMetadata>): UsageMetadata {
+export function calculateTotalTokens(
+  usage: Partial<UsageMetadata>
+): UsageMetadata {
   const baseInputTokens = Number(usage.input_tokens) || 0;
   const cacheCreation = Number(usage.input_token_details?.cache_creation) || 0;
   const cacheRead = Number(usage.input_token_details?.cache_read) || 0;
@@ -57,7 +76,7 @@ export function calculateTotalTokens(usage: Partial<UsageMetadata>): UsageMetada
   return {
     input_tokens: totalInputTokens,
     output_tokens: totalOutputTokens,
-    total_tokens: totalInputTokens + totalOutputTokens
+    total_tokens: totalInputTokens + totalOutputTokens,
   };
 }
 
@@ -97,8 +116,10 @@ export function getMessagesWithinTokenLimit({
   // Every reply is primed with <|start|>assistant<|message|>, so we
   // start with 3 tokens for the label after all messages have been counted.
   let currentTokenCount = 3;
-  const instructions = _messages[0]?.getType() === 'system' ? _messages[0] : undefined;
-  const instructionsTokenCount = instructions != null ? indexTokenCountMap[0] ?? 0 : 0;
+  const instructions =
+    _messages[0]?.getType() === 'system' ? _messages[0] : undefined;
+  const instructionsTokenCount =
+    instructions != null ? (indexTokenCountMap[0] ?? 0) : 0;
   const initialContextTokens = maxContextTokens - instructionsTokenCount;
   let remainingContextTokens = initialContextTokens;
   let startType = _startType;
@@ -120,13 +141,19 @@ export function getMessagesWithinTokenLimit({
   if (_thinkingStartIndex > -1) {
     const thinkingMessageContent = messages[_thinkingStartIndex]?.content;
     if (Array.isArray(thinkingMessageContent)) {
-      thinkingBlock = thinkingMessageContent.find((content) => content.type === reasoningType) as ThinkingContentText | undefined;
+      thinkingBlock = thinkingMessageContent.find(
+        (content) => content.type === reasoningType
+      ) as ThinkingContentText | undefined;
     }
   }
 
   if (currentTokenCount < remainingContextTokens) {
     let currentIndex = messages.length;
-    while (messages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > endIndex) {
+    while (
+      messages.length > 0 &&
+      currentTokenCount < remainingContextTokens &&
+      currentIndex > endIndex
+    ) {
       currentIndex--;
       if (messages.length === 1 && instructions) {
         break;
@@ -134,25 +161,42 @@ export function getMessagesWithinTokenLimit({
       const poppedMessage = messages.pop();
       if (!poppedMessage) continue;
       const messageType = poppedMessage.getType();
-      if (thinkingEnabled === true && thinkingEndIndex === -1 && (currentIndex === (originalLength - 1)) && (messageType === 'ai' || messageType === 'tool')) {
+      if (
+        thinkingEnabled === true &&
+        thinkingEndIndex === -1 &&
+        currentIndex === originalLength - 1 &&
+        (messageType === 'ai' || messageType === 'tool')
+      ) {
         thinkingEndIndex = currentIndex;
       }
-      if (thinkingEndIndex > -1 && !thinkingBlock  && thinkingStartIndex < 0 && messageType === 'ai' && Array.isArray(poppedMessage.content)) {
-        thinkingBlock = (poppedMessage.content.find((content) => content.type === reasoningType)) as ThinkingContentText | undefined;
+      if (
+        thinkingEndIndex > -1 &&
+        !thinkingBlock &&
+        thinkingStartIndex < 0 &&
+        messageType === 'ai' &&
+        Array.isArray(poppedMessage.content)
+      ) {
+        thinkingBlock = poppedMessage.content.find(
+          (content) => content.type === reasoningType
+        ) as ThinkingContentText | undefined;
         thinkingStartIndex = thinkingBlock != null ? currentIndex : -1;
       }
       /** False start, the latest message was not part of a multi-assistant/tool sequence of messages */
       if (
-        thinkingEndIndex > -1
-        && currentIndex === (thinkingEndIndex - 1)
-        && (messageType !== 'ai' && messageType !== 'tool')
+        thinkingEndIndex > -1 &&
+        currentIndex === thinkingEndIndex - 1 &&
+        messageType !== 'ai' &&
+        messageType !== 'tool'
       ) {
         thinkingEndIndex = -1;
       }
 
       const tokenCount = indexTokenCountMap[currentIndex] ?? 0;
 
-      if (prunedMemory.length === 0 && ((currentTokenCount + tokenCount) <= remainingContextTokens)) {
+      if (
+        prunedMemory.length === 0 &&
+        currentTokenCount + tokenCount <= remainingContextTokens
+      ) {
         context.push(poppedMessage);
         currentTokenCount += tokenCount;
       } else {
@@ -174,7 +218,11 @@ export function getMessagesWithinTokenLimit({
       let totalTokens = 0;
       for (let i = context.length - 1; i >= 0; i--) {
         const currentType = context[i]?.getType() ?? '';
-        if (Array.isArray(startType) ? startType.includes(currentType) : currentType === startType) {
+        if (
+          Array.isArray(startType)
+            ? startType.includes(currentType)
+            : currentType === startType
+        ) {
           requiredTypeIndex = i + 1;
           break;
         }
@@ -205,18 +253,27 @@ export function getMessagesWithinTokenLimit({
     result.thinkingStartIndex = thinkingStartIndex;
   }
 
-  if (prunedMemory.length === 0 || thinkingEndIndex < 0 || (thinkingStartIndex > -1 && isIndexInContext(_messages, context, thinkingStartIndex))) {
+  if (
+    prunedMemory.length === 0 ||
+    thinkingEndIndex < 0 ||
+    (thinkingStartIndex > -1 &&
+      isIndexInContext(_messages, context, thinkingStartIndex))
+  ) {
     // we reverse at this step to ensure the context is in the correct order for the model, and we need to work backwards
     result.context = context.reverse() as BaseMessage[];
     return result;
   }
 
   if (thinkingEndIndex > -1 && thinkingStartIndex < 0) {
-    throw new Error('The payload is malformed. There is a thinking sequence but no "AI" messages with thinking blocks.');
+    throw new Error(
+      'The payload is malformed. There is a thinking sequence but no "AI" messages with thinking blocks.'
+    );
   }
 
   if (!thinkingBlock) {
-    throw new Error('The payload is malformed. There is a thinking sequence but no thinking block found.');
+    throw new Error(
+      'The payload is malformed. There is a thinking sequence but no thinking block found.'
+    );
   }
 
   // Since we have a thinking sequence, we need to find the last assistant message
@@ -235,13 +292,20 @@ export function getMessagesWithinTokenLimit({
   }
 
   if (assistantIndex === -1) {
-    throw new Error('The payload is malformed. There is a thinking sequence but no "AI" messages to append thinking blocks to.');
+    throw new Error(
+      'The payload is malformed. There is a thinking sequence but no "AI" messages to append thinking blocks to.'
+    );
   }
 
   thinkingStartIndex = originalLength - 1 - assistantIndex;
-  const thinkingTokenCount = tokenCounter(new AIMessage({ content: [thinkingBlock] }));
+  const thinkingTokenCount = tokenCounter(
+    new AIMessage({ content: [thinkingBlock] })
+  );
   const newRemainingCount = remainingContextTokens - thinkingTokenCount;
-  const newMessage = addThinkingBlock(context[assistantIndex] as AIMessage, thinkingBlock);
+  const newMessage = addThinkingBlock(
+    context[assistantIndex] as AIMessage,
+    thinkingBlock
+  );
   context[assistantIndex] = newMessage;
   if (newRemainingCount > 0) {
     result.context = context.reverse() as BaseMessage[];
@@ -250,18 +314,23 @@ export function getMessagesWithinTokenLimit({
 
   const thinkingMessage: AIMessage = context[assistantIndex] as AIMessage;
   // now we need to an additional round of pruning but making the thinking block fit
-  const newThinkingMessageTokenCount = (indexTokenCountMap[thinkingStartIndex] ?? 0) + thinkingTokenCount;
+  const newThinkingMessageTokenCount =
+    (indexTokenCountMap[thinkingStartIndex] ?? 0) + thinkingTokenCount;
   remainingContextTokens = initialContextTokens - newThinkingMessageTokenCount;
   currentTokenCount = 3;
   let newContext: BaseMessage[] = [];
   const secondRoundMessages = [..._messages];
   let currentIndex = secondRoundMessages.length;
-  while (secondRoundMessages.length > 0 && currentTokenCount < remainingContextTokens && currentIndex > thinkingStartIndex) {
+  while (
+    secondRoundMessages.length > 0 &&
+    currentTokenCount < remainingContextTokens &&
+    currentIndex > thinkingStartIndex
+  ) {
     currentIndex--;
     const poppedMessage = secondRoundMessages.pop();
     if (!poppedMessage) continue;
     const tokenCount = indexTokenCountMap[currentIndex] ?? 0;
-    if ((currentTokenCount + tokenCount) <= remainingContextTokens) {
+    if (currentTokenCount + tokenCount <= remainingContextTokens) {
       newContext.push(poppedMessage);
       currentTokenCount += tokenCount;
     } else {
@@ -282,7 +351,11 @@ export function getMessagesWithinTokenLimit({
     let totalTokens = 0;
     for (let i = newContext.length - 1; i >= 0; i--) {
       const currentType = newContext[i]?.getType() ?? '';
-      if (Array.isArray(startType) ? startType.includes(currentType) : currentType === startType) {
+      if (
+        Array.isArray(startType)
+          ? startType.includes(currentType)
+          : currentType === startType
+      ) {
         requiredTypeIndex = i + 1;
         break;
       }
@@ -320,23 +393,28 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
   const indexTokenCountMap = { ...factoryParams.indexTokenCountMap };
   let lastTurnStartIndex = factoryParams.startIndex;
   let lastCutOffIndex = 0;
-  let totalTokens = (Object.values(indexTokenCountMap)).reduce((a, b) => a + b, 0);
+  let totalTokens = Object.values(indexTokenCountMap).reduce(
+    (a = 0, b = 0) => a + b,
+    0
+  ) as number;
   let runThinkingStartIndex = -1;
   return function pruneMessages(params: PruneMessagesParams): {
     context: BaseMessage[];
-    indexTokenCountMap: Record<string, number>;
+    indexTokenCountMap: Record<string, number | undefined>;
   } {
     let currentUsage: UsageMetadata | undefined;
-    if (params.usageMetadata && (
-      checkValidNumber(params.usageMetadata.input_tokens)
-      || (
-        checkValidNumber(params.usageMetadata.input_token_details)
-        && (
-          checkValidNumber(params.usageMetadata.input_token_details.cache_creation)
-          || checkValidNumber(params.usageMetadata.input_token_details.cache_read)
-        )
-      )
-    ) && checkValidNumber(params.usageMetadata.output_tokens)) {
+    if (
+      params.usageMetadata &&
+      (checkValidNumber(params.usageMetadata.input_tokens) ||
+        (checkValidNumber(params.usageMetadata.input_token_details) &&
+          (checkValidNumber(
+            params.usageMetadata.input_token_details.cache_creation
+          ) ||
+            checkValidNumber(
+              params.usageMetadata.input_token_details.cache_read
+            )))) &&
+      checkValidNumber(params.usageMetadata.output_tokens)
+    ) {
       currentUsage = calculateTotalTokens(params.usageMetadata);
       totalTokens = currentUsage.total_tokens;
     }
@@ -344,16 +422,18 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     const newOutputs = new Set<number>();
     for (let i = lastTurnStartIndex; i < params.messages.length; i++) {
       const message = params.messages[i];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (i === lastTurnStartIndex && indexTokenCountMap[i] === undefined && currentUsage) {
+      if (
+        i === lastTurnStartIndex &&
+        indexTokenCountMap[i] === undefined &&
+        currentUsage
+      ) {
         indexTokenCountMap[i] = currentUsage.output_tokens;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       } else if (indexTokenCountMap[i] === undefined) {
         indexTokenCountMap[i] = factoryParams.tokenCounter(message);
         if (currentUsage) {
           newOutputs.add(i);
         }
-        totalTokens += indexTokenCountMap[i];
+        totalTokens += indexTokenCountMap[i] ?? 0;
       }
     }
 
@@ -364,7 +444,7 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     if (currentUsage) {
       let totalIndexTokens = 0;
       if (params.messages[0].getType() === 'system') {
-        totalIndexTokens += indexTokenCountMap[0];
+        totalIndexTokens += indexTokenCountMap[0] ?? 0;
       }
       for (let i = lastCutOffIndex; i < params.messages.length; i++) {
         if (i === 0 && params.messages[0].getType() === 'system') {
@@ -373,24 +453,31 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
         if (newOutputs.has(i)) {
           continue;
         }
-        totalIndexTokens += indexTokenCountMap[i];
+        totalIndexTokens += indexTokenCountMap[i] ?? 0;
       }
 
       // Calculate ratio based only on messages that remain in the context
       const ratio = currentUsage.total_tokens / totalIndexTokens;
-      const isRatioSafe = ratio >= 1/3 && ratio <= 2.5;
+      const isRatioSafe = ratio >= 1 / 3 && ratio <= 2.5;
 
       // Apply the ratio adjustment only to messages at or after lastCutOffIndex, and only if the ratio is safe
       if (isRatioSafe) {
-        if (params.messages[0].getType() === 'system' && lastCutOffIndex !== 0) {
-          indexTokenCountMap[0] = Math.round(indexTokenCountMap[0] * ratio);
+        if (
+          params.messages[0].getType() === 'system' &&
+          lastCutOffIndex !== 0
+        ) {
+          indexTokenCountMap[0] = Math.round(
+            (indexTokenCountMap[0] ?? 0) * ratio
+          );
         }
 
         for (let i = lastCutOffIndex; i < params.messages.length; i++) {
           if (newOutputs.has(i)) {
             continue;
           }
-          indexTokenCountMap[i] = Math.round(indexTokenCountMap[i] * ratio);
+          indexTokenCountMap[i] = Math.round(
+            (indexTokenCountMap[i] ?? 0) * ratio
+          );
         }
       }
     }
@@ -407,12 +494,22 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
       startType: params.startType,
       thinkingEnabled: factoryParams.thinkingEnabled,
       tokenCounter: factoryParams.tokenCounter,
-      reasoningType: factoryParams.provider === Providers.BEDROCK ? ContentTypes.REASONING_CONTENT : ContentTypes.THINKING,
-      thinkingStartIndex: factoryParams.thinkingEnabled === true ? runThinkingStartIndex : undefined,
+      reasoningType:
+        factoryParams.provider === Providers.BEDROCK
+          ? ContentTypes.REASONING_CONTENT
+          : ContentTypes.THINKING,
+      thinkingStartIndex:
+        factoryParams.thinkingEnabled === true
+          ? runThinkingStartIndex
+          : undefined,
     });
     runThinkingStartIndex = thinkingStartIndex ?? -1;
     /** The index is the first value of `context`, index relative to `params.messages` */
-    lastCutOffIndex = Math.max(params.messages.length - (context.length - (context[0]?.getType() === 'system' ? 1 : 0)), 0);
+    lastCutOffIndex = Math.max(
+      params.messages.length -
+        (context.length - (context[0]?.getType() === 'system' ? 1 : 0)),
+      0
+    );
 
     return { context, indexTokenCountMap };
   };

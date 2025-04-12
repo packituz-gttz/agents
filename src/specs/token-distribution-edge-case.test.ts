@@ -1,5 +1,10 @@
 // src/specs/token-distribution-edge-case.test.ts
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+} from '@langchain/core/messages';
 import type { UsageMetadata } from '@langchain/core/messages';
 import type * as t from '@/types';
 import { createPruneMessages } from '@/messages/prune';
@@ -9,7 +14,10 @@ const createTestTokenCounter = (): t.TokenCounter => {
   // This simple token counter just counts characters as tokens for predictable testing
   return (message: BaseMessage): number => {
     // Use type assertion to help TypeScript understand the type
-    const content = message.content as string | Array<t.MessageContentComplex | string> | undefined;
+    const content = message.content as
+      | string
+      | Array<t.MessageContentComplex | string>
+      | undefined;
 
     // Handle string content
     if (typeof content === 'string') {
@@ -46,19 +54,19 @@ describe('Token Distribution Edge Case Tests', () => {
     // Create messages
     const messages = [
       new SystemMessage('System instruction'), // Will always be included
-      new HumanMessage('Message 1'),          // Will be pruned
-      new AIMessage('Response 1'),            // Will be pruned
-      new HumanMessage('Message 2'),          // Will remain
-      new AIMessage('Response 2')             // Will remain
+      new HumanMessage('Message 1'), // Will be pruned
+      new AIMessage('Response 1'), // Will be pruned
+      new HumanMessage('Message 2'), // Will remain
+      new AIMessage('Response 2'), // Will remain
     ];
 
     // Calculate initial token counts for each message
     const indexTokenCountMap: Record<string, number> = {
       0: 17, // "System instruction"
-      1: 9,  // "Message 1"
+      1: 9, // "Message 1"
       2: 10, // "Response 1"
-      3: 9,  // "Message 2"
-      4: 10  // "Response 2"
+      3: 9, // "Message 2"
+      4: 10, // "Response 2"
     };
 
     // Set a token limit that will force pruning of the first two messages after the system message
@@ -66,7 +74,7 @@ describe('Token Distribution Edge Case Tests', () => {
       maxTokens: 40, // Only enough for system message + last two messages
       startIndex: 0,
       tokenCounter,
-      indexTokenCountMap: { ...indexTokenCountMap }
+      indexTokenCountMap: { ...indexTokenCountMap },
     });
 
     // First call to establish lastCutOffIndex
@@ -82,13 +90,13 @@ describe('Token Distribution Edge Case Tests', () => {
     const usageMetadata: Partial<UsageMetadata> = {
       input_tokens: 30,
       output_tokens: 20,
-      total_tokens: 50 // Different from the sum of our initial token counts
+      total_tokens: 50, // Different from the sum of our initial token counts
     };
 
     // Call pruneMessages again with the usage metadata
     const result = pruneMessages({
       messages,
-      usageMetadata
+      usageMetadata,
     });
 
     // The token distribution should only affect messages that remain in the context
@@ -109,14 +117,16 @@ describe('Token Distribution Edge Case Tests', () => {
 
     // Verify that the sum of tokens for messages in the context is close to the total_tokens from usageMetadata
     // There might be small rounding differences or implementation details that affect the exact sum
-    const totalContextTokens = result.indexTokenCountMap[0] + result.indexTokenCountMap[3] + result.indexTokenCountMap[4];
+    const totalContextTokens =
+      (result.indexTokenCountMap[0] ?? 0) +
+      (result.indexTokenCountMap[3] ?? 0) +
+      (result.indexTokenCountMap[4] ?? 0);
     expect(totalContextTokens).toBeGreaterThan(0);
 
     // The key thing we're testing is that the token distribution happens for messages in the context
     // and that the sum is reasonably close to the expected total
     const tokenDifference = Math.abs(totalContextTokens - 50);
     expect(tokenDifference).toBeLessThan(20); // Allow for some difference due to implementation details
-
   });
 
   it('should handle the case when all messages fit within the token limit', () => {
@@ -127,14 +137,14 @@ describe('Token Distribution Edge Case Tests', () => {
     const messages = [
       new SystemMessage('System instruction'),
       new HumanMessage('Message 1'),
-      new AIMessage('Response 1')
+      new AIMessage('Response 1'),
     ];
 
     // Calculate initial token counts for each message
     const indexTokenCountMap: Record<string, number> = {
       0: 17, // "System instruction"
-      1: 9,  // "Message 1"
-      2: 10  // "Response 1"
+      1: 9, // "Message 1"
+      2: 10, // "Response 1"
     };
 
     // Set a token limit that will allow all messages to fit
@@ -142,7 +152,7 @@ describe('Token Distribution Edge Case Tests', () => {
       maxTokens: 100,
       startIndex: 0,
       tokenCounter,
-      indexTokenCountMap: { ...indexTokenCountMap }
+      indexTokenCountMap: { ...indexTokenCountMap },
     });
 
     // First call to establish lastCutOffIndex (should be 0 since no pruning occurs)
@@ -155,26 +165,36 @@ describe('Token Distribution Edge Case Tests', () => {
     const usageMetadata: Partial<UsageMetadata> = {
       input_tokens: 20,
       output_tokens: 10,
-      total_tokens: 30 // Different from the sum of our initial token counts
+      total_tokens: 30, // Different from the sum of our initial token counts
     };
 
     // Call pruneMessages again with the usage metadata
     const result = pruneMessages({
       messages,
-      usageMetadata
+      usageMetadata,
     });
 
     // Since all messages fit, all token counts should be adjusted
-    const initialTotalTokens = indexTokenCountMap[0] + indexTokenCountMap[1] + indexTokenCountMap[2];
+    const initialTotalTokens =
+      indexTokenCountMap[0] + indexTokenCountMap[1] + indexTokenCountMap[2];
     const expectedRatio = 30 / initialTotalTokens;
 
     // Check that all token counts were adjusted
-    expect(result.indexTokenCountMap[0]).toBe(Math.round(indexTokenCountMap[0] * expectedRatio));
-    expect(result.indexTokenCountMap[1]).toBe(Math.round(indexTokenCountMap[1] * expectedRatio));
-    expect(result.indexTokenCountMap[2]).toBe(Math.round(indexTokenCountMap[2] * expectedRatio));
+    expect(result.indexTokenCountMap[0]).toBe(
+      Math.round(indexTokenCountMap[0] * expectedRatio)
+    );
+    expect(result.indexTokenCountMap[1]).toBe(
+      Math.round(indexTokenCountMap[1] * expectedRatio)
+    );
+    expect(result.indexTokenCountMap[2]).toBe(
+      Math.round(indexTokenCountMap[2] * expectedRatio)
+    );
 
     // Verify that the sum of all tokens equals the total_tokens from usageMetadata
-    const totalTokens = result.indexTokenCountMap[0] + result.indexTokenCountMap[1] + result.indexTokenCountMap[2];
+    const totalTokens =
+      (result.indexTokenCountMap[0] ?? 0) +
+      (result.indexTokenCountMap[1] ?? 0) +
+      (result.indexTokenCountMap[2] ?? 0);
     expect(totalTokens).toBe(30);
   });
 
@@ -185,23 +205,23 @@ describe('Token Distribution Edge Case Tests', () => {
     // Create a longer sequence of messages
     const messages = [
       new SystemMessage('System instruction'), // Will always be included
-      new HumanMessage('Message 1'),          // Will be pruned in first round
-      new AIMessage('Response 1'),            // Will be pruned in first round
-      new HumanMessage('Message 2'),          // Will be pruned in second round
-      new AIMessage('Response 2'),            // Will be pruned in second round
-      new HumanMessage('Message 3'),          // Will remain
-      new AIMessage('Response 3')             // Will remain
+      new HumanMessage('Message 1'), // Will be pruned in first round
+      new AIMessage('Response 1'), // Will be pruned in first round
+      new HumanMessage('Message 2'), // Will be pruned in second round
+      new AIMessage('Response 2'), // Will be pruned in second round
+      new HumanMessage('Message 3'), // Will remain
+      new AIMessage('Response 3'), // Will remain
     ];
 
     // Calculate initial token counts for each message
     const indexTokenCountMap: Record<string, number> = {
       0: 17, // "System instruction"
-      1: 9,  // "Message 1"
+      1: 9, // "Message 1"
       2: 10, // "Response 1"
-      3: 9,  // "Message 2"
+      3: 9, // "Message 2"
       4: 10, // "Response 2"
-      5: 9,  // "Message 3"
-      6: 10  // "Response 3"
+      5: 9, // "Message 3"
+      6: 10, // "Response 3"
     };
 
     // Set a token limit that will force pruning
@@ -209,7 +229,7 @@ describe('Token Distribution Edge Case Tests', () => {
       maxTokens: 40, // Only enough for system message + last two messages
       startIndex: 0,
       tokenCounter,
-      indexTokenCountMap: { ...indexTokenCountMap }
+      indexTokenCountMap: { ...indexTokenCountMap },
     });
 
     // First pruning operation
@@ -225,33 +245,30 @@ describe('Token Distribution Edge Case Tests', () => {
     const firstUsageMetadata: Partial<UsageMetadata> = {
       input_tokens: 30,
       output_tokens: 20,
-      total_tokens: 50
+      total_tokens: 50,
     };
 
     // Apply first usage metadata
     const secondResult = pruneMessages({
       messages,
-      usageMetadata: firstUsageMetadata
+      usageMetadata: firstUsageMetadata,
     });
 
     // Add two more messages
     messages.push(new HumanMessage('Message 4'));
-    const extendedMessages = [
-      ...messages,
-      new AIMessage('Response 4')
-    ];
+    const extendedMessages = [...messages, new AIMessage('Response 4')];
 
     // Second usage metadata update
     const secondUsageMetadata: Partial<UsageMetadata> = {
       input_tokens: 30,
       output_tokens: 20,
-      total_tokens: 50
+      total_tokens: 50,
     };
 
     // Apply second usage metadata with extended messages
     const thirdResult = pruneMessages({
       messages: extendedMessages,
-      usageMetadata: secondUsageMetadata
+      usageMetadata: secondUsageMetadata,
     });
 
     // The context should include the system message and some of the latest messages
@@ -260,15 +277,15 @@ describe('Token Distribution Edge Case Tests', () => {
     expect(thirdResult.context[1].content).toBe('Response 4');
 
     // Find which messages are in the final context
-    const contextMessageIndices = thirdResult.context.map(msg => {
+    const contextMessageIndices = thirdResult.context.map((msg) => {
       // Find the index of this message in the original array
-      return extendedMessages.findIndex(m => m.content === msg.content);
+      return extendedMessages.findIndex((m) => m.content === msg.content);
     });
 
     // Get the sum of token counts for messages in the context
     let totalContextTokens = 0;
     for (const idx of contextMessageIndices) {
-      totalContextTokens += thirdResult.indexTokenCountMap[idx];
+      totalContextTokens += thirdResult.indexTokenCountMap[idx] ?? 0;
     }
 
     // Verify that the sum of tokens for messages in the context is close to the total_tokens from usageMetadata
@@ -283,11 +300,15 @@ describe('Token Distribution Edge Case Tests', () => {
     // Verify that messages not in the context have their original token counts or previously adjusted values
     for (let i = 0; i < extendedMessages.length; i++) {
       if (!contextMessageIndices.includes(i)) {
-        const expectedValue = i < messages.length
-          ? (secondResult.indexTokenCountMap[i] || indexTokenCountMap[i])
-          : (indexTokenCountMap as Record<string, number | undefined>)[i] ?? 0;
+        const expectedValue =
+          i < messages.length
+            ? (secondResult.indexTokenCountMap[i] ?? 0) || indexTokenCountMap[i]
+            : ((indexTokenCountMap as Record<string, number | undefined>)[i] ??
+              0);
 
-        const difference = Math.abs((thirdResult.indexTokenCountMap[i] || 0) - expectedValue);
+        const difference = Math.abs(
+          (thirdResult.indexTokenCountMap[i] ?? 0) - expectedValue
+        );
         expect(difference).toBe(0);
       }
     }
