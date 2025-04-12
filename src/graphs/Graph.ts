@@ -349,7 +349,8 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       tools: this.tools || [],
       toolMap: this.toolMap,
       toolCallStepIds: this.toolCallStepIds,
-      errorHandler: this.handleToolCallError.bind(this),
+      errorHandler: (data, metadata) =>
+        StandardGraph.handleToolCallErrorStatic(this, data, metadata),
     });
   }
 
@@ -685,11 +686,16 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       this
     );
   }
-  handleToolCallError(
+  /**
+   * Static version of handleToolCallError to avoid creating strong references
+   * that prevent garbage collection
+   */
+  static handleToolCallErrorStatic(
+    graph: StandardGraph,
     data: t.ToolErrorData,
     metadata?: Record<string, unknown>
   ): void {
-    if (!this.config) {
+    if (!graph.config) {
       throw new Error('No config provided');
     }
 
@@ -698,14 +704,14 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       return;
     }
 
-    const stepId = this.toolCallStepIds.get(data.id) ?? '';
+    const stepId = graph.toolCallStepIds.get(data.id) ?? '';
     if (!stepId) {
       throw new Error(`No stepId found for tool_call_id ${data.id}`);
     }
 
     const { name, input: args, error } = data;
 
-    const runStep = this.getRunStep(stepId);
+    const runStep = graph.getRunStep(stepId);
     if (!runStep) {
       throw new Error(`No run step found for stepId ${stepId}`);
     }
@@ -718,19 +724,32 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       progress: 1,
     };
 
-    this.handlerRegistry?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)?.handle(
-      GraphEvents.ON_RUN_STEP_COMPLETED,
-      {
-        result: {
-          id: stepId,
-          index: runStep.index,
-          type: 'tool_call',
-          tool_call,
-        } as t.ToolCompleteEvent,
-      },
-      metadata,
-      this
-    );
+    graph.handlerRegistry
+      ?.getHandler(GraphEvents.ON_RUN_STEP_COMPLETED)
+      ?.handle(
+        GraphEvents.ON_RUN_STEP_COMPLETED,
+        {
+          result: {
+            id: stepId,
+            index: runStep.index,
+            type: 'tool_call',
+            tool_call,
+          } as t.ToolCompleteEvent,
+        },
+        metadata,
+        graph
+      );
+  }
+
+  /**
+   * Instance method that delegates to the static method
+   * Kept for backward compatibility
+   */
+  handleToolCallError(
+    data: t.ToolErrorData,
+    metadata?: Record<string, unknown>
+  ): void {
+    StandardGraph.handleToolCallErrorStatic(this, data, metadata);
   }
 
   dispatchRunStepDelta(id: string, delta: t.ToolCallDelta): void {
