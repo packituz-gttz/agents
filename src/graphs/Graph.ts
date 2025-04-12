@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // src/graphs/Graph.ts
 import { nanoid } from 'nanoid';
 import { concat } from '@langchain/core/utils/stream';
@@ -114,7 +115,7 @@ export abstract class Graph<
   contentIndexMap: Map<string, number> = new Map();
   toolCallStepIds: Map<string, string> = new Map();
   currentUsage: Partial<UsageMetadata> | undefined;
-  indexTokenCountMap: Record<string, number> = {};
+  indexTokenCountMap: Record<string, number | undefined> = {};
   maxContextTokens: number | undefined;
   pruneMessages?: ReturnType<typeof createPruneMessages>;
   /** The amount of time that should pass before another consecutive API call */
@@ -168,21 +169,25 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       this.reasoningKey = reasoningKey;
     }
 
-    let finalInstructions: string | BaseMessageFields = instructions ?? '';
+    let finalInstructions: string | BaseMessageFields | undefined =
+      instructions;
     if (additional_instructions) {
-      finalInstructions = finalInstructions
-        ? `${finalInstructions}\n\n${additional_instructions}`
-        : additional_instructions;
+      finalInstructions =
+        finalInstructions != null && finalInstructions
+          ? `${finalInstructions}\n\n${additional_instructions}`
+          : additional_instructions;
     }
 
     if (
+      finalInstructions != null &&
       finalInstructions &&
       provider === Providers.ANTHROPIC &&
-      (
+      ((
         clientOptions as t.AnthropicClientOptions
       ).clientOptions?.defaultHeaders?.['anthropic-beta']?.includes(
         'prompt-caching'
-      )
+      ) ??
+        false)
     ) {
       finalInstructions = {
         content: [
@@ -195,7 +200,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       };
     }
 
-    if (finalInstructions) {
+    if (finalInstructions != null && finalInstructions !== '') {
       this.systemMessage = new SystemMessage(finalInstructions);
     }
   }
@@ -431,7 +436,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     if (
       finalMessage &&
       'usage_metadata' in finalMessage &&
-      finalMessage.usage_metadata
+      finalMessage.usage_metadata != null
     ) {
       this.currentUsage = finalMessage.usage_metadata as Partial<UsageMetadata>;
     }
@@ -448,7 +453,9 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
       if (!config.signal) {
-        config.signal = this.signal;
+        config.signal = this.signal
+          ? AbortSignal.any([this.signal])
+          : undefined;
       }
       this.config = config;
       const { messages } = state;
@@ -718,9 +725,9 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
 
     const tool_call: t.ProcessedToolCall = {
       id: data.id,
-      name: name ?? '',
+      name: name || '',
       args: typeof args === 'string' ? args : JSON.stringify(args),
-      output: `Error processing tool${error?.message ? `: ${error.message}` : ''}`,
+      output: `Error processing tool${error?.message != null ? `: ${error.message}` : ''}`,
       progress: 1,
     };
 
