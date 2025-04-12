@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents",
-  "version": "2.4.12",
+  "version": "2.4.13",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
@@ -43,7 +43,7 @@
     "start:cli": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "content": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/content.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "stream": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/stream.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
-    "code_exec": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec.ts --provider 'google' --name 'Jo' --location 'New York, NY'",
+    "code_exec": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "image": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/image.ts --provider 'google' --name 'Jo' --location 'New York, NY'",
     "code_exec_files": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec_files.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "code_exec_simple": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/code_exec_simple.ts --provider 'google' --name 'Jo' --location 'New York, NY'",
