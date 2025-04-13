@@ -17,3 +17,6 @@ export * from './utils';
 
 /* Types */
 export type * from './types';
+
+/* LLM */
+export { CustomOpenAIClient } from './llm/openai';

@@ -2,10 +2,19 @@ import { AIMessageChunk } from '@langchain/core/messages';
 import { ChatAnthropicMessages } from '@langchain/anthropic';
 import { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { BaseChatModelParams } from '@langchain/core/language_models/chat_models';
-import type { BaseMessage, MessageContentComplex } from '@langchain/core/messages';
+import type {
+  BaseMessage,
+  MessageContentComplex,
+} from '@langchain/core/messages';
 import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
 import type { AnthropicInput } from '@langchain/anthropic';
-import type { AnthropicMessageCreateParams, AnthropicStreamingMessageCreateParams, AnthropicStreamUsage, AnthropicMessageStartEvent, AnthropicMessageDeltaEvent } from '@/llm/anthropic/types';
+import type {
+  AnthropicMessageCreateParams,
+  AnthropicStreamingMessageCreateParams,
+  AnthropicStreamUsage,
+  AnthropicMessageStartEvent,
+  AnthropicMessageDeltaEvent,
+} from '@/llm/anthropic/types';
 import { _makeMessageChunkFromAnthropicEvent } from './utils/message_outputs';
 import { _convertMessagesToAnthropicPayload } from './utils/message_inputs';
 import { TextStream } from '@/llm/text';
@@ -43,7 +52,9 @@ function _thinkingInParams(
   return !!(params.thinking && params.thinking.type === 'enabled');
 }
 
-function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'content'] | [undefined] {
+function extractToken(
+  chunk: AIMessageChunk
+): [string, 'string' | 'input' | 'content'] | [undefined] {
   if (typeof chunk.content === 'string') {
     return [chunk.content, 'string'];
   } else if (
@@ -70,7 +81,11 @@ function extractToken(chunk: AIMessageChunk): [string, 'string' | 'input' | 'con
   return [undefined];
 }
 
-function cloneChunk(text: string, tokenType: string, chunk: AIMessageChunk): AIMessageChunk {
+function cloneChunk(
+  text: string,
+  tokenType: string,
+  chunk: AIMessageChunk
+): AIMessageChunk {
   if (tokenType === 'string') {
     return new AIMessageChunk(Object.assign({}, chunk, { content: text }));
   } else if (tokenType === 'input') {
@@ -78,17 +93,31 @@ function cloneChunk(text: string, tokenType: string, chunk: AIMessageChunk): AIM
   }
   const content = chunk.content[0] as MessageContentComplex;
   if (tokenType === 'content' && content.type === 'text') {
-    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
+    return new AIMessageChunk(
+      Object.assign({}, chunk, {
+        content: [Object.assign({}, content, { text })],
+      })
+    );
   } else if (tokenType === 'content' && content.type === 'text_delta') {
-    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { text })] }));
+    return new AIMessageChunk(
+      Object.assign({}, chunk, {
+        content: [Object.assign({}, content, { text })],
+      })
+    );
   } else if (tokenType === 'content' && content.type?.startsWith('thinking')) {
-    return new AIMessageChunk(Object.assign({}, chunk, { content: [Object.assign({}, content, { thinking: text })] }));
+    return new AIMessageChunk(
+      Object.assign({}, chunk, {
+        content: [Object.assign({}, content, { thinking: text })],
+      })
+    );
   }
 
   return chunk;
 }
 
-export type CustomAnthropicInput = AnthropicInput & { _lc_stream_delay?: number } & BaseChatModelParams;
+export type CustomAnthropicInput = AnthropicInput & {
+  _lc_stream_delay?: number;
+} & BaseChatModelParams;
 
 export class CustomAnthropic extends ChatAnthropicMessages {
   _lc_stream_delay: number;
@@ -109,18 +138,26 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     if (this.emitted_usage === true) {
       return;
     }
-    const inputUsage = (this.message_start?.message)?.usage as undefined | AnthropicStreamUsage;
-    const outputUsage = this.message_delta?.usage as undefined | Partial<AnthropicStreamUsage>;
+    const inputUsage = this.message_start?.message.usage as
+      | undefined
+      | AnthropicStreamUsage;
+    const outputUsage = this.message_delta?.usage as
+      | undefined
+      | Partial<AnthropicStreamUsage>;
     if (!outputUsage) {
       return;
     }
     const totalUsage: AnthropicStreamUsage = {
       input_tokens: inputUsage?.input_tokens ?? 0,
       output_tokens: outputUsage.output_tokens ?? 0,
-      total_tokens: (inputUsage?.input_tokens ?? 0) + (outputUsage.output_tokens ?? 0),
+      total_tokens:
+        (inputUsage?.input_tokens ?? 0) + (outputUsage.output_tokens ?? 0),
     };
 
-    if (inputUsage?.cache_creation_input_tokens != null || inputUsage?.cache_read_input_tokens != null) {
+    if (
+      inputUsage?.cache_creation_input_tokens != null ||
+      inputUsage?.cache_read_input_tokens != null
+    ) {
       totalUsage.input_token_details = {
         cache_creation: inputUsage.cache_creation_input_tokens ?? 0,
         cache_read: inputUsage.cache_read_input_tokens ?? 0,
@@ -144,12 +181,14 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     usageMetadata,
     shouldStreamUsage,
   }: {
-    token?: string,
-    chunk: AIMessageChunk,
-    shouldStreamUsage: boolean
-    usageMetadata?: AnthropicStreamUsage,
+    token?: string;
+    chunk: AIMessageChunk;
+    shouldStreamUsage: boolean;
+    usageMetadata?: AnthropicStreamUsage;
   }): ChatGenerationChunk {
-    const usage_metadata = shouldStreamUsage ? usageMetadata ?? chunk.usage_metadata : undefined;
+    const usage_metadata = shouldStreamUsage
+      ? (usageMetadata ?? chunk.usage_metadata)
+      : undefined;
     return new ChatGenerationChunk({
       message: new AIMessageChunk({
         // Just yield chunk as it is and tool_use will be concat by BaseChatModel._generateUncached().
@@ -220,7 +259,11 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       const { chunk } = result;
       const [token = '', tokenType] = extractToken(chunk);
 
-      if (!tokenType || tokenType === 'input' || (token === '' && usageMetadata)) {
+      if (
+        !tokenType ||
+        tokenType === 'input' ||
+        (token === '' && usageMetadata)
+      ) {
         const generationChunk = this.createGenerationChunk({
           token,
           chunk,

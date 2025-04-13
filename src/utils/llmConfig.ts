@@ -1,6 +1,6 @@
 // src/utils/llmConfig.ts
 import { Providers } from '@/common';
-import type * as or from '@/llm/openrouter/llm';
+import type * as or from '@/llm/openrouter';
 import type * as t from '@/types';
 
 export const llmConfigs: Record<string, t.LLMConfig | undefined> = {

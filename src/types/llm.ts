@@ -1,31 +1,26 @@
 // src/types/llm.ts
-import { ChatXAI } from '@langchain/xai';
 import { ChatOllama } from '@langchain/ollama';
-import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
-import {
-  ChatOpenAI,
-  AzureChatOpenAI,
-  ClientOptions as OAIClientOptions,
-} from '@langchain/openai';
 import type {
   BindToolsInput,
   BaseChatModelParams,
 } from '@langchain/core/language_models/chat_models';
 import type {
-  ChatOpenAIFields,
   OpenAIChatInput,
+  ChatOpenAIFields,
   AzureOpenAIInput,
+  ClientOptions as OAIClientOptions,
 } from '@langchain/openai';
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
 import type { ChatDeepSeekCallOptions } from '@langchain/deepseek';
+import type { ChatOpenRouterCallOptions } from '@/llm/openrouter';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
 import type { StructuredTool } from '@langchain/core/tools';
@@ -34,8 +29,13 @@ import type { Runnable } from '@langchain/core/runnables';
 import type { ChatOllamaInput } from '@langchain/ollama';
 import type { OpenAI as OpenAIClient } from 'openai';
 import type { ChatXAIInput } from '@langchain/xai';
-import type { ChatOpenRouterCallOptions } from '@/llm/openrouter/llm';
-import { ChatOpenRouter } from '@/llm/openrouter/llm';
+import {
+  ChatXAI,
+  ChatOpenAI,
+  ChatDeepSeek,
+  AzureChatOpenAI,
+} from '@/llm/openai';
+import { ChatOpenRouter } from '@/llm/openrouter';
 import { Providers } from '@/common';
 
 export type AzureClientOptions = Partial<OpenAIChatInput> &
@@ -105,6 +105,7 @@ export type ProviderOptionsMap = {
 };
 
 export type ChatModelMap = {
+  [Providers.XAI]: ChatXAI;
   [Providers.OPENAI]: ChatOpenAI;
   [Providers.OLLAMA]: ChatOllama;
   [Providers.AZURE]: AzureChatOpenAI;
@@ -117,7 +118,6 @@ export type ChatModelMap = {
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
   [Providers.GOOGLE]: ChatGoogleGenerativeAI;
-  [Providers.XAI]: ChatXAI;
 };
 
 export type ChatModelConstructorMap = {

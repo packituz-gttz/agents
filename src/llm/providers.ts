@@ -1,12 +1,9 @@
 // src/llm/providers.ts
-import { ChatXAI } from '@langchain/xai';
 import { ChatOllama } from '@langchain/ollama';
-import { ChatDeepSeek } from '@langchain/deepseek';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 // import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatVertexAI } from '@langchain/google-vertexai';
-import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type {
@@ -14,8 +11,14 @@ import type {
   ProviderOptionsMap,
   ChatModelMap,
 } from '@/types';
-import { CustomAnthropic } from '@/llm/anthropic/llm';
-import { ChatOpenRouter } from '@/llm/openrouter/llm';
+import { CustomAnthropic } from '@/llm/anthropic';
+import { ChatOpenRouter } from '@/llm/openrouter';
+import {
+  ChatXAI,
+  ChatOpenAI,
+  ChatDeepSeek,
+  AzureChatOpenAI,
+} from '@/llm/openai';
 import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {
