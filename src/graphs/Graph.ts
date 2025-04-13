@@ -453,9 +453,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
       if (!config.signal) {
-        config.signal = this.signal
-          ? AbortSignal.any([this.signal])
-          : undefined;
+        config.signal = this.signal;
       }
       this.config = config;
       const { messages } = state;
