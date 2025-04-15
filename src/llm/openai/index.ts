@@ -9,6 +9,12 @@ import {
 } from '@langchain/openai';
 import type * as t from '@langchain/openai';
 
+function createAbortHandler(controller: AbortController): () => void {
+  return function (): void {
+    controller.abort();
+  };
+}
+
 export class CustomOpenAIClient extends OpenAIClient {
   abortHandler?: () => void;
   async fetchWithTimeout(
@@ -18,9 +24,7 @@ export class CustomOpenAIClient extends OpenAIClient {
     controller: AbortController
   ): Promise<Response> {
     const { signal, ...options } = init || {};
-    const handler = function (): void {
-      controller.abort();
-    };
+    const handler = createAbortHandler(controller);
     this.abortHandler = handler;
     if (signal) signal.addEventListener('abort', handler, { once: true });
 
@@ -55,9 +59,7 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
     controller: AbortController
   ): Promise<Response> {
     const { signal, ...options } = init || {};
-    const handler = function (): void {
-      controller.abort();
-    };
+    const handler = createAbortHandler(controller);
     this.abortHandler = handler;
     if (signal) signal.addEventListener('abort', handler, { once: true });
 
