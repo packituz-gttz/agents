@@ -37,7 +37,10 @@ export class CustomOpenAIClient extends OpenAIClient {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       /** @ts-ignore */
       this.fetch.call(undefined, url, fetchOptions).finally(() => {
-        if (signal) signal.removeEventListener('abort', handler);
+        if (signal) {
+          controller.abort();
+          signal.removeEventListener('abort', handler);
+        }
         clearTimeout(timeout);
       })
     );
@@ -71,7 +74,10 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       /** @ts-ignore */
       this.fetch.call(undefined, url, fetchOptions).finally(() => {
-        if (signal) signal.removeEventListener('abort', handler);
+        if (signal) {
+          controller.abort();
+          signal.removeEventListener('abort', handler);
+        }
         clearTimeout(timeout);
       })
     );
