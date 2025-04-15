@@ -18,8 +18,11 @@ export class CustomOpenAIClient extends OpenAIClient {
     controller: AbortController
   ): Promise<Response> {
     const { signal, ...options } = init || {};
-    const handler = (): void => controller.abort();
-    if (signal) signal.addEventListener('abort', handler);
+    const handler = function (): void {
+      controller.abort();
+    };
+    this.abortHandler = handler;
+    if (signal) signal.addEventListener('abort', handler, { once: true });
 
     const timeout = setTimeout(() => handler, ms);
 
@@ -52,9 +55,11 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
     controller: AbortController
   ): Promise<Response> {
     const { signal, ...options } = init || {};
-    const handler = (): void => controller.abort();
+    const handler = function (): void {
+      controller.abort();
+    };
     this.abortHandler = handler;
-    if (signal) signal.addEventListener('abort', handler);
+    if (signal) signal.addEventListener('abort', handler, { once: true });
 
     const timeout = setTimeout(() => handler, ms);
 
@@ -80,6 +85,9 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
 }
 
 export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
+  public get exposedClient(): CustomOpenAIClient {
+    return this.client;
+  }
   protected _getClientOptions(
     options?: t.OpenAICoreRequestOptions
   ): t.OpenAICoreRequestOptions {
@@ -110,6 +118,9 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
 }
 
 export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
+  public get exposedClient(): CustomOpenAIClient {
+    return this.client;
+  }
   protected _getClientOptions(
     options: t.OpenAICoreRequestOptions | undefined
   ): t.OpenAICoreRequestOptions {
@@ -174,6 +185,9 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
 }
 
 export class ChatDeepSeek extends OriginalChatDeepSeek {
+  public get exposedClient(): CustomOpenAIClient {
+    return this.client;
+  }
   protected _getClientOptions(
     options?: t.OpenAICoreRequestOptions
   ): t.OpenAICoreRequestOptions {
@@ -204,6 +218,9 @@ export class ChatDeepSeek extends OriginalChatDeepSeek {
 }
 
 export class ChatXAI extends OriginalChatXAI {
+  public get exposedClient(): CustomOpenAIClient {
+    return this.client;
+  }
   protected _getClientOptions(
     options?: t.OpenAICoreRequestOptions
   ): t.OpenAICoreRequestOptions {

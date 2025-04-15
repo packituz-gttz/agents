@@ -5,7 +5,6 @@ import { concat } from '@langchain/core/utils/stream';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { ChatVertexAI } from '@langchain/google-vertexai';
 import { START, END, StateGraph } from '@langchain/langgraph';
-import { ChatOpenAI, AzureChatOpenAI } from '@langchain/openai';
 import { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import { dispatchCustomEvent } from '@langchain/core/callbacks/dispatch';
 import {
@@ -44,6 +43,7 @@ import {
   joinKeys,
   sleep,
 } from '@/utils';
+import { ChatOpenAI, AzureChatOpenAI } from '@/llm/openai';
 import { createFakeStreamingLLM } from '@/llm/fake';
 import { HandlerRegistry } from '@/events';
 
@@ -127,7 +127,7 @@ export abstract class Graph<
 export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
   private graphState: t.GraphStateChannels<t.BaseGraphState>;
   clientOptions: t.ClientOptions;
-  boundModel: Runnable;
+  boundModel?: Runnable;
   /** The last recorded timestamp that a stream API call was invoked */
   lastStreamCall: number | undefined;
   handlerRegistry: HandlerRegistry | undefined;
@@ -139,7 +139,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
   startIndex: number = 0;
   provider: Providers;
   toolEnd: boolean;
-  signal: AbortSignal | undefined;
+  signal?: AbortSignal;
 
   constructor({
     runId,
@@ -442,6 +442,21 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     }
   }
 
+  cleanupSignalListener(): void {
+    if (!this.signal) {
+      return;
+    }
+    if (!this.boundModel) {
+      return;
+    }
+    const client = (this.boundModel as ChatOpenAI | undefined)?.exposedClient;
+    if (!client?.abortHandler) {
+      return;
+    }
+    this.signal.removeEventListener('abort', client.abortHandler);
+    client.abortHandler = undefined;
+  }
+
   createCallModel() {
     return async (
       state: t.BaseGraphState,
@@ -449,6 +464,9 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     ): Promise<Partial<t.BaseGraphState>> => {
       const { provider = '' } =
         (config?.configurable as t.GraphConfig | undefined) ?? {};
+      if (this.boundModel == null) {
+        throw new Error('No Graph model found');
+      }
       if (!config || !provider) {
         throw new Error(`No ${config ? 'provider' : 'config'} provided`);
       }
@@ -570,6 +588,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       }
 
       this.storeUsageMetadata(result.messages?.[0]);
+      this.cleanupSignalListener();
       return result;
     };
   }
