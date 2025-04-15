@@ -10,6 +10,7 @@ import {
 import type * as t from '@langchain/openai';
 
 export class CustomOpenAIClient extends OpenAIClient {
+  abortHandler?: () => void;
   async fetchWithTimeout(
     url: RequestInfo,
     init: RequestInit | undefined,
@@ -37,16 +38,13 @@ export class CustomOpenAIClient extends OpenAIClient {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       /** @ts-ignore */
       this.fetch.call(undefined, url, fetchOptions).finally(() => {
-        if (signal) {
-          controller.abort();
-          signal.removeEventListener('abort', handler);
-        }
         clearTimeout(timeout);
       })
     );
   }
 }
 export class CustomAzureOpenAIClient extends AzureOpenAIClient {
+  abortHandler?: () => void;
   async fetchWithTimeout(
     url: RequestInfo,
     init: RequestInit | undefined,
@@ -55,6 +53,7 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
   ): Promise<Response> {
     const { signal, ...options } = init || {};
     const handler = (): void => controller.abort();
+    this.abortHandler = handler;
     if (signal) signal.addEventListener('abort', handler);
 
     const timeout = setTimeout(() => handler, ms);
@@ -74,10 +73,6 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       /** @ts-ignore */
       this.fetch.call(undefined, url, fetchOptions).finally(() => {
-        if (signal) {
-          controller.abort();
-          signal.removeEventListener('abort', handler);
-        }
         clearTimeout(timeout);
       })
     );
