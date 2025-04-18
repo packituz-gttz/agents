@@ -5,12 +5,23 @@ export function isOpenAILike(provider?: string | Providers): boolean {
   if (provider == null) {
     return false;
   }
-  return ([Providers.OPENAI, Providers.AZURE] as string[]).includes(provider);
+  return (
+    [
+      Providers.OPENAI,
+      Providers.AZURE,
+      Providers.OPENROUTER,
+      Providers.XAI,
+      Providers.DEEPSEEK,
+      Providers.OLLAMA,
+    ] as string[]
+  ).includes(provider);
 }
 
 export function isGoogleLike(provider?: string | Providers): boolean {
   if (provider == null) {
     return false;
   }
-  return ([Providers.GOOGLE, Providers.VERTEXAI] as string[]).includes(provider);
+  return ([Providers.GOOGLE, Providers.VERTEXAI] as string[]).includes(
+    provider
+  );
 }
