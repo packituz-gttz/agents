@@ -72,7 +72,7 @@
   },
   "dependencies": {
     "@langchain/anthropic": "^0.3.16",
-    "@langchain/aws": "^0.1.7",
+    "@langchain/aws": "^0.1.9",
     "@langchain/community": "^0.3.39",
     "@langchain/core": "^0.3.43",
     "@langchain/deepseek": "^0.0.1",
