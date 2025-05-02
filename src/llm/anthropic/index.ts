@@ -4,6 +4,7 @@ import { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { BaseChatModelParams } from '@langchain/core/language_models/chat_models';
 import type {
   BaseMessage,
+  UsageMetadata,
   MessageContentComplex,
 } from '@langchain/core/messages';
 import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
@@ -132,9 +133,9 @@ export class CustomAnthropic extends ChatAnthropicMessages {
 
   /**
    * Get stream usage as returned by this client's API response.
-   * @returns {AnthropicStreamUsage} The stream usage object.
+   * @returns The stream usage object.
    */
-  getStreamUsage(): AnthropicStreamUsage | undefined {
+  getStreamUsage(): UsageMetadata | undefined {
     if (this.emitted_usage === true) {
       return;
     }
@@ -147,7 +148,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     if (!outputUsage) {
       return;
     }
-    const totalUsage: AnthropicStreamUsage = {
+    const totalUsage: UsageMetadata = {
       input_tokens: inputUsage?.input_tokens ?? 0,
       output_tokens: outputUsage.output_tokens ?? 0,
       total_tokens:
@@ -184,7 +185,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     token?: string;
     chunk: AIMessageChunk;
     shouldStreamUsage: boolean;
-    usageMetadata?: AnthropicStreamUsage;
+    usageMetadata?: UsageMetadata;
   }): ChatGenerationChunk {
     const usage_metadata = shouldStreamUsage
       ? (usageMetadata ?? chunk.usage_metadata)
@@ -245,7 +246,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
         this.message_delta = data as AnthropicMessageDeltaEvent;
       }
 
-      let usageMetadata: AnthropicStreamUsage | undefined;
+      let usageMetadata: UsageMetadata | undefined;
       if (this.tools_in_params !== true && this.emitted_usage !== true) {
         usageMetadata = this.getStreamUsage();
       }

@@ -1,6 +1,4 @@
-
 import Anthropic from '@anthropic-ai/sdk';
-import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources';
 import { BindToolsInput } from '@langchain/core/language_models/chat_models';
 
 export type AnthropicToolResponse = {
@@ -11,9 +9,10 @@ export type AnthropicToolResponse = {
   input: Record<string, any>;
 };
 
+export type AnthropicStreamUsage = Anthropic.Usage;
 export type AnthropicMessageParam = Anthropic.MessageParam;
-export type AnthropicMessageDeltaEvent= Anthropic.MessageDeltaEvent;
-export type AnthropicMessageStartEvent= Anthropic.MessageStartEvent;
+export type AnthropicMessageDeltaEvent = Anthropic.MessageDeltaEvent;
+export type AnthropicMessageStartEvent = Anthropic.MessageStartEvent;
 export type AnthropicMessageResponse =
   | Anthropic.ContentBlock
   | AnthropicToolResponse;
@@ -21,6 +20,7 @@ export type AnthropicMessageCreateParams =
   Anthropic.MessageCreateParamsNonStreaming;
 export type AnthropicStreamingMessageCreateParams =
   Anthropic.MessageCreateParamsStreaming;
+export type AnthropicThinkingConfigParam = Anthropic.ThinkingConfigParam;
 export type AnthropicMessageStreamEvent = Anthropic.MessageStreamEvent;
 export type AnthropicRequestOptions = Anthropic.RequestOptions;
 export type AnthropicToolChoice =
@@ -32,7 +32,7 @@ export type AnthropicToolChoice =
   | 'auto'
   | 'none'
   | string;
-export type ChatAnthropicToolType = AnthropicTool | BindToolsInput;
+export type ChatAnthropicToolType = Anthropic.Messages.Tool | BindToolsInput;
 export type AnthropicTextBlockParam = Anthropic.Messages.TextBlockParam;
 export type AnthropicImageBlockParam = Anthropic.Messages.ImageBlockParam;
 export type AnthropicToolUseBlockParam = Anthropic.Messages.ToolUseBlockParam;
@@ -41,39 +41,64 @@ export type AnthropicToolResultBlockParam =
 export type AnthropicDocumentBlockParam = Anthropic.Messages.DocumentBlockParam;
 export type AnthropicThinkingBlockParam = Anthropic.Messages.ThinkingBlockParam;
 export type AnthropicRedactedThinkingBlockParam =
-    Anthropic.Messages.RedactedThinkingBlockParam;
+  Anthropic.Messages.RedactedThinkingBlockParam;
 
-/**
- * Stream usage information for Anthropic API calls
- * @see https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching#pricing
- */
-export interface AnthropicStreamUsage {
-  /**
-   * The number of input tokens used in the request
-   */
-  input_tokens: number;
+export function isAnthropicImageBlockParam(
+  block: unknown
+): block is AnthropicImageBlockParam {
+  if (block == null) {
+    return false;
+  }
+  if (typeof block !== 'object') {
+    return false;
+  }
+  if (!('type' in block) || block.type !== 'image') {
+    return false;
+  }
 
-  /**
-   * The number of cache creation input tokens used (write operations)
-   */
-  cache_creation_input_tokens?: number;
-  /**
-   * The number of cache input tokens used (read operations)
-   */
-  cache_read_input_tokens?: number;
-  /**
-   * The number of output tokens generated in the response
-   */
-  output_tokens: number;
-  /**
-   * The total number of tokens generated in the response
-   */
-  total_tokens: number;
-  /**
-   * Details about input token usage
-   */
-  input_token_details?: {
-    cache_creation: number;
-    cache_read: number;
-  };
+  if (!('source' in block) || typeof block.source !== 'object') {
+    return false;
+  }
+
+  if (block.source == null) {
+    return false;
+  }
+
+  if (!('type' in block.source)) {
+    return false;
+  }
+
+  if (block.source.type === 'base64') {
+    if (!('media_type' in block.source)) {
+      return false;
+    }
+
+    if (typeof block.source.media_type !== 'string') {
+      return false;
+    }
+
+    if (!('data' in block.source)) {
+      return false;
+    }
+
+    if (typeof block.source.data !== 'string') {
+      return false;
+    }
+
+    return true;
+  }
+
+  if (block.source.type === 'url') {
+    if (!('url' in block.source)) {
+      return false;
+    }
+
+    if (typeof block.source.url !== 'string') {
+      return false;
+    }
+
+    return true;
+  }
+
+  return false;
 }

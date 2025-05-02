@@ -4,29 +4,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   AIMessage,
-  UsageMetadata,
   AIMessageChunk,
+  UsageMetadata,
 } from '@langchain/core/messages';
 import type { ToolCallChunk } from '@langchain/core/messages/tool';
-import { ToolCall } from '@langchain/core/messages/tool';
 import { ChatGeneration } from '@langchain/core/outputs';
-import { AnthropicMessageResponse } from '../types.js';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extractToolCalls(content: Record<string, any>[]): ToolCall[] {
-  const toolCalls: ToolCall[] = [];
-  for (const block of content) {
-    if (block.type === 'tool_use') {
-      toolCalls.push({
-        name: block.name,
-        args: block.input,
-        id: block.id,
-        type: 'tool_call',
-      });
-    }
-  }
-  return toolCalls;
-}
+import { extractToolCalls } from './output_parsers';
+import { AnthropicMessageResponse } from '../types';
 
 export function _makeMessageChunkFromAnthropicEvent(
   data: Anthropic.Messages.RawMessageStreamEvent,
@@ -231,7 +215,6 @@ export function _makeMessageChunkFromAnthropicEvent(
       }),
     };
   }
-
   return null;
 }
 
