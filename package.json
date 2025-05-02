@@ -76,7 +76,7 @@
     "@langchain/community": "^0.3.39",
     "@langchain/core": "^0.3.43",
     "@langchain/deepseek": "^0.0.1",
-    "@langchain/google-genai": "^0.2.2",
+    "@langchain/google-genai": "^0.2.5",
     "@langchain/google-vertexai": "^0.2.5",
     "@langchain/langgraph": "^0.2.62",
     "@langchain/mistralai": "^0.2.0",
