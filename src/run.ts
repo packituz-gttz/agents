@@ -141,7 +141,7 @@ export class Run<T extends t.BaseGraphState> {
         }
 
         const jsonSchema = zodToJsonSchema(
-          tool.schema.describe(tool.description ?? ''),
+          (tool.schema as t.ZodObjectAny).describe(tool.description ?? ''),
           tool.name
         );
         return (
