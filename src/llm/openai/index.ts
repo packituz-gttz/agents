@@ -7,6 +7,7 @@ import {
   ChatOpenAI as OriginalChatOpenAI,
   AzureChatOpenAI as OriginalAzureChatOpenAI,
 } from '@langchain/openai';
+import type { OpenAICoreRequestOptions } from 'node_modules/@langchain/deepseek/node_modules/@langchain/openai';
 import type * as t from '@langchain/openai';
 
 function createAbortHandler(controller: AbortController): () => void {
@@ -191,8 +192,8 @@ export class ChatDeepSeek extends OriginalChatDeepSeek {
     return this.client;
   }
   protected _getClientOptions(
-    options?: t.OpenAICoreRequestOptions
-  ): t.OpenAICoreRequestOptions {
+    options?: OpenAICoreRequestOptions
+  ): OpenAICoreRequestOptions {
     if (!(this.client as OpenAIClient | undefined)) {
       const openAIEndpointConfig: t.OpenAIEndpointConfig = {
         baseURL: this.clientConfig.baseURL,
@@ -214,7 +215,7 @@ export class ChatDeepSeek extends OriginalChatDeepSeek {
     const requestOptions = {
       ...this.clientConfig,
       ...options,
-    } as t.OpenAICoreRequestOptions;
+    } as OpenAICoreRequestOptions;
     return requestOptions;
   }
 }
@@ -224,8 +225,8 @@ export class ChatXAI extends OriginalChatXAI {
     return this.client;
   }
   protected _getClientOptions(
-    options?: t.OpenAICoreRequestOptions
-  ): t.OpenAICoreRequestOptions {
+    options?: OpenAICoreRequestOptions
+  ): OpenAICoreRequestOptions {
     if (!(this.client as OpenAIClient | undefined)) {
       const openAIEndpointConfig: t.OpenAIEndpointConfig = {
         baseURL: this.clientConfig.baseURL,
@@ -247,7 +248,7 @@ export class ChatXAI extends OriginalChatXAI {
     const requestOptions = {
       ...this.clientConfig,
       ...options,
-    } as t.OpenAICoreRequestOptions;
+    } as OpenAICoreRequestOptions;
     return requestOptions;
   }
 }
