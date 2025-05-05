@@ -101,9 +101,7 @@ const getHighlights = async ({
   }
 
   try {
-    console.log('Splitting content for highlights...');
     const documents = await chunker.splitText(content);
-    console.dir(documents, { depth: null });
     if (Array.isArray(documents)) {
       return await reranker.rerank(query, documents, topResults);
     } else {

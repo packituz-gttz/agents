@@ -13,21 +13,17 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
     addSection('Web Results');
     organic.forEach((r, i) => {
       output += [
-        `Anchor: \ue202turn0search${i + 1}`,
-        `Title: ${r.title ?? '(no title)'}`,
+        `Source ${i + 1}: ${r.title ?? '(no title)'}`,
+        `Citation Anchor: \\ue202turn0search${i + 1}`,
         `URL: ${r.link}`,
-        r.snippet != null ? `Snippet: ${r.snippet}` : '',
+        r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',
         r.attribution != null ? `Source: ${r.attribution}` : '',
-        r.highlights != null
-          ? `Highlights: ${r.highlights
-            .map((h) => {
-              return h.text.length > 0
-                ? `\n\`\`\`md\n${h.text}\n\`\`\`\n  - Relevance: ${h.score}`
-                : '';
-            })
-            .join('\n')}`
-          : '',
+        '',
+        '--- Content Highlights ---',
+        ...(r.highlights ?? [])
+          .filter((h) => h.text.trim().length > 0)
+          .map((h) => `[Relevance: ${h.score.toFixed(2)}]\n${h.text.trim()}`),
         '',
       ]
         .filter(Boolean)
@@ -82,7 +78,7 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
         ? `Image URL: ${results.knowledgeGraph.imageUrl}`
         : '',
       results.knowledgeGraph.attributes != null
-        ? `Attributes: ${JSON.stringify(results.knowledgeGraph.attributes)}`
+        ? `Attributes: ${JSON.stringify(results.knowledgeGraph.attributes, null, 2)}`
         : '',
       '',
     ]
