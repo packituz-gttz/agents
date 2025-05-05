@@ -2,11 +2,7 @@
 import axios from 'axios';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import type * as t from './types';
-import {
-  getAttribution,
-  createFirecrawlScraper,
-  FirecrawlScraper,
-} from './firecrawl';
+import { getAttribution, FirecrawlScraper } from './firecrawl';
 import { BaseReranker } from './rerankers';
 
 const chunker = {
@@ -341,6 +337,9 @@ export const createSourceProcessor = (
   ) => Promise<t.SearchResultData>;
   topResults: number;
 } => {
+  if (!scraperInstance) {
+    throw new Error('Firecrawl scraper instance is required');
+  }
   const {
     topResults = 5,
     // strategies = ['no_extraction'],
@@ -348,13 +347,7 @@ export const createSourceProcessor = (
     reranker,
   } = config;
 
-  // Initialize Firecrawl scraper if not provided
-  const firecrawlScraper =
-    scraperInstance ||
-    createFirecrawlScraper({
-      apiKey: process.env.FIRECRAWL_API_KEY,
-      formats: ['markdown', 'html'],
-    });
+  const firecrawlScraper = scraperInstance;
 
   const webScraper = {
     scrapeMany: async ({
