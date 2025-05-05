@@ -12,9 +12,20 @@ import { BaseReranker } from './rerankers';
 const chunker = {
   cleanText: (text: string): string => {
     if (!text) return '';
+
+    /** Normalized all line endings to '\n' */
     const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const cleanedNewlines = normalizedText.replace(/[\t ]*\n[\t \n]*/g, '\n');
+
+    /** Handle multiple backslashes followed by newlines
+     * This replaces patterns like '\\\\\\n' with a single newline */
+    const fixedBackslashes = normalizedText.replace(/\\+\n/g, '\n');
+
+    /** Cleaned up consecutive newlines, tabs, and spaces around newlines */
+    const cleanedNewlines = fixedBackslashes.replace(/[\t ]*\n[\t \n]*/g, '\n');
+
+    /** Cleaned up excessive spaces and tabs */
     const cleanedSpaces = cleanedNewlines.replace(/[ \t]+/g, ' ');
+
     return cleanedSpaces.trim();
   },
   splitText: async (
@@ -81,12 +92,19 @@ const getHighlights = async ({
   topResults?: number;
 }): Promise<t.Highlight[] | undefined> => {
   if (!content) {
+    console.warn('No content provided for highlights');
+    return;
+  }
+  if (!reranker) {
+    console.warn('No reranker provided for highlights');
     return;
   }
 
   try {
+    console.log('Splitting content for highlights...');
     const documents = await chunker.splitText(content);
-    if (reranker && Array.isArray(documents)) {
+    console.dir(documents, { depth: null });
+    if (Array.isArray(documents)) {
       return await reranker.rerank(query, documents, topResults);
     } else {
       console.error(
