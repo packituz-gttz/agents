@@ -18,7 +18,7 @@ const SearchToolSchema = z.object({
 });
 
 export const createSearchTool = (
-  config: t.OpenDeepSearchToolConfig = {}
+  config: t.SearchToolConfig = {}
 ): DynamicStructuredTool<typeof SearchToolSchema> => {
   const {
     searchProvider = 'serper',

@@ -164,7 +164,7 @@ export interface CohereRerankerResponse {
   };
 }
 
-export interface OpenDeepSearchToolConfig
+export interface SearchToolConfig
   extends SearchConfig,
     ProcessSourcesConfig,
     FirecrawlConfig {
