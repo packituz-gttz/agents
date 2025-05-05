@@ -1,4 +1,5 @@
-import { BaseReranker } from './rerankers';
+import type { RunnableConfig } from '@langchain/core/runnables';
+import type { BaseReranker } from './rerankers';
 
 export type SearchProvider = 'serper' | 'searxng';
 export type RerankerType = 'infinity' | 'jina' | 'cohere' | 'none';
@@ -171,4 +172,8 @@ export interface SearchToolConfig
   jinaApiKey?: string;
   cohereApiKey?: string;
   rerankerType?: RerankerType;
+  onSearchResults?: (
+    results: SearchResult,
+    runnableConfig?: RunnableConfig
+  ) => void;
 }

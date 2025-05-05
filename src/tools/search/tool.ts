@@ -34,6 +34,7 @@ export const createSearchTool = (
     firecrawlFormats = ['markdown', 'html'],
     jinaApiKey,
     cohereApiKey,
+    onSearchResults: _onSearchResults,
   } = config;
 
   const searchAPI = createSearchAPI({
@@ -69,13 +70,21 @@ export const createSearchTool = (
     firecrawlScraper
   );
 
-  const search = async (
-    query: string,
-    maxSources: number = 5,
-    proMode: boolean = true
-  ): Promise<t.SearchResultData> => {
+  const search = async ({
+    query,
+    proMode = true,
+    maxSources = 5,
+    onSearchResults,
+  }: {
+    query: string;
+    proMode?: boolean;
+    maxSources?: number;
+    onSearchResults?: (sources: t.SearchResult) => void;
+  }): Promise<t.SearchResultData> => {
     try {
       const sources = await searchAPI.getSources(query);
+      onSearchResults?.(sources);
+
       if (!sources.success) {
         throw new Error(sources.error ?? 'Search failed');
       }
@@ -100,10 +109,17 @@ export const createSearchTool = (
   };
 
   return tool<typeof SearchToolSchema>(
-    async ({ query }) => {
-      const searchResult = await search(query);
+    async ({ query }, runnableConfig) => {
+      const searchResult = await search({
+        query,
+        onSearchResults: _onSearchResults
+          ? (result): void => {
+            _onSearchResults(result, runnableConfig);
+          }
+          : undefined,
+      });
       const output = formatResultsForLLM(searchResult);
-      return [output, undefined];
+      return [output, searchResult];
     },
     {
       name: Constants.WEB_SEARCH,
