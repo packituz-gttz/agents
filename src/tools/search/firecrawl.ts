@@ -152,7 +152,7 @@ export class FirecrawlScraper {
     this.apiUrl = `${baseUrl.replace(/\/+$/, '')}/v1/scrape`;
 
     this.defaultFormats = config.formats ?? ['markdown', 'html'];
-    this.timeout = config.timeout ?? 30000;
+    this.timeout = config.timeout ?? 15000;
 
     if (!this.apiKey) {
       console.warn('FIRECRAWL_API_KEY is not set. Scraping will not work.');
