@@ -228,6 +228,7 @@ export function expandHighlights(
         });
       }
 
+      delete resultCopy.content;
       resultCopy.highlights = highlights;
       return resultCopy;
     });

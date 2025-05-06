@@ -119,7 +119,7 @@ export const createSearchTool = (
           : undefined,
       });
       const output = formatResultsForLLM(searchResult);
-      return [output, searchResult];
+      return [output, { [Constants.WEB_SEARCH]: { ...searchResult } }];
     },
     {
       name: Constants.WEB_SEARCH,
