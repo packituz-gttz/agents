@@ -13,8 +13,8 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
     addSection('Web Results');
     organic.forEach((r, i) => {
       output += [
-        `Source ${i + 1}: ${r.title ?? '(no title)'}`,
-        `Citation Anchor: \\ue202turn0search${i + 1}`,
+        `Source ${i}: ${r.title ?? '(no title)'}`,
+        `Citation Anchor: \\ue202turn0search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',
@@ -38,7 +38,7 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
   //   addSection('News Results');
   //   topStores.forEach((r, i) => {
   //     output += [
-  //       `Anchor: \ue202turn0news${i + 1}`,
+  //       `Anchor: \ue202turn0news${i}`,
   //       `Title: ${r.title ?? '(no title)'}`,
   //       `URL: ${r.link}`,
   //       r.snippet != null ? `Snippet: ${r.snippet}` : '',
@@ -55,7 +55,7 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
   //   addSection('Image Results');
   //   images.forEach((img, i) => {
   //     output += [
-  //       `Anchor: \ue202turn0image${i + 1}`,
+  //       `Anchor: \ue202turn0image${i}`,
   //       `Title: ${img.title ?? '(no title)'}`,
   //       `Image URL: ${img.imageUrl}`,
   //       ''
