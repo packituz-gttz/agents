@@ -105,7 +105,8 @@ export abstract class Graph<
   lastToken?: string;
   tokenTypeSwitch?: 'reasoning' | 'content';
   reasoningKey: 'reasoning_content' | 'reasoning' = 'reasoning_content';
-  currentTokenType: ContentTypes.TEXT | ContentTypes.THINK = ContentTypes.TEXT;
+  currentTokenType: ContentTypes.TEXT | ContentTypes.THINK | 'think_and_text' =
+    ContentTypes.TEXT;
   messageStepHasToolCalls: Map<string, boolean> = new Map();
   messageIdsByStepKey: Map<string, string> = new Map();
   prelimMessageIdsByStepKey: Map<string, string> = new Map();

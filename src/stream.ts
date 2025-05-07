@@ -6,6 +6,57 @@ import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 import { StepTypes, ContentTypes, GraphEvents, ToolCallTypes } from '@/common';
 
+/**
+ * Parses content to extract thinking sections enclosed in <think> tags using string operations
+ * @param content The content to parse
+ * @returns An object with separated text and thinking content
+ */
+function parseThinkingContent(content: string): {
+  text: string;
+  thinking: string;
+} {
+  // If no think tags, return the original content as text
+  if (!content.includes('<think>')) {
+    return { text: content, thinking: '' };
+  }
+
+  let textResult = '';
+  const thinkingResult: string[] = [];
+  let position = 0;
+
+  while (position < content.length) {
+    const thinkStart = content.indexOf('<think>', position);
+
+    if (thinkStart === -1) {
+      // No more think tags, add the rest and break
+      textResult += content.slice(position);
+      break;
+    }
+
+    // Add text before the think tag
+    textResult += content.slice(position, thinkStart);
+
+    const thinkEnd = content.indexOf('</think>', thinkStart);
+    if (thinkEnd === -1) {
+      // Malformed input, no closing tag
+      textResult += content.slice(thinkStart);
+      break;
+    }
+
+    // Add the thinking content
+    const thinkContent = content.slice(thinkStart + 7, thinkEnd);
+    thinkingResult.push(thinkContent);
+
+    // Move position to after the think tag
+    position = thinkEnd + 8; // 8 is the length of '</think>'
+  }
+
+  return {
+    text: textResult.trim(),
+    thinking: thinkingResult.join('\n').trim(),
+  };
+}
+
 function getNonEmptyValue(possibleValues: string[]): string | undefined {
   for (const value of possibleValues) {
     if (value && value.trim() !== '') {
@@ -239,6 +290,28 @@ hasToolCallChunks: ${hasToolCallChunks}
             },
           ],
         });
+      } else if (graph.currentTokenType === 'think_and_text') {
+        const { text, thinking } = parseThinkingContent(content);
+        if (thinking) {
+          graph.dispatchReasoningDelta(stepId, {
+            content: [
+              {
+                type: ContentTypes.THINK,
+                think: thinking,
+              },
+            ],
+          });
+        }
+        if (text) {
+          graph.dispatchMessageDelta(stepId, {
+            content: [
+              {
+                type: ContentTypes.TEXT,
+                text: text,
+              },
+            ],
+          });
+        }
       } else {
         graph.dispatchReasoningDelta(stepId, {
           content: [
@@ -383,6 +456,14 @@ hasToolCallChunks: ${hasToolCallChunks}
       chunk.content !== ''
     ) {
       graph.currentTokenType = ContentTypes.TEXT;
+      graph.tokenTypeSwitch = 'content';
+    } else if (
+      chunk.content != null &&
+      typeof chunk.content === 'string' &&
+      chunk.content.includes('<think>') &&
+      chunk.content.includes('</think>')
+    ) {
+      graph.currentTokenType = 'think_and_text';
       graph.tokenTypeSwitch = 'content';
     } else if (
       chunk.content != null &&
