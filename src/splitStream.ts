@@ -3,10 +3,11 @@ import type * as t from '@/types';
 import { ContentTypes, GraphEvents, StepTypes } from '@/common';
 
 export const SEPARATORS = [
-  '.',
+  '. ',
   '?',
   '!',
   '۔',
+  '- ',
   '。',
   '‥',
   ';',
