@@ -314,7 +314,7 @@ hasToolCallChunks: ${hasToolCallChunks}
             },
           });
 
-          const newStepId = graph.getStepIdByKey(stepKey);
+          const newStepId = graph.getStepIdByKey(newStepKey);
           graph.dispatchMessageDelta(newStepId, {
             content: [
               {
