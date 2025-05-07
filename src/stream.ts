@@ -303,7 +303,19 @@ hasToolCallChunks: ${hasToolCallChunks}
           });
         }
         if (text) {
-          graph.dispatchMessageDelta(stepId, {
+          graph.currentTokenType = ContentTypes.TEXT;
+          graph.tokenTypeSwitch = 'content';
+          const newStepKey = graph.getStepKey(metadata);
+          const message_id = getMessageId(newStepKey, graph) ?? '';
+          graph.dispatchRunStep(newStepKey, {
+            type: StepTypes.MESSAGE_CREATION,
+            message_creation: {
+              message_id,
+            },
+          });
+
+          const newStepId = graph.getStepIdByKey(stepKey);
+          graph.dispatchMessageDelta(newStepId, {
             content: [
               {
                 type: ContentTypes.TEXT,

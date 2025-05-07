@@ -304,7 +304,10 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       metadata.langgraph_step as number,
       metadata.checkpoint_ns as string,
     ];
-    if (this.currentTokenType === ContentTypes.THINK) {
+    if (
+      this.currentTokenType === ContentTypes.THINK ||
+      this.currentTokenType === 'think_and_text'
+    ) {
       keyList.push('reasoning');
     }
 
