@@ -127,19 +127,20 @@ export const createSearchTool = (
 Real-time search. Results have required unique citation anchors.
 
 Anchors:
-- \\ue202turn0searchN (web), \\ue202turn0newsN (news), \\ue202turn0imageN (image)
+- \\ue202turnXsearchY (web), \\ue202turnXnewsY (news), \\ue202turnXimageY (image)
+- X = turn, Y = item number
 
 Special Markers:
-- \\ue203...\\ue204 — mark start/end of cited span
-- \\ue200...\\ue201 — composite/group block (e.g. \\ue200cite\\ue202turn0search1\\ue202turn0news2\\ue201)
-- \\ue206 — marks grouped/summary citation areas
+- \\ue203...\\ue204 — highlight start/end of cited text (for Standalone or Group citations)
+- \\ue200...\\ue201 — group block (e.g. \\ue200\\ue202turn0search1\\ue202turn0news2\\ue201)
 
 **CITE EVERY NON-OBVIOUS FACT/QUOTE:**
-Insert the anchor marker(s) immediately after the statement:
-- "Pure functions produce same output \\ue202turn0search0."
-- Multiple: "Benefits \\ue202turn0search0\\ue202turn0news0."
-- Span: \\ue203Key: first-class functions\\ue204\\ue202turn0news1
-- Group: "Functional languages."\\ue206 or \\ue200cite\\ue202turn0search0\\ue202turn0news1\\ue201
+Use anchor marker(s) immediately after the statement:
+- Standalone: "Pure functions produce same output. \\ue202turn0search0"
+- Standalone (multiple): "Today's News \\ue202turn0search0\\ue202turn0news0"
+- Highlight: "\\ue203Highlight text.\\ue204\\ue202turn0news1"
+- Group: "Sources. \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
+- Group Highlight: "\\ue203Highlight for group.\\ue204 \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
 - Image: "See photo \\ue202turn0image0."
 
 **NEVER use markdown links, [1], or footnotes. CITE ONLY with anchors provided.**
