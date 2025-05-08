@@ -10,11 +10,27 @@ import { createReranker } from './rerankers';
 import { Constants } from '@/common';
 
 const SearchToolSchema = z.object({
-  query: z
-    .string()
-    .describe(
-      'The search query string that specifies what should be searched for.'
-    ),
+  query: z.string().describe(
+    `
+GUIDELINES:
+- Start broad, then narrow: Begin with key concepts, then refine with specifics
+- Think like sources: Use terminology experts would use in the field
+- Consider perspective: Frame queries from different viewpoints for better results
+- Quality over quantity: A precise 3-4 word query often beats lengthy sentences
+
+TECHNIQUES (combine for power searches):
+- EXACT PHRASES: Use quotes ("climate change report")
+- EXCLUDE TERMS: Use minus to remove unwanted results (-wikipedia)
+- SITE-SPECIFIC: Restrict to websites (site:edu research)
+- FILETYPE: Find specific documents (filetype:pdf study)
+- OR OPERATOR: Find alternatives (electric OR hybrid cars)
+- DATE RANGE: Recent information (data after:2020)
+- WILDCARDS: Use * for unknown terms (how to * bread)
+- SPECIFIC QUESTIONS: Use who/what/when/where/why/how
+- DOMAIN TERMS: Include technical terminology for specialized topics
+- CONCISE TERMS: Prioritize keywords over sentences
+`.trim()
+  ),
 });
 
 export const createSearchTool = (
