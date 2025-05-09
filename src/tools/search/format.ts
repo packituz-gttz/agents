@@ -1,6 +1,9 @@
 import type * as t from './types';
 
-export function formatResultsForLLM(results: t.SearchResultData): string {
+export function formatResultsForLLM(
+  turn: number,
+  results: t.SearchResultData
+): string {
   let output = '';
 
   const addSection = (title: string): void => {
@@ -10,11 +13,11 @@ export function formatResultsForLLM(results: t.SearchResultData): string {
   // Organic (web) results
   const organic = results.organic ?? [];
   if (organic.length) {
-    addSection('Web Results');
+    addSection('Web Results, Turn ' + turn);
     organic.forEach((r, i) => {
       output += [
         `Source ${i}: ${r.title ?? '(no title)'}`,
-        `Citation Anchor: \\ue202turn0search${i}`,
+        `Citation Anchor: \\ue202turn${turn}search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',

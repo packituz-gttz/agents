@@ -134,8 +134,9 @@ export const createSearchTool = (
           }
           : undefined,
       });
-      const output = formatResultsForLLM(searchResult);
-      return [output, { [Constants.WEB_SEARCH]: { ...searchResult } }];
+      const turn = runnableConfig.toolCall?.turn ?? 0;
+      const output = formatResultsForLLM(turn, searchResult);
+      return [output, { [Constants.WEB_SEARCH]: { turn, ...searchResult } }];
     },
     {
       name: Constants.WEB_SEARCH,
