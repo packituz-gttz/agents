@@ -1,10 +1,18 @@
-import { END, MessagesAnnotation, isCommand, isGraphInterrupt } from '@langchain/langgraph';
+import {
+  END,
+  MessagesAnnotation,
+  isCommand,
+  isGraphInterrupt,
+} from '@langchain/langgraph';
 import { ToolMessage, isBaseMessage } from '@langchain/core/messages';
-import type { RunnableConfig, RunnableToolLike } from '@langchain/core/runnables';
+import type {
+  RunnableConfig,
+  RunnableToolLike,
+} from '@langchain/core/runnables';
 import type { BaseMessage, AIMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type * as t from '@/types';
-import{ RunnableCallable } from '@/utils';
+import { RunnableCallable } from '@/utils';
 import { GraphNodeKeys } from '@/common';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,6 +23,7 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
   handleToolErrors = true;
   toolCallStepIds?: Map<string, string>;
   errorHandler?: t.ToolNodeConstructorParams['errorHandler'];
+  private toolUsageCount: Map<string, number>;
 
   constructor({
     tools,
@@ -28,11 +37,20 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
   }: t.ToolNodeConstructorParams) {
     super({ name, tags, func: (input, config) => this.run(input, config) });
     this.tools = tools;
-    this.toolMap = toolMap ?? new Map(tools.map(tool => [tool.name, tool]));
+    this.toolMap = toolMap ?? new Map(tools.map((tool) => [tool.name, tool]));
     this.toolCallStepIds = toolCallStepIds;
     this.handleToolErrors = handleToolErrors ?? this.handleToolErrors;
     this.loadRuntimeTools = loadRuntimeTools;
     this.errorHandler = errorHandler;
+    this.toolUsageCount = new Map<string, number>();
+  }
+
+  /**
+   * Returns a snapshot of the current tool usage counts.
+   * @returns A ReadonlyMap where keys are tool names and values are their usage counts.
+   */
+  public getToolUsageCounts(): ReadonlyMap<string, number> {
+    return new Map(this.toolUsageCount); // Return a copy
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,7 +68,7 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
         (message as AIMessage).tool_calls ?? []
       );
       this.tools = tools;
-      this.toolMap = toolMap ?? new Map(tools.map(tool => [tool.name, tool]));
+      this.toolMap = toolMap ?? new Map(tools.map((tool) => [tool.name, tool]));
     }
     const outputs = await Promise.all(
       (message as AIMessage).tool_calls?.map(async (call) => {
@@ -59,11 +77,13 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (tool === undefined) {
             throw new Error(`Tool "${call.name}" not found.`);
           }
+          const turn = this.toolUsageCount.get(call.name) ?? 0;
+          this.toolUsageCount.set(call.name, turn + 1);
           const args = call.args;
           const stepId = this.toolCallStepIds?.get(call.id!);
           const output = await tool.invoke(
-            { ...call, args, type: 'tool_call', stepId },
-            config,
+            { ...call, args, type: 'tool_call', stepId, turn },
+            config
           );
           if (
             (isBaseMessage(output) && output._getType() === 'tool') ||
@@ -86,12 +106,15 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
           if (isGraphInterrupt(e)) {
             throw e;
           }
-          this.errorHandler?.({
-            error: e,
-            id: call.id!,
-            name: call.name,
-            input: call.args,
-          }, config.metadata);
+          this.errorHandler?.(
+            {
+              error: e,
+              id: call.id!,
+              name: call.name,
+              input: call.args,
+            },
+            config.metadata
+          );
           return new ToolMessage({
             content: `Error: ${e.message}\n Please fix your mistakes.`,
             name: call.name,
