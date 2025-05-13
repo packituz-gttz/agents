@@ -1,5 +1,7 @@
 /* eslint-disable no-console */
 import axios from 'axios';
+import { processContent } from './content';
+import type { References } from './types';
 
 export interface FirecrawlScrapeOptions {
   formats?: string[];
@@ -221,27 +223,39 @@ export class FirecrawlScraper {
    * @param response Scrape response
    * @returns Extracted content or empty string if not available
    */
-  extractContent(response: FirecrawlScrapeResponse): string {
+  extractContent(
+    response: FirecrawlScrapeResponse
+  ): [string, undefined | References] {
     if (!response.success || !response.data) {
-      return '';
+      return ['', undefined];
     }
 
-    // Prefer markdown content if available
-    if (response.data.markdown != null) {
-      return response.data.markdown;
+    if (response.data.markdown != null && response.data.html != null) {
+      try {
+        const { markdown, ...rest } = processContent(
+          response.data.html,
+          response.data.markdown
+        );
+        return [markdown, rest];
+      } catch (error) {
+        console.error('Error processing content:', error);
+        return [response.data.markdown, undefined];
+      }
+    } else if (response.data.markdown != null) {
+      return [response.data.markdown, undefined];
     }
 
     // Fall back to HTML content
     if (response.data.html != null) {
-      return response.data.html;
+      return [response.data.html, undefined];
     }
 
     // Fall back to raw HTML content
     if (response.data.rawHtml != null) {
-      return response.data.rawHtml;
+      return [response.data.rawHtml, undefined];
     }
 
-    return '';
+    return ['', undefined];
   }
 
   /**

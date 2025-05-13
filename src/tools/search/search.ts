@@ -366,12 +366,14 @@ export const createSourceProcessor = (
             .then(([url, response]) => {
               const attribution = getAttribution(url, response.data?.metadata);
               if (response.success && response.data) {
-                const content = firecrawlScraper.extractContent(response);
+                const [content, references] =
+                  firecrawlScraper.extractContent(response);
                 return {
                   url,
+                  references,
                   attribution,
                   content: chunker.cleanText(content),
-                };
+                } as t.ScrapeResult;
               }
 
               return {
@@ -379,7 +381,7 @@ export const createSourceProcessor = (
                 attribution,
                 error: true,
                 content: `Failed to scrape ${url}: ${response.error ?? 'Unknown error'}`,
-              };
+              } as t.ScrapeResult;
             })
             .then(async (result) => {
               try {
@@ -443,10 +445,11 @@ export const createSourceProcessor = (
       if (result.error === true) {
         continue;
       }
-      const { url, content, attribution, highlights } = result;
+      const { url, content, attribution, references, highlights } = result;
       onContentScraped?.(url, {
         content,
         attribution,
+        references,
         highlights,
       });
     }
