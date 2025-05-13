@@ -109,7 +109,8 @@ async function testStandardStreaming(): Promise<void> {
   // Make sure to always refer to me by name, which is ${userName}.
   // After giving me a thorough summary, tell me a joke about the weather forecast we went over.
   // `;
-  const userMessage = 'Are massage guns good?';
+  // const userMessage = 'Are massage guns good?';
+  const userMessage = 'What is functional programming?';
 
   conversationHistory.push(new HumanMessage(userMessage));
 
