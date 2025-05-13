@@ -1,4 +1,4 @@
-`[Jump to content](https://en.wikipedia.org/wiki/Functional_programming#bodyContent)
+[Jump to content](https://en.wikipedia.org/wiki/Functional_programming#bodyContent)
 
 [![Listen to this article](https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Sound-icon.svg/20px-Sound-icon.svg.png)](https://en.wikipedia.org/wiki/File:En-Functional_programming.ogg 'Listen to this article')
 
@@ -640,4 +640,4 @@ Search
 
 Functional programming
 
-54 languages[Add topic](https://en.wikipedia.org/wiki/Functional_programming#)`
+54 languages[Add topic](https://en.wikipedia.org/wiki/Functional_programming#)
