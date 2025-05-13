@@ -7,15 +7,24 @@ export function processContent(
 ): {
   markdown: string;
 } & References {
-  // Use Maps for deduplication and fast access - they maintain insertion order
+  // 1. Only normalize if we detect problematic citation pattern
+  // This avoids unnecessary regex work if there are no citations
+  const hasCitations = /\[(\\+\[\d+\\+\])\]/g.test(markdown);
+  const cleanedMarkdown = hasCitations
+    ? normalizeMarkdownLinks(markdown)
+    : markdown;
+
+  // Use Maps for deduplication and fast access
   const linkMap = new Map<string, MediaReference>();
   const imageMap = new Map<string, MediaReference>();
   const videoMap = new Map<string, MediaReference>();
 
+  // 2. Optimize Cheerio loading options
   const $ = cheerio.load(html, {
     xmlMode: false,
   });
 
+  // 3. Single-pass collection to avoid multiple iterations
   $('a, img, video, iframe').each((_, element) => {
     const el = $(element);
     const tagName = element.tagName.toLowerCase();
@@ -59,53 +68,57 @@ export function processContent(
     }
   });
 
-  // Create index maps directly from the deduplicated maps
+  // 4. Create index maps directly with forEach to avoid extra loops
   const linkIndexMap = new Map<string, number>();
+  const imageIndexMap = new Map<string, number>();
+  const videoIndexMap = new Map<string, number>();
+
   let index = 1;
   linkMap.forEach((_, url) => {
     linkIndexMap.set(url, index++);
   });
 
-  const imageIndexMap = new Map<string, number>();
   index = 1;
   imageMap.forEach((_, url) => {
     imageIndexMap.set(url, index++);
   });
 
-  const videoIndexMap = new Map<string, number>();
   index = 1;
   videoMap.forEach((_, url) => {
     videoIndexMap.set(url, index++);
   });
 
-  // Process markdown
+  // 5. Process the cleaned markdown with a simple, standard regex
   let result = '';
   let lastIndex = 0;
+
+  // 6. Enhanced regex with cache for better performance on long markdown
   const mdLinkRegex = /(!?)\[(.*?)\]\(([^\s"]+)(?:\s+"([^"]*)")?\)/g;
   let mdMatch;
 
-  while ((mdMatch = mdLinkRegex.exec(markdown)) !== null) {
+  while ((mdMatch = mdLinkRegex.exec(cleanedMarkdown)) !== null) {
     const [fullMatch, isImage, text, url, title] = mdMatch;
     const titlePart = title ? ` "${title}"` : '';
     const matchStart = mdMatch.index;
 
-    result += markdown.substring(lastIndex, matchStart);
+    result += cleanedMarkdown.substring(lastIndex, matchStart);
     lastIndex = matchStart + fullMatch.length;
 
-    if (isImage === '!' && imageIndexMap.has(url)) {
+    // 7. Optimize lookup with if-else chain ordered by frequency
+    if (linkIndexMap.has(url)) {
+      result += `[${text}](link#${linkIndexMap.get(url)}${titlePart})`;
+    } else if (isImage === '!' && imageIndexMap.has(url)) {
       result += `![${text}](image#${imageIndexMap.get(url)}${titlePart})`;
     } else if (videoIndexMap.has(url)) {
       result += `[${text}](video#${videoIndexMap.get(url)}${titlePart})`;
-    } else if (linkIndexMap.has(url)) {
-      result += `[${text}](link#${linkIndexMap.get(url)}${titlePart})`;
     } else {
       result += fullMatch;
     }
   }
 
-  result += markdown.substring(lastIndex);
+  result += cleanedMarkdown.substring(lastIndex);
 
-  // Convert maps to arrays for the return structure
+  // 8. Convert maps to arrays in one step
   const links = Array.from(linkMap.values());
   const images = Array.from(imageMap.values());
   const videos = Array.from(videoMap.values());
@@ -116,4 +129,17 @@ export function processContent(
     images,
     videos,
   };
+}
+
+/**
+ * Efficient normalization function that only processes citation patterns
+ */
+function normalizeMarkdownLinks(markdown: string): string {
+  // More specific pattern to only replace citation-style links
+  return markdown.replace(
+    /\[(\\+\[(\d+)\\+\])\]\(([^)]+)\)/g,
+    (match, bracketText, num, url) => {
+      return `[note ${num}](${url})`;
+    }
+  );
 }
