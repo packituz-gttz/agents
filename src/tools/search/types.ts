@@ -94,11 +94,17 @@ export interface SearchConfig {
   searxngApiKey?: string;
 }
 
+export type References = {
+  links?: MediaReference[];
+  images?: MediaReference[];
+  videos?: MediaReference[];
+};
 export interface ScrapeResult {
   url: string;
   error?: boolean;
   content: string;
   attribution?: string;
+  references?: References;
   highlights?: Highlight[];
 }
 
@@ -176,4 +182,10 @@ export interface SearchToolConfig
     results: SearchResult,
     runnableConfig?: RunnableConfig
   ) => void;
+}
+
+export interface MediaReference {
+  originalUrl: string;
+  title?: string;
+  text?: string;
 }

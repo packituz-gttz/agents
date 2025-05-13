@@ -1,20 +1,12 @@
 import * as cheerio from 'cheerio';
-
-export interface MediaReference {
-  originalUrl: string;
-  title?: string;
-  text?: string;
-}
+import type { References, MediaReference } from './types';
 
 export function processContent(
   html: string,
   markdown: string
 ): {
   markdown: string;
-  links: MediaReference[];
-  images: MediaReference[];
-  videos: MediaReference[];
-} {
+} & References {
   const links: MediaReference[] = [];
   const images: MediaReference[] = [];
   const videos: MediaReference[] = [];
