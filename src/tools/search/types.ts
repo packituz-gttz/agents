@@ -58,6 +58,7 @@ export interface ValidSource {
   date?: string;
   content?: string;
   attribution?: string;
+  references?: References;
   highlights?: Highlight[];
 }
 
@@ -95,9 +96,9 @@ export interface SearchConfig {
 }
 
 export type References = {
-  links?: MediaReference[];
-  images?: MediaReference[];
-  videos?: MediaReference[];
+  links: MediaReference[];
+  images: MediaReference[];
+  videos: MediaReference[];
 };
 export interface ScrapeResult {
   url: string;
