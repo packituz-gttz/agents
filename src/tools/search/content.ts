@@ -6,7 +6,7 @@ export function processContent(
   markdown: string
 ): {
   markdown: string;
-} & References {
+} & Required<References> {
   const links: MediaReference[] = [];
   const images: MediaReference[] = [];
   const videos: MediaReference[] = [];
