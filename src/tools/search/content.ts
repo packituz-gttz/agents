@@ -7,9 +7,10 @@ export function processContent(
 ): {
   markdown: string;
 } & References {
-  const links: MediaReference[] = [];
-  const images: MediaReference[] = [];
-  const videos: MediaReference[] = [];
+  // Use Maps for deduplication and fast access - they maintain insertion order
+  const linkMap = new Map<string, MediaReference>();
+  const imageMap = new Map<string, MediaReference>();
+  const videoMap = new Map<string, MediaReference>();
 
   const $ = cheerio.load(html, {
     xmlMode: false,
@@ -23,8 +24,8 @@ export function processContent(
       const href = el.attr('href');
       if (href == null || !href) return;
 
-      if (el.find('img, video').length === 0) {
-        links.push({
+      if (el.find('img, video').length === 0 && !linkMap.has(href)) {
+        linkMap.set(href, {
           originalUrl: href,
           title: el.attr('title'),
           text: el.text().trim(),
@@ -34,10 +35,12 @@ export function processContent(
       const src = el.attr('src');
       if (src == null || !src) return;
 
-      images.push({
-        originalUrl: src,
-        title: el.attr('alt') ?? el.attr('title'),
-      });
+      if (!imageMap.has(src)) {
+        imageMap.set(src, {
+          originalUrl: src,
+          title: el.attr('alt') ?? el.attr('title'),
+        });
+      }
     } else if (
       tagName === 'video' ||
       (tagName === 'iframe' &&
@@ -47,32 +50,37 @@ export function processContent(
       const src = el.attr('src');
       if (src == null || !src) return;
 
-      videos.push({
-        originalUrl: src,
-        title: el.attr('title'),
-      });
+      if (!videoMap.has(src)) {
+        videoMap.set(src, {
+          originalUrl: src,
+          title: el.attr('title'),
+        });
+      }
     }
   });
 
-  const linkMap = new Map<string, number>();
-  const imageMap = new Map<string, number>();
-  const videoMap = new Map<string, number>();
-
-  links.forEach((link, index) => {
-    linkMap.set(link.originalUrl, index + 1);
+  // Create index maps directly from the deduplicated maps
+  const linkIndexMap = new Map<string, number>();
+  let index = 1;
+  linkMap.forEach((_, url) => {
+    linkIndexMap.set(url, index++);
   });
 
-  images.forEach((image, index) => {
-    imageMap.set(image.originalUrl, index + 1);
+  const imageIndexMap = new Map<string, number>();
+  index = 1;
+  imageMap.forEach((_, url) => {
+    imageIndexMap.set(url, index++);
   });
 
-  videos.forEach((video, index) => {
-    videoMap.set(video.originalUrl, index + 1);
+  const videoIndexMap = new Map<string, number>();
+  index = 1;
+  videoMap.forEach((_, url) => {
+    videoIndexMap.set(url, index++);
   });
 
+  // Process markdown
   let result = '';
   let lastIndex = 0;
-
   const mdLinkRegex = /(!?)\[(.*?)\]\(([^\s"]+)(?:\s+"([^"]*)")?\)/g;
   let mdMatch;
 
@@ -84,18 +92,23 @@ export function processContent(
     result += markdown.substring(lastIndex, matchStart);
     lastIndex = matchStart + fullMatch.length;
 
-    if (isImage === '!' && imageMap.has(url)) {
-      result += `![${text}](image#${imageMap.get(url)}${titlePart})`;
-    } else if (videoMap.has(url)) {
-      result += `[${text}](video#${videoMap.get(url)}${titlePart})`;
-    } else if (linkMap.has(url)) {
-      result += `[${text}](link#${linkMap.get(url)}${titlePart})`;
+    if (isImage === '!' && imageIndexMap.has(url)) {
+      result += `![${text}](image#${imageIndexMap.get(url)}${titlePart})`;
+    } else if (videoIndexMap.has(url)) {
+      result += `[${text}](video#${videoIndexMap.get(url)}${titlePart})`;
+    } else if (linkIndexMap.has(url)) {
+      result += `[${text}](link#${linkIndexMap.get(url)}${titlePart})`;
     } else {
       result += fullMatch;
     }
   }
 
   result += markdown.substring(lastIndex);
+
+  // Convert maps to arrays for the return structure
+  const links = Array.from(linkMap.values());
+  const images = Array.from(imageMap.values());
+  const videos = Array.from(videoMap.values());
 
   return {
     markdown: result,
