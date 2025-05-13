@@ -145,8 +145,6 @@ function generateReferenceAppendix(result: {
   appendix += `- Images: ${result.images.length}\n`;
   appendix += `- Videos: ${result.videos.length}\n`;
 
-  appendix += `\n_Generated on: ${new Date().toLocaleString()}_`;
-
   return appendix;
 }
 
