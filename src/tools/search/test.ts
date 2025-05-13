@@ -51,7 +51,7 @@ async function processWikipediaArticle(): Promise<void> {
     const appendix = generateReferenceAppendix(result);
 
     // Create complete output with the processed content and appendix
-    const completeOutput = result.processedMarkdown + appendix;
+    const completeOutput = result.markdown + appendix;
 
     // Write to output file
     fs.writeFileSync(outputPath, completeOutput);
@@ -72,10 +72,7 @@ async function processWikipediaArticle(): Promise<void> {
     console.log('-'.repeat(60));
 
     // Print sample of the transformation
-    const sampleLines = result.processedMarkdown
-      .split('\n')
-      .slice(0, 10)
-      .join('\n');
+    const sampleLines = result.markdown.split('\n').slice(0, 10).join('\n');
     console.log('\nSample of transformed content:');
     console.log('-'.repeat(30));
     console.log(sampleLines);

@@ -23,9 +23,9 @@ describe('Link Processor', () => {
     expect(result.links.length).toBe(1);
     expect(result.images.length).toBe(1);
     expect(result.videos.length).toBe(1);
-    expect(result.processedMarkdown).toContain('link#1');
-    expect(result.processedMarkdown).toContain('image#1');
-    expect(result.processedMarkdown).toContain('video#1');
+    expect(result.markdown).toContain('link#1');
+    expect(result.markdown).toContain('image#1');
+    expect(result.markdown).toContain('video#1');
   });
 
   // Edge case tests
@@ -43,8 +43,8 @@ describe('Link Processor', () => {
     const result = processContent(html, markdown);
 
     expect(result.links.length).toBe(2);
-    expect(result.processedMarkdown).toContain('link#1');
-    expect(result.processedMarkdown).toContain('link#2');
+    expect(result.markdown).toContain('link#1');
+    expect(result.markdown).toContain('link#2');
   });
 
   // Performance test with large files
@@ -75,10 +75,10 @@ describe('Link Processor', () => {
 
     // Basic validations for large file processing
     expect(result.links.length).toBeGreaterThan(0);
-    expect(result.processedMarkdown).toContain('link#');
+    expect(result.markdown).toContain('link#');
 
     // Check if all links were replaced (sample check)
-    expect(result.processedMarkdown).not.toContain('https://example.com/link');
+    expect(result.markdown).not.toContain('https://example.com/link');
   });
 
   // Memory usage test
@@ -115,7 +115,7 @@ describe('Link Processor', () => {
       );
 
       expect(result.links.length).toBeGreaterThan(10); // Wikipedia articles typically have many links
-      expect(result.processedMarkdown).not.toMatch(/\]\(https?:\/\/[^\s")]+\)/); // No regular URLs should remain
+      expect(result.markdown).not.toMatch(/\]\(https?:\/\/[^\s")]+\)/); // No regular URLs should remain
     } else {
       console.log('Wikipedia test files not found, skipping this test');
     }

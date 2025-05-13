@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 
-interface MediaReference {
+export interface MediaReference {
   originalUrl: string;
   title?: string;
   text?: string;
@@ -10,7 +10,7 @@ export function processContent(
   html: string,
   markdown: string
 ): {
-  processedMarkdown: string;
+  markdown: string;
   links: MediaReference[];
   images: MediaReference[];
   videos: MediaReference[];
@@ -106,7 +106,7 @@ export function processContent(
   result += markdown.substring(lastIndex);
 
   return {
-    processedMarkdown: result,
+    markdown: result,
     links,
     images,
     videos,
