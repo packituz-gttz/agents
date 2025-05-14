@@ -9,9 +9,7 @@ import { formatResultsForLLM } from './format';
 import { createReranker } from './rerankers';
 import { Constants } from '@/common';
 
-const SearchToolSchema = z.object({
-  query: z.string().describe(
-    `
+const DEFAULT_QUERY_DESCRIPTION = `
 GUIDELINES:
 - Start broad, then narrow: Begin with key concepts, then refine with specifics
 - Think like sources: Use terminology experts would use in the field
@@ -29,23 +27,24 @@ TECHNIQUES (combine for power searches):
 - SPECIFIC QUESTIONS: Use who/what/when/where/why/how
 - DOMAIN TERMS: Include technical terminology for specialized topics
 - CONCISE TERMS: Prioritize keywords over sentences
-`.trim()
-  ),
-  country: z
-    .string()
-    .optional()
-    .describe(
-      `Country code to localize search results.
+`.trim();
+
+const DEFAULT_COUNTRY_DESCRIPTION = `Country code to localize search results.
 Use standard 2-letter country codes: "us", "uk", "ca", "de", "fr", "jp", "br", etc.
 Provide this when the search should return results specific to a particular country.
 Examples:
 - "us" for United States (default)
 - "de" for Germany
 - "in" for India
-`.trim()
-    ),
-});
+`.trim();
 
+/**
+ * Creates a search tool with a schema that dynamically includes the country field
+ * only when the searchProvider is 'serper'.
+ *
+ * @param config - The search tool configuration
+ * @returns A DynamicStructuredTool with a schema that depends on the searchProvider
+ */
 export const createSearchTool = (
   config: t.SearchToolConfig = {}
 ): DynamicStructuredTool<typeof SearchToolSchema> => {
@@ -65,6 +64,23 @@ export const createSearchTool = (
     cohereApiKey,
     onSearchResults: _onSearchResults,
   } = config;
+
+  const querySchema = z.string().describe(DEFAULT_QUERY_DESCRIPTION);
+  const schemaObject: {
+    query: z.ZodString;
+    country?: z.ZodOptional<z.ZodString>;
+  } = {
+    query: querySchema,
+  };
+
+  if (searchProvider === 'serper') {
+    schemaObject.country = z
+      .string()
+      .optional()
+      .describe(DEFAULT_COUNTRY_DESCRIPTION);
+  }
+
+  const SearchToolSchema = z.object(schemaObject);
 
   const searchAPI = createSearchAPI({
     searchProvider,
@@ -140,7 +156,9 @@ export const createSearchTool = (
   };
 
   return tool<typeof SearchToolSchema>(
-    async ({ query, country }, runnableConfig) => {
+    async (params, runnableConfig) => {
+      const { query, country: _c } = params;
+      const country = typeof _c === 'string' && _c ? _c : undefined;
       const searchResult = await search({
         query,
         country,
