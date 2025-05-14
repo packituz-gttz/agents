@@ -66,6 +66,7 @@ export interface ValidSource {
 export type ResultReference = {
   link: string;
   title?: string;
+  attribution?: string;
 };
 export interface SearchResultData {
   organic?: ValidSource[];
