@@ -2,8 +2,9 @@
 import axios from 'axios';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import type * as t from './types';
-import { getAttribution, FirecrawlScraper } from './firecrawl';
+import { FirecrawlScraper } from './firecrawl';
 import { BaseReranker } from './rerankers';
+import { getAttribution } from './utils';
 
 const chunker = {
   cleanText: (text: string): string => {
