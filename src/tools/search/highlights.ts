@@ -123,6 +123,89 @@ function findBestBoundary(text: string, direction = 'backward'): number {
 }
 
 /**
+ * Tracks references used in a highlight without changing their numbers
+ */
+function trackReferencesInHighlight(
+  text: string,
+  sourceResult: t.ValidSource // Source containing the original references
+): {
+  usedRefs: {
+    type: 'link' | 'image' | 'video';
+    originalIndex: number;
+    reference: t.MediaReference; // Original reference object
+  }[];
+} {
+  // Track used references
+  const usedRefs: {
+    type: 'link' | 'image' | 'video';
+    originalIndex: number;
+    reference: t.MediaReference;
+  }[] = [];
+
+  if (!text || text.length === 0 || !text.includes('#')) {
+    return { usedRefs }; // Early return
+  }
+
+  // Quick check for reference markers
+  if (
+    !text.includes('link#') &&
+    !text.includes('image#') &&
+    !text.includes('video#')
+  ) {
+    return { usedRefs };
+  }
+
+  // Get references from the source if available
+  const sourceRefs = sourceResult.references || {
+    links: [],
+    images: [],
+    videos: [],
+  };
+
+  // Find references but don't modify text
+  const refRegex = /\((link|image|video)#(\d+)(?:\s+"([^"]*)")?\)/g;
+  let match;
+
+  while ((match = refRegex.exec(text)) !== null) {
+    const [, type, indexStr] = match;
+    const originalIndex = parseInt(indexStr, 10) - 1; // Convert to 0-based
+
+    // Get the source array for this type
+    const refType = type as 'link' | 'image' | 'video';
+    const sourceArray = sourceRefs[`${refType}s`] as
+      | t.MediaReference[]
+      | undefined;
+
+    // Skip if invalid reference
+    if (
+      !sourceArray ||
+      originalIndex < 0 ||
+      originalIndex >= sourceArray.length
+    ) {
+      continue; // Skip invalid references
+    }
+
+    // Get original reference
+    const reference = sourceArray[originalIndex];
+
+    // Track if not already tracked
+    const alreadyTracked = usedRefs.some(
+      (ref) => ref.type === refType && ref.originalIndex === originalIndex
+    );
+
+    if (!alreadyTracked) {
+      usedRefs.push({
+        type: refType,
+        originalIndex,
+        reference,
+      });
+    }
+  }
+
+  return { usedRefs };
+}
+
+/**
  * Expand highlights in search results using smart boundary detection.
  *
  * This implementation finds natural text boundaries like paragraphs, sentences,
@@ -131,25 +214,19 @@ function findBestBoundary(text: string, direction = 'backward'): number {
  * @param searchResults - Search results object
  * @param mainExpandBy - Primary expansion size on each side (default: 300)
  * @param separatorExpandBy - Additional range to look for separators (default: 150)
- * @returns Copy of search results with expanded highlights
+ * @returns Copy of search results with expanded highlights and tracked references
  */
 export function expandHighlights(
   searchResults: t.SearchResultData,
   mainExpandBy = 300,
   separatorExpandBy = 150
 ): t.SearchResultData {
-  // 1. Avoid full deep copy - only copy what we modify
+  // Avoid deep copy - only copy what we modify
   const resultCopy = { ...searchResults };
+  if (resultCopy.organic) resultCopy.organic = [...resultCopy.organic];
+  if (resultCopy.topStories) resultCopy.topStories = [...resultCopy.topStories];
 
-  // Only deep copy the relevant arrays
-  if (resultCopy.organic) {
-    resultCopy.organic = [...resultCopy.organic];
-  }
-  if (resultCopy.topStories) {
-    resultCopy.topStories = [...resultCopy.topStories];
-  }
-
-  // 5. Process the results efficiently
+  // Process the results efficiently
   const processResultTypes = ['organic', 'topStories'] as const;
 
   for (const resultType of processResultTypes) {
@@ -170,17 +247,23 @@ export function expandHighlights(
       const resultCopy = { ...result };
       const content = result.content;
       const highlights = [];
+      const allUsedRefs: {
+        type: 'link' | 'image' | 'video';
+        originalIndex: number;
+        reference: t.MediaReference;
+      }[] = [];
 
       // Process each highlight
       for (const highlight of result.highlights) {
-        const highlightText = highlight.text;
+        const { usedRefs } = trackReferencesInHighlight(highlight.text, result);
+        allUsedRefs.push(...usedRefs);
 
-        let startPos = content.indexOf(highlightText);
-        let highlightLen = highlightText.length;
+        let startPos = content.indexOf(highlight.text);
+        let highlightLen = highlight.text.length;
 
         if (startPos === -1) {
           // Try with stripped whitespace
-          const strippedHighlight = highlightText.trim();
+          const strippedHighlight = highlight.text.trim();
           startPos = content.indexOf(strippedHighlight);
 
           if (startPos === -1) {
@@ -228,8 +311,13 @@ export function expandHighlights(
         });
       }
 
-      delete resultCopy.content;
+      if (allUsedRefs.length > 0) {
+        resultCopy.usedReferences = allUsedRefs;
+      }
+
       resultCopy.highlights = highlights;
+      delete resultCopy.content;
+      delete resultCopy.references;
       return resultCopy;
     });
   }
