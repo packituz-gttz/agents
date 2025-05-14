@@ -75,7 +75,7 @@ export interface SearchResultData {
   knowledgeGraph?: KnowledgeGraphResult;
   answerBox?: AnswerBoxResult;
   peopleAlsoAsk?: PeopleAlsoAskResult[];
-  relatedSearches?: string[];
+  relatedSearches?: Array<{ query: string }>;
   suggestions?: string[];
   error?: string;
   references?: ResultReference[];
@@ -191,6 +191,21 @@ export interface SearchToolConfig
     runnableConfig?: RunnableConfig
   ) => void;
 }
+
+// Base schema interface with just the query field
+export interface BaseSearchSchema {
+  query: string;
+}
+
+// Extended schema interface with both query and country fields
+export interface SerperSearchSchema extends BaseSearchSchema {
+  country?: string;
+}
+
+// Type helper for the search tool schema
+export type SearchToolSchemaType<P extends SearchProvider> = P extends 'serper'
+  ? SerperSearchSchema
+  : BaseSearchSchema;
 
 export interface MediaReference {
   originalUrl: string;

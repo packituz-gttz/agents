@@ -164,7 +164,7 @@ const createSerperAPI = (
         knowledgeGraph: data.knowledgeGraph as t.KnowledgeGraphResult,
         answerBox: data.answerBox as t.AnswerBoxResult,
         peopleAlsoAsk: data.peopleAlsoAsk as t.PeopleAlsoAskResult[],
-        relatedSearches: data.relatedSearches as string[],
+        relatedSearches: data.relatedSearches,
       };
 
       return { success: true, data: results };
