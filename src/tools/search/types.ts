@@ -27,6 +27,7 @@ export type ResultReference = {
   attribution?: string;
 };
 export interface SearchResultData {
+  turn?: number;
   organic?: ProcessedOrganic[];
   topStories?: ProcessedTopStory[];
   images?: ImageResult[];

@@ -170,10 +170,8 @@ export const createSearchTool = (
       });
       const turn = runnableConfig.toolCall?.turn ?? 0;
       const { output, references } = formatResultsForLLM(turn, searchResult);
-      return [
-        output,
-        { [Constants.WEB_SEARCH]: { turn, ...searchResult, references } },
-      ];
+      const data: t.SearchResultData = { turn, ...searchResult, references };
+      return [output, { [Constants.WEB_SEARCH]: data }];
     },
     {
       name: Constants.WEB_SEARCH,
