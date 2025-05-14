@@ -24,7 +24,7 @@ export function formatResultsForLLM(
         r.date != null ? `Date: ${r.date}` : '',
         r.attribution != null ? `Source: ${r.attribution}` : '',
         '',
-        '--- Content Highlights ---',
+        '--- Content Highlights ---\n',
         '',
       ]
         .filter(Boolean)
