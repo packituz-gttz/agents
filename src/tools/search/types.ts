@@ -60,6 +60,7 @@ export interface ValidSource {
   attribution?: string;
   references?: References;
   highlights?: Highlight[];
+  usedReferences?: UsedReferences;
 }
 
 export interface SearchResultData {
@@ -190,3 +191,9 @@ export interface MediaReference {
   title?: string;
   text?: string;
 }
+
+export type UsedReferences = {
+  type: 'link' | 'image' | 'video';
+  originalIndex: number;
+  reference: MediaReference;
+}[];
