@@ -141,11 +141,13 @@ export const createSearchTool = (
     {
       name: Constants.WEB_SEARCH,
       description: `
-Real-time search. Results have required unique citation anchors.
+Real-time search. Results have required citation anchors.
+
+Note: Use ONCE per reply unless instructed otherwise.
 
 Anchors:
-- \\ue202turnXsearchY (web), \\ue202turnXnewsY (news), \\ue202turnXimageY (image)
-- X = turn, Y = item number
+- \\ue202turnXtypeY
+- X = turn idx, type = 'search' | 'news' | 'image', Y = item idx
 
 Special Markers:
 - \\ue203...\\ue204 — highlight start/end of cited text (for Standalone or Group citations)
