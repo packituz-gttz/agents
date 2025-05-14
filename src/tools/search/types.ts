@@ -63,6 +63,10 @@ export interface ValidSource {
   highlights?: Highlight[];
 }
 
+export type ResultReference = {
+  link: string;
+  title?: string;
+};
 export interface SearchResultData {
   organic?: ValidSource[];
   topStories?: ValidSource[];
@@ -73,6 +77,7 @@ export interface SearchResultData {
   relatedSearches?: string[];
   suggestions?: string[];
   error?: string;
+  references?: ResultReference[];
 }
 
 export interface SearchResult {
@@ -197,3 +202,96 @@ export type UsedReferences = {
   originalIndex: number;
   reference: MediaReference;
 }[];
+
+/** Firecrawl */
+
+export interface FirecrawlScrapeOptions {
+  formats?: string[];
+  includeTags?: string[];
+  excludeTags?: string[];
+  headers?: Record<string, string>;
+  waitFor?: number;
+  timeout?: number;
+}
+
+export interface ScrapeMetadata {
+  // Core source information
+  sourceURL?: string;
+  url?: string;
+  scrapeId?: string;
+  statusCode?: number;
+  // Basic metadata
+  title?: string;
+  description?: string;
+  language?: string;
+  favicon?: string;
+  viewport?: string;
+  robots?: string;
+  'theme-color'?: string;
+  // Open Graph metadata
+  'og:url'?: string;
+  'og:title'?: string;
+  'og:description'?: string;
+  'og:type'?: string;
+  'og:image'?: string;
+  'og:image:width'?: string;
+  'og:image:height'?: string;
+  'og:site_name'?: string;
+  ogUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  ogSiteName?: string;
+  // Article metadata
+  'article:author'?: string;
+  'article:published_time'?: string;
+  'article:modified_time'?: string;
+  'article:section'?: string;
+  'article:tag'?: string;
+  'article:publisher'?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  // Twitter metadata
+  'twitter:site'?: string;
+  'twitter:creator'?: string;
+  'twitter:card'?: string;
+  'twitter:image'?: string;
+  'twitter:dnt'?: string;
+  'twitter:app:name:iphone'?: string;
+  'twitter:app:id:iphone'?: string;
+  'twitter:app:url:iphone'?: string;
+  'twitter:app:name:ipad'?: string;
+  'twitter:app:id:ipad'?: string;
+  'twitter:app:url:ipad'?: string;
+  'twitter:app:name:googleplay'?: string;
+  'twitter:app:id:googleplay'?: string;
+  'twitter:app:url:googleplay'?: string;
+  // Facebook metadata
+  'fb:app_id'?: string;
+  // App links
+  'al:ios:url'?: string;
+  'al:ios:app_name'?: string;
+  'al:ios:app_store_id'?: string;
+  // Allow for additional properties that might be present
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+export interface FirecrawlScrapeResponse {
+  success: boolean;
+  data?: {
+    markdown?: string;
+    html?: string;
+    rawHtml?: string;
+    screenshot?: string;
+    links?: string[];
+    metadata?: ScrapeMetadata;
+  };
+  error?: string;
+}
+
+export interface FirecrawlScraperConfig {
+  apiKey?: string;
+  apiUrl?: string;
+  formats?: string[];
+  timeout?: number;
+}
