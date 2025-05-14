@@ -86,7 +86,7 @@ async function testStandardStreaming(): Promise<void> {
       tools: [createSearchTool()],
       instructions:
         'You are a friendly AI assistant. Always address the user by their name.',
-      additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
+      // additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
     returnContent: true,
     customHandlers,

@@ -454,7 +454,6 @@ export type SerperResultData = {
   relatedSearches?: RelatedSearches;
   knowledgeGraph?: KnowledgeGraphResult;
   answerBox?: AnswerBoxResult;
-  suggestions?: string[];
   credits?: number;
 };
 
