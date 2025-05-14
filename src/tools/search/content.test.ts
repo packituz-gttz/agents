@@ -58,8 +58,8 @@ describe('Link Processor', () => {
 
   // Performance test with large files
   test('should process large files efficiently', () => {
-    const html = fs.readFileSync('./test.html', 'utf-8');
-    const markdown = fs.readFileSync('./test.md', 'utf-8');
+    const html = fs.readFileSync('src/tools/search/test.html', 'utf-8');
+    const markdown = fs.readFileSync('src/tools/search/test.md', 'utf-8');
 
     // const largeHtml = generateLargeHtml(1000); // 1000 links
     // fs.writeFileSync('./temp.html', largeHtml);
@@ -90,8 +90,8 @@ describe('Link Processor', () => {
 
   // Memory usage test
   test('should have reasonable memory usage', () => {
-    const html = fs.readFileSync('./test.html', 'utf-8');
-    const markdown = fs.readFileSync('./test.md', 'utf-8');
+    const html = fs.readFileSync('src/tools/search/test.html', 'utf-8');
+    const markdown = fs.readFileSync('src/tools/search/test.md', 'utf-8');
 
     const beforeMem = process.memoryUsage();
     processContent(html, markdown);
@@ -108,8 +108,8 @@ describe('Link Processor', () => {
   // Real-world file test (if available)
   test('should process real-world Wikipedia content', () => {
     // Try to find real-world test files if they exist
-    const wikiHtml = './test.html';
-    const wikiMd = './test.md';
+    const wikiHtml = 'src/tools/search/test.html';
+    const wikiMd = 'src/tools/search/test.md';
 
     if (fs.existsSync(wikiHtml) && fs.existsSync(wikiMd)) {
       const html = fs.readFileSync(wikiHtml, 'utf-8');
