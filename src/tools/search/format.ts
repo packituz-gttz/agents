@@ -14,7 +14,8 @@ export function formatResultsForLLM(
   const organic = results.organic ?? [];
   if (organic.length) {
     addSection(`Web Results, Turn ${turn}`);
-    organic.forEach((r, i) => {
+    for (let i = 0; i < organic.length; i++) {
+      const r = organic[i];
       output += [
         `Source ${i}: ${r.title ?? '(no title)'}`,
         `Citation Anchor: \\ue202turn${turn}search${i}`,
@@ -51,7 +52,7 @@ export function formatResultsForLLM(
         });
 
       output += '\n';
-    });
+    }
   }
 
   // Ignoring these sections for now
