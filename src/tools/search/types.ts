@@ -296,3 +296,163 @@ export interface FirecrawlScraperConfig {
   formats?: string[];
   timeout?: number;
 }
+
+/** Serper API */
+
+export type GetSourcesParams = {
+  query: string;
+  country?: string;
+  numResults?: number;
+};
+
+export interface SerperSearchPayload {
+  /**
+   * The search query string
+   */
+  q: string;
+
+  /**
+   * Country code for localized results
+   * Examples: "us", "uk", "ca", "de", etc.
+   */
+  gl?: string;
+
+  /**
+   * Interface language
+   * Examples: "en", "fr", "de", etc.
+   */
+  hl?: string;
+
+  /**
+   * Number of results to return (up to 100)
+   */
+  num?: number;
+
+  /**
+   * Starting index for search results pagination
+   */
+  start?: number;
+
+  /**
+   * Search type/vertical
+   * Options: "search" (web), "images", "news", "places", "videos"
+   */
+  type?: 'search' | 'images' | 'news' | 'places' | 'videos';
+
+  /**
+   * Specific location for contextual results
+   * Example: "New York, NY"
+   */
+  location?: string;
+
+  /**
+   * Search autocorrection setting
+   * "0" - disabled, "1" - enabled (default)
+   */
+  autocorrect?: '0' | '1';
+
+  /**
+   * Filtering for safe search
+   * Options: "off", "moderate", "active"
+   */
+  safe?: 'off' | 'moderate' | 'active';
+}
+
+/** SearXNG */
+
+export interface SearxNGSearchPayload {
+  /**
+   * The search query string
+   * Supports syntax specific to different search engines
+   * Example: "site:github.com SearXNG"
+   */
+  q: string;
+
+  /**
+   * Comma-separated list of search categories
+   * Example: "general,images,news"
+   */
+  categories?: string;
+
+  /**
+   * Comma-separated list of search engines to use
+   * Example: "google,bing,duckduckgo"
+   */
+  engines?: string;
+
+  /**
+   * Code of the language for search results
+   * Example: "en", "fr", "de", "es"
+   */
+  language?: string;
+
+  /**
+   * Search page number
+   * Default: 1
+   */
+  pageno?: number;
+
+  /**
+   * Time range filter for search results
+   * Options: "day", "month", "year"
+   */
+  time_range?: 'day' | 'month' | 'year';
+
+  /**
+   * Output format of results
+   * Options: "json", "csv", "rss"
+   */
+  format?: 'json' | 'csv' | 'rss';
+
+  /**
+   * Open search results on new tab
+   * Options: `0` (off), `1` (on)
+   */
+  results_on_new_tab?: 0 | 1;
+
+  /**
+   * Proxy image results through SearxNG
+   * Options: true, false
+   */
+  image_proxy?: boolean;
+
+  /**
+   * Service for autocomplete suggestions
+   * Options: "google", "dbpedia", "duckduckgo", "mwmbl",
+   *          "startpage", "wikipedia", "stract", "swisscows", "qwant"
+   */
+  autocomplete?: string;
+
+  /**
+   * Safe search filtering level
+   * Options: "0" (off), "1" (moderate), "2" (strict)
+   */
+  safesearch?: 0 | 1 | 2;
+
+  /**
+   * Theme to use for results page
+   * Default: "simple" (other themes may be available per instance)
+   */
+  theme?: string;
+
+  /**
+   * List of enabled plugins
+   * Default: "Hash_plugin,Self_Information,Tracker_URL_remover,Ahmia_blacklist"
+   */
+  enabled_plugins?: string;
+
+  /**
+   * List of disabled plugins
+   */
+  disabled_plugins?: string;
+
+  /**
+   * List of enabled engines
+   */
+  enabled_engines?: string;
+
+  /**
+   * List of disabled engines
+   */
+  disabled_engines?: string;
+}

@@ -31,6 +31,19 @@ TECHNIQUES (combine for power searches):
 - CONCISE TERMS: Prioritize keywords over sentences
 `.trim()
   ),
+  country: z
+    .string()
+    .optional()
+    .describe(
+      `Country code to localize search results.
+Use standard 2-letter country codes: "us", "uk", "ca", "de", "fr", "jp", "br", etc.
+Provide this when the search should return results specific to a particular country.
+Examples:
+- "us" for United States (default)
+- "de" for Germany
+- "in" for India
+`.trim()
+    ),
 });
 
 export const createSearchTool = (
@@ -88,17 +101,19 @@ export const createSearchTool = (
 
   const search = async ({
     query,
+    country,
     proMode = true,
     maxSources = 5,
     onSearchResults,
   }: {
     query: string;
-    proMode?: boolean;
+    country?: string;
     maxSources?: number;
+    proMode?: boolean;
     onSearchResults?: (sources: t.SearchResult) => void;
   }): Promise<t.SearchResultData> => {
     try {
-      const sources = await searchAPI.getSources(query);
+      const sources = await searchAPI.getSources({ query, country });
       onSearchResults?.(sources);
 
       if (!sources.success) {
@@ -125,9 +140,10 @@ export const createSearchTool = (
   };
 
   return tool<typeof SearchToolSchema>(
-    async ({ query }, runnableConfig) => {
+    async ({ query, country }, runnableConfig) => {
       const searchResult = await search({
         query,
+        country,
         onSearchResults: _onSearchResults
           ? (result): void => {
             _onSearchResults(result, runnableConfig);

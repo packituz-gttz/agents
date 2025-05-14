@@ -117,16 +117,11 @@ const getHighlights = async ({
 const createSerperAPI = (
   apiKey?: string
 ): {
-  getSources: (
-    query: string,
-    numResults?: number,
-    storedLocation?: string
-  ) => Promise<t.SearchResult>;
+  getSources: (params: t.GetSourcesParams) => Promise<t.SearchResult>;
 } => {
   const config = {
     apiKey: apiKey ?? process.env.SERPER_API_KEY,
     apiUrl: 'https://google.serper.dev/search',
-    defaultLocation: 'us',
     timeout: 10000,
   };
 
@@ -134,25 +129,24 @@ const createSerperAPI = (
     throw new Error('SERPER_API_KEY is required for SerperAPI');
   }
 
-  const getSources = async (
-    query: string,
-    numResults: number = 8,
-    storedLocation?: string
-  ): Promise<t.SearchResult> => {
+  const getSources = async ({
+    query,
+    country,
+    numResults = 8,
+  }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
       return { success: false, error: 'Query cannot be empty' };
     }
 
     try {
-      const searchLocation = (
-        storedLocation ?? config.defaultLocation
-      ).toLowerCase();
-
-      const payload = {
+      const payload: t.SerperSearchPayload = {
         q: query,
         num: Math.min(Math.max(1, numResults), 10),
-        gl: searchLocation,
       };
+
+      if (country != null && country !== '') {
+        payload['gl'] = country.toLowerCase();
+      }
 
       const response = await axios.post(config.apiUrl, payload, {
         headers: {
@@ -188,11 +182,7 @@ const createSearXNGAPI = (
   instanceUrl?: string,
   apiKey?: string
 ): {
-  getSources: (
-    query: string,
-    numResults?: number,
-    storedLocation?: string
-  ) => Promise<t.SearchResult>;
+  getSources: (params: t.GetSourcesParams) => Promise<t.SearchResult>;
 } => {
   const config = {
     instanceUrl: instanceUrl ?? process.env.SEARXNG_INSTANCE_URL,
@@ -205,11 +195,10 @@ const createSearXNGAPI = (
     throw new Error('SEARXNG_INSTANCE_URL is required for SearXNG API');
   }
 
-  const getSources = async (
-    query: string,
-    numResults: number = 8,
-    storedLocation?: string
-  ): Promise<t.SearchResult> => {
+  const getSources = async ({
+    query,
+    numResults = 8,
+  }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
       return { success: false, error: 'Query cannot be empty' };
     }
@@ -226,7 +215,7 @@ const createSearXNGAPI = (
       }
 
       // Prepare parameters for SearXNG
-      const params: Record<string, string | number> = {
+      const params: t.SearxNGSearchPayload = {
         q: query,
         format: 'json',
         pageno: 1,
@@ -234,12 +223,7 @@ const createSearXNGAPI = (
         language: 'all',
         safesearch: 0,
         engines: 'google,bing,duckduckgo',
-        max_results: Math.min(Math.max(1, numResults), 20),
       };
-
-      if (storedLocation != null && storedLocation !== 'all') {
-        params.language = storedLocation;
-      }
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -302,11 +286,7 @@ const createSearXNGAPI = (
 export const createSearchAPI = (
   config: t.SearchConfig
 ): {
-  getSources: (
-    query: string,
-    numResults?: number,
-    storedLocation?: string
-  ) => Promise<t.SearchResult>;
+  getSources: (params: t.GetSourcesParams) => Promise<t.SearchResult>;
 } => {
   const {
     searchProvider = 'serper',
