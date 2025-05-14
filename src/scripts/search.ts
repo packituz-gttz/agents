@@ -101,7 +101,7 @@ async function testStandardStreaming(): Promise<void> {
     version: 'v2' as const,
   };
 
-  console.log('Test 1: Weather query (content parts test)');
+  console.log('Test 1: Search query (search tool test)');
 
   // const userMessage = `
   // Make a search for the weather in ${location} today, which is ${currentDate}.
@@ -110,7 +110,8 @@ async function testStandardStreaming(): Promise<void> {
   // After giving me a thorough summary, tell me a joke about the weather forecast we went over.
   // `;
   // const userMessage = 'Are massage guns good?';
-  const userMessage = 'What is functional programming?';
+  // const userMessage = 'What is functional programming?';
+  const userMessage = "Get me today's trending news.";
 
   conversationHistory.push(new HumanMessage(userMessage));
 
