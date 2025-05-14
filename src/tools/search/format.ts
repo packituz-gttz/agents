@@ -19,7 +19,7 @@ export function formatResultsForLLM(
       const r = results.organic[i];
       output += [
         `# Source ${i}: "${r.title ?? '(no title)'}"`,
-        `Citation Anchor: \\ue202turn${turn}search${i}`,
+        `Anchor: \\ue202turn${turn}search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',
@@ -50,7 +50,7 @@ export function formatResultsForLLM(
                     ''
                   ).split('\n')[0],
                 });
-                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\tCitation Anchor: \\ue202turn${turn}ref${references.length - 1}`;
+                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\tAnchor: \\ue202turn${turn}ref${references.length - 1}`;
               })
               .join('\n');
             output += '\n\n';
