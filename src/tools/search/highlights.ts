@@ -129,21 +129,21 @@ function trackReferencesInHighlight(
   text: string,
   sourceResult: t.ValidSource // Source containing the original references
 ): {
-  usedRefs: {
+  references: {
     type: 'link' | 'image' | 'video';
     originalIndex: number;
     reference: t.MediaReference; // Original reference object
   }[];
 } {
   // Track used references
-  const usedRefs: {
+  const references: {
     type: 'link' | 'image' | 'video';
     originalIndex: number;
     reference: t.MediaReference;
   }[] = [];
 
   if (!text || text.length === 0 || !text.includes('#')) {
-    return { usedRefs }; // Early return
+    return { references }; // Early return
   }
 
   // Quick check for reference markers
@@ -152,7 +152,7 @@ function trackReferencesInHighlight(
     !text.includes('image#') &&
     !text.includes('video#')
   ) {
-    return { usedRefs };
+    return { references };
   }
 
   // Get references from the source if available
@@ -189,12 +189,12 @@ function trackReferencesInHighlight(
     const reference = sourceArray[originalIndex];
 
     // Track if not already tracked
-    const alreadyTracked = usedRefs.some(
+    const alreadyTracked = references.some(
       (ref) => ref.type === refType && ref.originalIndex === originalIndex
     );
 
     if (!alreadyTracked) {
-      usedRefs.push({
+      references.push({
         type: refType,
         originalIndex,
         reference,
@@ -202,7 +202,7 @@ function trackReferencesInHighlight(
     }
   }
 
-  return { usedRefs };
+  return { references };
 }
 
 /**
@@ -247,16 +247,12 @@ export function expandHighlights(
       const resultCopy = { ...result };
       const content = result.content;
       const highlights = [];
-      const allUsedRefs: {
-        type: 'link' | 'image' | 'video';
-        originalIndex: number;
-        reference: t.MediaReference;
-      }[] = [];
-
       // Process each highlight
       for (const highlight of result.highlights) {
-        const { usedRefs } = trackReferencesInHighlight(highlight.text, result);
-        allUsedRefs.push(...usedRefs);
+        const { references } = trackReferencesInHighlight(
+          highlight.text,
+          result
+        );
 
         let startPos = content.indexOf(highlight.text);
         let highlightLen = highlight.text.length;
@@ -270,6 +266,7 @@ export function expandHighlights(
             highlights.push({
               text: highlight.text,
               score: highlight.score,
+              references,
             });
             continue;
           }
@@ -308,11 +305,8 @@ export function expandHighlights(
         highlights.push({
           text: expandedHighlightText,
           score: highlight.score,
+          references,
         });
-      }
-
-      if (allUsedRefs.length > 0) {
-        resultCopy.usedReferences = allUsedRefs;
       }
 
       resultCopy.highlights = highlights;

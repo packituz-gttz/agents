@@ -48,6 +48,7 @@ export interface PeopleAlsoAskResult {
 export interface Highlight {
   score: number;
   text: string;
+  references?: UsedReferences;
 }
 
 export interface ValidSource {
@@ -60,7 +61,6 @@ export interface ValidSource {
   attribution?: string;
   references?: References;
   highlights?: Highlight[];
-  usedReferences?: UsedReferences;
 }
 
 export interface SearchResultData {
