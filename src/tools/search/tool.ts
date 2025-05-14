@@ -135,8 +135,11 @@ export const createSearchTool = (
           : undefined,
       });
       const turn = runnableConfig.toolCall?.turn ?? 0;
-      const output = formatResultsForLLM(turn, searchResult);
-      return [output, { [Constants.WEB_SEARCH]: { turn, ...searchResult } }];
+      const { output, references } = formatResultsForLLM(turn, searchResult);
+      return [
+        output,
+        { [Constants.WEB_SEARCH]: { turn, ...searchResult, references } },
+      ];
     },
     {
       name: Constants.WEB_SEARCH,
@@ -147,7 +150,7 @@ Note: Use ONCE per reply unless instructed otherwise.
 
 Anchors:
 - \\ue202turnXtypeY
-- X = turn idx, type = 'search' | 'news' | 'image', Y = item idx
+- X = turn idx, type = 'search' | 'news' | 'image' | 'ref', Y = item idx
 
 Special Markers:
 - \\ue203...\\ue204 — highlight start/end of cited text (for Standalone or Group citations)

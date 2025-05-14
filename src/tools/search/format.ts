@@ -1,21 +1,22 @@
 import type * as t from './types';
+import { getDomainName } from './utils';
 
 export function formatResultsForLLM(
   turn: number,
   results: t.SearchResultData
-): string {
+): { output: string; references: t.ResultReference[] } {
   let output = '';
 
   const addSection = (title: string): void => {
     output += `\n=== ${title} ===\n`;
   };
 
+  const references: t.ResultReference[] = [];
   // Organic (web) results
-  const organic = results.organic ?? [];
-  if (organic.length) {
+  if (results.organic?.length != null && results.organic.length > 0) {
     addSection(`Web Results, Turn ${turn}`);
-    for (let i = 0; i < organic.length; i++) {
-      const r = organic[i];
+    for (let i = 0; i < results.organic.length; i++) {
+      const r = results.organic[i];
       output += [
         `# Source ${i}: "${r.title ?? '(no title)'}"`,
         `Citation Anchor: \\ue202turn${turn}search${i}`,
@@ -41,7 +42,15 @@ export function formatResultsForLLM(
             output += 'Core References:\n';
             output += h.references
               .map((ref) => {
-                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}`;
+                references.push({
+                  link: ref.reference.originalUrl,
+                  attribution: getDomainName(ref.reference.originalUrl),
+                  title: (
+                    ((ref.reference.title ?? '') || ref.reference.text) ??
+                    ''
+                  ).split('\n')[0],
+                });
+                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\tCitation Anchor: \\ue202turn${turn}ref${references.length - 1}`;
               })
               .join('\n');
             output += '\n\n';
@@ -52,6 +61,7 @@ export function formatResultsForLLM(
           }
         });
 
+      delete results.organic[i].highlights;
       output += '\n';
     }
   }
@@ -152,5 +162,8 @@ export function formatResultsForLLM(
         .join('\n\n');
     });
   }
-  return output.trim();
+  return {
+    output: output.trim(),
+    references,
+  };
 }
