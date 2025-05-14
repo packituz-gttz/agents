@@ -17,14 +17,15 @@ export function formatResultsForLLM(
     for (let i = 0; i < organic.length; i++) {
       const r = organic[i];
       output += [
-        `Source ${i}: ${r.title ?? '(no title)'}`,
+        `# Source ${i}: "${r.title ?? '(no title)'}"`,
         `Citation Anchor: \\ue202turn${turn}search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',
         r.attribution != null ? `Source: ${r.attribution}` : '',
         '',
-        '--- Content Highlights ---\n',
+        '\n## Highlights\n\n',
+        '',
         '',
       ]
         .filter(Boolean)
