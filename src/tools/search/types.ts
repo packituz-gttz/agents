@@ -98,15 +98,6 @@ export interface ScraperExtractionResult {
   no_extraction: ScraperContentResult;
 }
 
-// Define type for SearXNG result
-export interface SearXNGResult {
-  title?: string;
-  url?: string;
-  content?: string;
-  publishedDate?: string;
-  img_src?: string;
-}
-
 export interface JinaRerankerResult {
   index: number;
   relevance_score: number;
@@ -554,4 +545,12 @@ export interface SearxNGSearchPayload {
    * List of disabled engines
    */
   disabled_engines?: string;
+}
+
+export interface SearXNGResult {
+  title?: string;
+  url?: string;
+  content?: string;
+  publishedDate?: string;
+  img_src?: string;
 }
