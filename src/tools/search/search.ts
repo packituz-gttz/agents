@@ -148,22 +148,26 @@ const createSerperAPI = (
         payload['gl'] = country.toLowerCase();
       }
 
-      const response = await axios.post(config.apiUrl, payload, {
-        headers: {
-          'X-API-KEY': config.apiKey,
-          'Content-Type': 'application/json',
-        },
-        timeout: config.timeout,
-      });
+      const response = await axios.post<t.SerperResultData>(
+        config.apiUrl,
+        payload,
+        {
+          headers: {
+            'X-API-KEY': config.apiKey,
+            'Content-Type': 'application/json',
+          },
+          timeout: config.timeout,
+        }
+      );
 
       const data = response.data;
       const results: t.SearchResultData = {
         organic: data.organic,
         images: data.images ?? [],
+        answerBox: data.answerBox,
         topStories: data.topStories ?? [],
-        knowledgeGraph: data.knowledgeGraph as t.KnowledgeGraphResult,
-        answerBox: data.answerBox as t.AnswerBoxResult,
-        peopleAlsoAsk: data.peopleAlsoAsk as t.PeopleAlsoAskResult[],
+        peopleAlsoAsk: data.peopleAlsoAsk,
+        knowledgeGraph: data.knowledgeGraph,
         relatedSearches: data.relatedSearches,
       };
 

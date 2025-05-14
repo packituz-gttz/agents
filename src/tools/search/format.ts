@@ -103,14 +103,23 @@ export function formatResultsForLLM(
     addSection('Knowledge Graph');
     output += [
       `**Title:** ${results.knowledgeGraph.title ?? '(no title)'}`,
-      results.knowledgeGraph.description != null
-        ? `**Description:** ${results.knowledgeGraph.description}`
-        : '',
       results.knowledgeGraph.type != null
         ? `**Type:** ${results.knowledgeGraph.type}`
         : '',
+      results.knowledgeGraph.description != null
+        ? `**Description:** ${results.knowledgeGraph.description}`
+        : '',
+      results.knowledgeGraph.descriptionSource != null
+        ? `**Description Source:** ${results.knowledgeGraph.descriptionSource}`
+        : '',
+      results.knowledgeGraph.descriptionLink != null
+        ? `**Description Link:** ${results.knowledgeGraph.descriptionLink}`
+        : '',
       results.knowledgeGraph.imageUrl != null
         ? `**Image URL:** ${results.knowledgeGraph.imageUrl}`
+        : '',
+      results.knowledgeGraph.website != null
+        ? `**Website:** ${results.knowledgeGraph.website}`
         : '',
       results.knowledgeGraph.attributes != null
         ? `**Attributes:**\n\`\`\`json\n${JSON.stringify(
@@ -132,14 +141,16 @@ export function formatResultsForLLM(
       results.answerBox.title != null
         ? `**Title:** ${results.answerBox.title}`
         : '',
-      results.answerBox.answer != null
-        ? `**Answer:** ${results.answerBox.answer}`
-        : '',
       results.answerBox.snippet != null
         ? `**Snippet:** ${results.answerBox.snippet}`
         : '',
-      results.answerBox.date != null
-        ? `**Date:** ${results.answerBox.date}`
+      results.answerBox.snippetHighlighted != null
+        ? `**Snippet Highlighted:** ${results.answerBox.snippetHighlighted
+          .map((s) => `\`${s}\``)
+          .join(' ')}`
+        : '',
+      results.answerBox.link != null
+        ? `**Link:** ${results.answerBox.link}`
         : '',
       '',
     ]
@@ -154,8 +165,10 @@ export function formatResultsForLLM(
     peopleAlsoAsk.forEach((p, i) => {
       output += [
         `### Question ${i + 1}:`,
-        `**Q:** ${p.question}`,
-        `**A:** ${p.answer}`,
+        `"${p.question}"`,
+        `${p.snippet != null && p.snippet ? `Snippet: ${p.snippet}}` : ''}`,
+        `${p.title != null && p.title ? `Title: ${p.title}` : ''}`,
+        `${p.link != null && p.link ? `Link: ${p.link}` : ''}`,
         '',
       ]
         .filter(Boolean)
