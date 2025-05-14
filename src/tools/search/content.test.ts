@@ -106,7 +106,7 @@ describe('Link Processor', () => {
   });
 
   // Real-world file test (if available)
-  xtest('should process real-world Wikipedia content', () => {
+  test('should process real-world Wikipedia content', () => {
     // Try to find real-world test files if they exist
     const wikiHtml = './test.html';
     const wikiMd = './test.md';
