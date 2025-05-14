@@ -50,7 +50,7 @@ export function formatResultsForLLM(
                     ''
                   ).split('\n')[0],
                 });
-                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\tAnchor: \\ue202turn${turn}ref${references.length - 1}`;
+                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
               })
               .join('\n');
             output += '\n\n';
