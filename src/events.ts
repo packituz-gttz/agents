@@ -1,9 +1,12 @@
 /* eslint-disable no-console */
 // src/events.ts
-import type { UsageMetadata, BaseMessageFields } from '@langchain/core/messages';
+import type {
+  UsageMetadata,
+  BaseMessageFields,
+} from '@langchain/core/messages';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
-import { handleToolCalls } from '@/stream';
+import { handleToolCalls } from '@/tools/handlers';
 import { Providers } from '@/common';
 
 export class HandlerRegistry {
@@ -27,7 +30,12 @@ export class ModelEndHandler implements t.EventHandler {
     this.collectedUsage = collectedUsage;
   }
 
-  handle(event: string, data: t.ModelEndData, metadata?: Record<string, unknown>, graph?: Graph): void {
+  handle(
+    event: string,
+    data: t.ModelEndData,
+    metadata?: Record<string, unknown>,
+    graph?: Graph
+  ): void {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
       return;
@@ -43,9 +51,12 @@ export class ModelEndHandler implements t.EventHandler {
     }
 
     console.log(`====== ${event.toUpperCase()} ======`);
-    console.dir({
-      usage,
-    }, { depth: null });
+    console.dir(
+      {
+        usage,
+      },
+      { depth: null }
+    );
 
     if (metadata.provider !== Providers.GOOGLE) {
       return;
@@ -60,7 +71,12 @@ export class ToolEndHandler implements t.EventHandler {
   constructor(callback?: t.ToolEndCallback) {
     this.callback = callback;
   }
-  handle(event: string, data: t.StreamEventData | undefined, metadata?: Record<string, unknown>, graph?: Graph): void {
+  handle(
+    event: string,
+    data: t.StreamEventData | undefined,
+    metadata?: Record<string, unknown>,
+    graph?: Graph
+  ): void {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
       return;
@@ -74,14 +90,17 @@ export class ToolEndHandler implements t.EventHandler {
 
     this.callback?.(toolEndData, metadata);
 
-    graph.handleToolCallCompleted({ input: toolEndData.input, output: toolEndData.output }, metadata);
+    graph.handleToolCallCompleted(
+      { input: toolEndData.input, output: toolEndData.output },
+      metadata
+    );
   }
 }
 
 export class TestLLMStreamHandler implements t.EventHandler {
   handle(event: string, data: t.StreamEventData | undefined): void {
     const chunk = data?.chunk;
-    const  isMessageChunk = !!(chunk && 'message' in chunk);
+    const isMessageChunk = !!(chunk && 'message' in chunk);
     const msg = isMessageChunk ? chunk.message : undefined;
     if (msg && msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
       console.log(msg.tool_call_chunks);
@@ -116,11 +135,17 @@ export class TestChatStreamHandler implements t.EventHandler {
 }
 
 export class LLMStreamHandler implements t.EventHandler {
-  handle(event: string, data: t.StreamEventData | undefined, metadata?: Record<string, unknown>): void {
+  handle(
+    event: string,
+    data: t.StreamEventData | undefined,
+    metadata?: Record<string, unknown>
+  ): void {
     const chunk = data?.chunk;
-    const  isMessageChunk = !!(chunk && 'message' in chunk);
+    const isMessageChunk = !!(chunk && 'message' in chunk);
     const msg = isMessageChunk && chunk.message;
-    if (metadata) { console.log(metadata); }
+    if (metadata) {
+      console.log(metadata);
+    }
     if (msg && msg.tool_call_chunks && msg.tool_call_chunks.length > 0) {
       console.log(msg.tool_call_chunks);
     } else if (msg && msg.content) {
@@ -133,12 +158,21 @@ export class LLMStreamHandler implements t.EventHandler {
   }
 }
 
-export const createMetadataAggregator = (_collected?: Record<string, NonNullable<BaseMessageFields['response_metadata']>>[]): t.MetadataAggregatorResult => {
+export const createMetadataAggregator = (
+  _collected?: Record<
+    string,
+    NonNullable<BaseMessageFields['response_metadata']>
+  >[]
+): t.MetadataAggregatorResult => {
   const collected = _collected || [];
 
   const handleLLMEnd: t.HandleLLMEnd = (output) => {
     const { generations } = output;
-    const lastMessageOutput = (generations[generations.length - 1] as (t.StreamGeneration | undefined)[] | undefined)?.[0];
+    const lastMessageOutput = (
+      generations[generations.length - 1] as
+        | (t.StreamGeneration | undefined)[]
+        | undefined
+    )?.[0];
     if (!lastMessageOutput) {
       return;
     }

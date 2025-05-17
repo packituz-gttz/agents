@@ -10,6 +10,7 @@ export * from './graphs';
 
 /* Tools */
 export * from './tools/CodeExecutor';
+export * from './tools/handlers';
 export * from './tools/search';
 
 /* Misc. */
