@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { BaseReranker } from './rerankers';
 
@@ -564,3 +565,20 @@ export type ProcessSourcesFields = {
   proMode: boolean;
   onGetHighlights: SearchToolConfig['onGetHighlights'];
 };
+
+export type SearchToolSchema = z.ZodObject<
+  {
+    query: z.ZodString;
+    country?: z.ZodOptional<z.ZodString>;
+  },
+  'strip',
+  z.ZodTypeAny,
+  {
+    query: string;
+    country?: unknown;
+  },
+  {
+    query: string;
+    country?: unknown;
+  }
+>;

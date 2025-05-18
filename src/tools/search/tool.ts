@@ -46,7 +46,7 @@ function createSearchProcessor({
 }: {
   searchAPI: ReturnType<typeof createSearchAPI>;
   sourceProcessor: ReturnType<typeof createSourceProcessor>;
-  onGetHighlights?: (link: string) => void;
+  onGetHighlights: t.SearchToolConfig['onGetHighlights'];
 }) {
   return async function ({
     query,
@@ -59,7 +59,7 @@ function createSearchProcessor({
     country?: string;
     maxSources?: number;
     proMode?: boolean;
-    onSearchResults?: (sources: t.SearchResult) => void;
+    onSearchResults: t.SearchToolConfig['onSearchResults'];
   }): Promise<t.SearchResultData> {
     try {
       const result = await searchAPI.getSources({ query, country });
@@ -95,10 +95,7 @@ function createOnSearchResults({
   onSearchResults,
 }: {
   runnableConfig: RunnableConfig;
-  onSearchResults?: (
-    results: t.SearchResult,
-    runnableConfig?: RunnableConfig
-  ) => void;
+  onSearchResults: t.SearchToolConfig['onSearchResults'];
 }) {
   return function (results: t.SearchResult): void {
     if (!onSearchResults) {
@@ -106,6 +103,63 @@ function createOnSearchResults({
     }
     onSearchResults(results, runnableConfig);
   };
+}
+
+function createTool({
+  schema,
+  search,
+  onSearchResults: _onSearchResults,
+}: {
+  schema: t.SearchToolSchema;
+  search: ReturnType<typeof createSearchProcessor>;
+  onSearchResults: t.SearchToolConfig['onSearchResults'];
+}): DynamicStructuredTool<typeof schema> {
+  return tool<typeof schema>(
+    async (params, runnableConfig) => {
+      const { query, country: _c } = params;
+      const country = typeof _c === 'string' && _c ? _c : undefined;
+      const searchResult = await search({
+        query,
+        country,
+        onSearchResults: createOnSearchResults({
+          runnableConfig,
+          onSearchResults: _onSearchResults,
+        }),
+      });
+      const turn = runnableConfig.toolCall?.turn ?? 0;
+      const { output, references } = formatResultsForLLM(turn, searchResult);
+      const data: t.SearchResultData = { turn, ...searchResult, references };
+      return [output, { [Constants.WEB_SEARCH]: data }];
+    },
+    {
+      name: Constants.WEB_SEARCH,
+      description: `Real-time search. Results have required citation anchors.
+
+Note: Use ONCE per reply unless instructed otherwise.
+
+Anchors:
+- \\ue202turnXtypeY
+- X = turn idx, type = 'search' | 'news' | 'image' | 'ref', Y = item idx
+
+Special Markers:
+- \\ue203...\\ue204 — highlight start/end of cited text (for Standalone or Group citations)
+- \\ue200...\\ue201 — group block (e.g. \\ue200\\ue202turn0search1\\ue202turn0news2\\ue201)
+
+**CITE EVERY NON-OBVIOUS FACT/QUOTE:**
+Use anchor marker(s) immediately after the statement:
+- Standalone: "Pure functions produce same output. \\ue202turn0search0"
+- Standalone (multiple): "Today's News \\ue202turn0search0\\ue202turn0news0"
+- Highlight: "\\ue203Highlight text.\\ue204\\ue202turn0news1"
+- Group: "Sources. \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
+- Group Highlight: "\\ue203Highlight for group.\\ue204 \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
+- Image: "See photo \\ue202turn0image0."
+
+**NEVER use markdown links, [1], or footnotes. CITE ONLY with anchors provided.**
+`.trim(),
+      schema: schema,
+      responseFormat: Constants.CONTENT_AND_ARTIFACT,
+    }
+  );
 }
 
 /**
@@ -117,7 +171,7 @@ function createOnSearchResults({
  */
 export const createSearchTool = (
   config: t.SearchToolConfig = {}
-): DynamicStructuredTool<typeof SearchToolSchema> => {
+): DynamicStructuredTool<typeof toolSchema> => {
   const {
     searchProvider = 'serper',
     serperApiKey,
@@ -151,7 +205,7 @@ export const createSearchTool = (
       .describe(DEFAULT_COUNTRY_DESCRIPTION);
   }
 
-  const SearchToolSchema = z.object(schemaObject);
+  const toolSchema = z.object(schemaObject);
 
   const searchAPI = createSearchAPI({
     searchProvider,
@@ -192,51 +246,9 @@ export const createSearchTool = (
     onGetHighlights,
   });
 
-  return tool<typeof SearchToolSchema>(
-    async (params, runnableConfig) => {
-      const { query, country: _c } = params;
-      const country = typeof _c === 'string' && _c ? _c : undefined;
-      const searchResult = await search({
-        query,
-        country,
-        onSearchResults: createOnSearchResults({
-          runnableConfig,
-          onSearchResults: _onSearchResults,
-        }),
-      });
-      const turn = runnableConfig.toolCall?.turn ?? 0;
-      const { output, references } = formatResultsForLLM(turn, searchResult);
-      const data: t.SearchResultData = { turn, ...searchResult, references };
-      return [output, { [Constants.WEB_SEARCH]: data }];
-    },
-    {
-      name: Constants.WEB_SEARCH,
-      description: `
-Real-time search. Results have required citation anchors.
-
-Note: Use ONCE per reply unless instructed otherwise.
-
-Anchors:
-- \\ue202turnXtypeY
-- X = turn idx, type = 'search' | 'news' | 'image' | 'ref', Y = item idx
-
-Special Markers:
-- \\ue203...\\ue204 — highlight start/end of cited text (for Standalone or Group citations)
-- \\ue200...\\ue201 — group block (e.g. \\ue200\\ue202turn0search1\\ue202turn0news2\\ue201)
-
-**CITE EVERY NON-OBVIOUS FACT/QUOTE:**
-Use anchor marker(s) immediately after the statement:
-- Standalone: "Pure functions produce same output. \\ue202turn0search0"
-- Standalone (multiple): "Today's News \\ue202turn0search0\\ue202turn0news0"
-- Highlight: "\\ue203Highlight text.\\ue204\\ue202turn0news1"
-- Group: "Sources. \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
-- Group Highlight: "\\ue203Highlight for group.\\ue204 \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
-- Image: "See photo \\ue202turn0image0."
-
-**NEVER use markdown links, [1], or footnotes. CITE ONLY with anchors provided.**
-`.trim(),
-      schema: SearchToolSchema,
-      responseFormat: Constants.CONTENT_AND_ARTIFACT,
-    }
-  );
+  return createTool({
+    search,
+    schema: toolSchema,
+    onSearchResults: _onSearchResults,
+  });
 };
