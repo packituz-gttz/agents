@@ -504,16 +504,20 @@ export const createSourceProcessor = (
 
       const sourceMap = new Map<string, t.ValidSource>();
       const organicLinks: string[] = [];
-      const topStoryLinks: string[] = [];
+      const organicLinksSet = new Set<string>();
 
       for (const source of result.data.organic) {
         if (source.link) {
           organicLinks.push(source.link);
+          organicLinksSet.add(source.link);
           sourceMap.set(source.link, source);
         }
       }
-      for (const source of result.data.topStories ?? []) {
-        if (source.link) {
+
+      const topStoryLinks: string[] = [];
+      const topStories = result.data.topStories ?? [];
+      for (const source of topStories) {
+        if (source.link && !organicLinksSet.has(source.link)) {
           topStoryLinks.push(source.link);
           sourceMap.set(source.link, source);
         }
@@ -525,6 +529,7 @@ export const createSourceProcessor = (
 
       const onContentScraped = createSourceUpdateCallback(sourceMap);
       const promises: Promise<void>[] = [];
+
       if (organicLinks.length > 0) {
         promises.push(
           fetchContents({
@@ -536,6 +541,7 @@ export const createSourceProcessor = (
           })
         );
       }
+
       if (topStoryLinks.length > 0) {
         promises.push(
           fetchContents({
@@ -547,6 +553,7 @@ export const createSourceProcessor = (
           })
         );
       }
+
       await Promise.all(promises);
 
       for (let i = 0; i < result.data.organic.length; i++) {
@@ -559,14 +566,11 @@ export const createSourceProcessor = (
           };
         }
       }
-      for (let i = 0; i < (result.data.topStories ?? []).length; i++) {
-        if (result.data.topStories == null) {
-          break;
-        }
-        const source = result.data.topStories[i];
+      for (let i = 0; i < topStories.length; i++) {
+        const source = topStories[i];
         const updatedSource = sourceMap.get(source.link);
         if (updatedSource) {
-          result.data.topStories[i] = {
+          topStories[i] = {
             ...source,
             ...updatedSource,
           };
@@ -581,11 +585,11 @@ export const createSourceProcessor = (
         result.data.organic = organicSources;
       }
 
-      const topStorySources = result.data.topStories?.filter(
+      const topStorySources = topStories.filter(
         (source) =>
           source.content == null || !source.content.startsWith('Failed')
       );
-      if (topStorySources && topStorySources.length > 0) {
+      if (topStorySources.length > 0) {
         result.data.topStories = topStorySources;
       }
       return result.data;
