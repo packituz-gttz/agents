@@ -536,12 +536,10 @@ export const createSourceProcessor = (
         }
       }
 
-      const successfulSources = result.data.organic
-        .filter(
-          (source) =>
-            source.content != null && !source.content.startsWith('Failed')
-        )
-        .slice(0, numElements);
+      const successfulSources = result.data.organic.filter(
+        (source) =>
+          source.content == null || !source.content.startsWith('Failed')
+      );
 
       if (successfulSources.length > 0) {
         result.data.organic = successfulSources;
