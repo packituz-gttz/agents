@@ -38,6 +38,57 @@ Examples:
 - "in" for India
 `.trim();
 
+function createSearchProcessor({
+  searchAPI,
+  sourceProcessor,
+  onGetHighlights,
+}: {
+  searchAPI: ReturnType<typeof createSearchAPI>;
+  sourceProcessor: ReturnType<typeof createSourceProcessor>;
+  onGetHighlights?: (link: string) => void;
+}) {
+  return async function ({
+    query,
+    country,
+    proMode = true,
+    maxSources = 5,
+    onSearchResults,
+  }: {
+    query: string;
+    country?: string;
+    maxSources?: number;
+    proMode?: boolean;
+    onSearchResults?: (sources: t.SearchResult) => void;
+  }): Promise<t.SearchResultData> {
+    try {
+      const result = await searchAPI.getSources({ query, country });
+      onSearchResults?.(result);
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'Search failed');
+      }
+
+      const processedSources = await sourceProcessor.processSources({
+        query,
+        result,
+        proMode,
+        onGetHighlights,
+        numElements: maxSources,
+      });
+      return expandHighlights(processedSources);
+    } catch (error) {
+      console.error('Error in search:', error);
+      return {
+        organic: [],
+        topStories: [],
+        images: [],
+        relatedSearches: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  };
+}
+
 /**
  * Creates a search tool with a schema that dynamically includes the country field
  * only when the searchProvider is 'serper'.
@@ -63,6 +114,7 @@ export const createSearchTool = (
     jinaApiKey,
     cohereApiKey,
     onSearchResults: _onSearchResults,
+    onGetHighlights,
   } = config;
 
   const querySchema = z.string().describe(DEFAULT_QUERY_DESCRIPTION);
@@ -115,45 +167,11 @@ export const createSearchTool = (
     firecrawlScraper
   );
 
-  const search = async ({
-    query,
-    country,
-    proMode = true,
-    maxSources = 5,
-    onSearchResults,
-  }: {
-    query: string;
-    country?: string;
-    maxSources?: number;
-    proMode?: boolean;
-    onSearchResults?: (sources: t.SearchResult) => void;
-  }): Promise<t.SearchResultData> => {
-    try {
-      const sources = await searchAPI.getSources({ query, country });
-      onSearchResults?.(sources);
-
-      if (!sources.success) {
-        throw new Error(sources.error ?? 'Search failed');
-      }
-
-      const processedSources = await sourceProcessor.processSources(
-        sources,
-        maxSources,
-        query,
-        proMode
-      );
-      return expandHighlights(processedSources);
-    } catch (error) {
-      console.error('Error in search:', error);
-      return {
-        organic: [],
-        topStories: [],
-        images: [],
-        relatedSearches: [],
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  };
+  const search = createSearchProcessor({
+    searchAPI,
+    sourceProcessor,
+    onGetHighlights,
+  });
 
   return tool<typeof SearchToolSchema>(
     async (params, runnableConfig) => {
