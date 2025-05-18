@@ -143,6 +143,7 @@ export interface SearchToolConfig
     results: SearchResult,
     runnableConfig?: RunnableConfig
   ) => void;
+  onGetHighlights?: (link: string) => void;
 }
 export interface MediaReference {
   originalUrl: string;
@@ -205,7 +206,7 @@ export interface ScrapeMetadata {
   publishedTime?: string;
   modifiedTime?: string;
   // Twitter metadata
-  'twitter:site'?: string;
+  'twitter:site'?: string | boolean | number | null;
   'twitter:creator'?: string;
   'twitter:card'?: string;
   'twitter:image'?: string;
@@ -555,3 +556,11 @@ export interface SearXNGResult {
   publishedDate?: string;
   img_src?: string;
 }
+
+export type ProcessSourcesFields = {
+  result: SearchResult;
+  numElements: number;
+  query: string;
+  proMode: boolean;
+  onGetHighlights?: (link: string) => void;
+};

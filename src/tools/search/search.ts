@@ -65,7 +65,7 @@ const chunker = {
   },
 };
 
-const createSourceUpdateCallback = (sourceMap: Map<string, t.ValidSource>) => {
+function createSourceUpdateCallback(sourceMap: Map<string, t.ValidSource>) {
   return (link: string, update?: Partial<t.ValidSource>): void => {
     const source = sourceMap.get(link);
     if (source) {
@@ -75,7 +75,7 @@ const createSourceUpdateCallback = (sourceMap: Map<string, t.ValidSource>) => {
       });
     }
   };
-};
+}
 
 const getHighlights = async ({
   query,
@@ -315,10 +315,7 @@ export const createSourceProcessor = (
   scraperInstance?: FirecrawlScraper
 ): {
   processSources: (
-    result: t.SearchResult,
-    numElements: number,
-    query: string,
-    proMode?: boolean
+    fields: t.ProcessSourcesFields
   ) => Promise<t.SearchResultData>;
   topResults: number;
 } => {
@@ -338,14 +335,17 @@ export const createSourceProcessor = (
     scrapeMany: async ({
       query,
       links,
+      onGetHighlights,
     }: {
       query: string;
       links: string[];
+      onGetHighlights?: (link: string) => void;
     }): Promise<Array<t.ScrapeResult>> => {
       console.log(`Scraping ${links.length} links with Firecrawl`);
       const promises: Array<Promise<t.ScrapeResult>> = [];
       try {
-        for (const currentLink of links) {
+        for (let i = 0; i < links.length; i++) {
+          const currentLink = links[i];
           const promise: Promise<t.ScrapeResult> = firecrawlScraper
             .scrapeUrl(currentLink, {})
             .then(([url, response]) => {
@@ -383,6 +383,9 @@ export const createSourceProcessor = (
                   reranker,
                   content: result.content,
                 });
+                if (onGetHighlights) {
+                  onGetHighlights(result.url);
+                }
                 return {
                   ...result,
                   highlights,
@@ -416,16 +419,22 @@ export const createSourceProcessor = (
     links,
     query,
     target,
+    onGetHighlights,
     onContentScraped,
   }: {
     links: string[];
     query: string;
     target: number;
+    onGetHighlights?: (link: string) => void;
     onContentScraped?: (link: string, update?: Partial<t.ValidSource>) => void;
   }): Promise<void> => {
     const initialLinks = links.slice(0, target);
     // const remainingLinks = links.slice(target).reverse();
-    const results = await webScraper.scrapeMany({ query, links: initialLinks });
+    const results = await webScraper.scrapeMany({
+      query,
+      links: initialLinks,
+      onGetHighlights,
+    });
     for (const result of results) {
       if (result.error === true) {
         continue;
@@ -440,12 +449,13 @@ export const createSourceProcessor = (
     }
   };
 
-  const processSources = async (
-    result: t.SearchResult,
-    numElements: number,
-    query: string,
-    proMode: boolean = false
-  ): Promise<t.SearchResultData> => {
+  const processSources = async ({
+    result,
+    numElements,
+    query,
+    proMode = true,
+    onGetHighlights,
+  }: t.ProcessSourcesFields): Promise<t.SearchResultData> => {
     try {
       if (!result.data) {
         return {
@@ -473,6 +483,7 @@ export const createSourceProcessor = (
         await fetchContents({
           query,
           target: 1,
+          onGetHighlights,
           onContentScraped,
           links: [wikiSources[0].link],
         });
