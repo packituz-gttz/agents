@@ -25,11 +25,15 @@ export function getAttribution(
 ): string | undefined {
   if (!metadata) return getDomainName(link, metadata);
 
+  const twitterSite = metadata['twitter:site'];
+  const twitterSiteFormatted =
+    typeof twitterSite === 'string' ? twitterSite.replace(/^@/, '') : undefined;
+
   const possibleAttributions = [
     metadata.ogSiteName,
     metadata['og:site_name'],
     metadata.title?.split('|').pop()?.trim(),
-    metadata['twitter:site']?.replace(/^@/, ''),
+    twitterSiteFormatted,
   ];
 
   const attribution = possibleAttributions.find(
