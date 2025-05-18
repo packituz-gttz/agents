@@ -4,6 +4,86 @@ import { getDomainName } from './utils';
 function addHighlightSection(): string[] {
   return ['\n## Highlights\n\n', '', ''];
 }
+
+// Helper function to format a source (organic or top story)
+function formatSource(
+  source: t.ValidSource,
+  index: number,
+  turn: number,
+  sourceType: 'search' | 'news',
+  references: t.ResultReference[]
+): string {
+  let output = `\n# ${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} ${index}: "${source.title ?? '(no title)'}"`;
+
+  /** Array of lines to include in the output */
+  const outputLines = [
+    `\nAnchor: \\ue202turn${turn}${sourceType}${index}`,
+    `URL: ${source.link}`,
+  ];
+
+  if ('snippet' in source && source.snippet != null) {
+    outputLines.push(`Summary: ${source.snippet}`);
+  }
+
+  if (source.date != null) {
+    outputLines.push(`Date: ${source.date}`);
+  }
+
+  if (source.attribution != null) {
+    outputLines.push(`Source: ${source.attribution}`);
+  }
+
+  if ((source.highlights?.length ?? 0) > 0) {
+    outputLines.push(...addHighlightSection());
+  } else {
+    outputLines.push('');
+  }
+
+  output += outputLines.filter(Boolean).join('\n');
+
+  // Process highlights if they exist
+  (source.highlights ?? [])
+    .filter((h) => h.text.trim().length > 0)
+    .forEach((h, hIndex) => {
+      output += `### Highlight ${hIndex + 1} [Relevance: ${h.score.toFixed(2)}]\n\n`;
+      output += '```text\n' + h.text.trim() + '\n```\n\n';
+
+      if (h.references != null && h.references.length) {
+        let hasHeader = false;
+        for (let j = 0; j < h.references.length; j++) {
+          const ref = h.references[j];
+          references.push({
+            type: ref.type,
+            link: ref.reference.originalUrl,
+            attribution: getDomainName(ref.reference.originalUrl),
+            title: (
+              ((ref.reference.title ?? '') || ref.reference.text) ??
+              ''
+            ).split('\n')[0],
+          });
+          if (ref.type !== 'link') {
+            continue;
+          }
+          if (!hasHeader) {
+            output += 'Core References:';
+            hasHeader = true;
+          }
+          output += `\n- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
+        }
+        if (hasHeader) {
+          output += '\n';
+        }
+      }
+
+      if (hIndex < (source.highlights?.length ?? 0) - 1) {
+        output += '---\n\n';
+      }
+    });
+
+  output += '\n';
+  return output;
+}
+
 export function formatResultsForLLM(
   turn: number,
   results: t.SearchResultData
@@ -15,83 +95,29 @@ export function formatResultsForLLM(
   };
 
   const references: t.ResultReference[] = [];
+
   // Organic (web) results
   if (results.organic?.length != null && results.organic.length > 0) {
     addSection(`Web Results, Turn ${turn}`);
     for (let i = 0; i < results.organic.length; i++) {
       const r = results.organic[i];
-      output += [
-        `\n# Search ${i}: "${r.title ?? '(no title)'}"`,
-        `Anchor: \\ue202turn${turn}search${i}`,
-        `URL: ${r.link}`,
-        r.snippet != null ? `Summary: ${r.snippet}` : '',
-        r.date != null ? `Date: ${r.date}` : '',
-        r.attribution != null ? `Source: ${r.attribution}` : '',
-        ...((r.highlights?.length ?? 0) > 0 ? addHighlightSection() : ['']),
-      ]
-        .filter(Boolean)
-        .join('\n');
-
-      (r.highlights ?? [])
-        .filter((h) => h.text.trim().length > 0)
-        .forEach((h, hIndex) => {
-          output += `### Highlight ${hIndex + 1} [Relevance: ${h.score.toFixed(2)}]\n\n`;
-          output += '```text\n' + h.text.trim() + '\n```\n\n';
-
-          if (h.references != null && h.references.length) {
-            let hasHeader = false;
-            for (let j = 0; j < h.references.length; j++) {
-              const ref = h.references[j];
-              references.push({
-                type: ref.type,
-                link: ref.reference.originalUrl,
-                attribution: getDomainName(ref.reference.originalUrl),
-                title: (
-                  ((ref.reference.title ?? '') || ref.reference.text) ??
-                  ''
-                ).split('\n')[0],
-              });
-              if (ref.type !== 'link') {
-                continue;
-              }
-              if (!hasHeader) {
-                output += 'Core References:';
-                hasHeader = true;
-              }
-              output += `\n- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
-            }
-            if (hasHeader) {
-              output += '\n';
-            }
-          }
-
-          if (hIndex < (r.highlights?.length ?? 0) - 1) {
-            output += '---\n\n';
-          }
-        });
-
+      output += formatSource(r, i, turn, 'search', references);
       delete results.organic[i].highlights;
-      output += '\n';
     }
   }
 
-  // Ignoring these sections for now
-  // // Top stories (news)
-  // const topStores = results.topStories ?? [];
-  // if (topStores.length) {
-  //   addSection('News Results');
-  //   topStores.forEach((r, i) => {
-  //     output += [
-  //       `Anchor: \ue202turn0news${i}`,
-  //       `Title: ${r.title ?? '(no title)'}`,
-  //       `URL: ${r.link}`,
-  //       r.snippet != null ? `Snippet: ${r.snippet}` : '',
-  //       r.date != null ? `Date: ${r.date}` : '',
-  //       r.attribution != null ? `Source: ${r.attribution}` : '',
-  //       ''
-  //     ].filter(Boolean).join('\n');
-  //   });
-  // }
+  // Top stories (news)
+  const topStories = results.topStories ?? [];
+  if (topStories.length) {
+    addSection('News Results');
+    for (let i = 0; i < topStories.length; i++) {
+      const r = topStories[i];
+      output += formatSource(r, i, turn, 'news', references);
+      if (results.topStories?.[i]?.highlights) {
+        delete results.topStories[i].highlights;
+      }
+    }
+  }
 
   // // Images
   // const images = results.images ?? [];
@@ -185,7 +211,6 @@ export function formatResultsForLLM(
     });
   }
 
-  output += '\nNote: give as much relevant detail as possible';
   return {
     output: output.trim(),
     references,
