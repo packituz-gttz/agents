@@ -13,14 +13,17 @@ function formatSource(
   sourceType: 'search' | 'news',
   references: t.ResultReference[]
 ): string {
-  let output = `\n# ${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} ${index}: "${source.title ?? '(no title)'}"`;
+  /** Array of all lines to include in the output */
+  const outputLines: string[] = [];
 
-  /** Array of lines to include in the output */
-  const outputLines = [
-    `\nAnchor: \\ue202turn${turn}${sourceType}${index}`,
-    `URL: ${source.link}`,
-  ];
+  // Add the title
+  outputLines.push(
+    `\n# ${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} ${index}: ${source.title != null && source.title ? `"${source.title}"` : '(no title)'}`
+  );
+  outputLines.push(`\nAnchor: \\ue202turn${turn}${sourceType}${index}`);
+  outputLines.push(`URL: ${source.link}`);
 
+  // Add optional fields
   if ('snippet' in source && source.snippet != null) {
     outputLines.push(`Summary: ${source.snippet}`);
   }
@@ -33,23 +36,30 @@ function formatSource(
     outputLines.push(`Source: ${source.attribution}`);
   }
 
+  // Add highlight section or empty line
   if ((source.highlights?.length ?? 0) > 0) {
     outputLines.push(...addHighlightSection());
   } else {
     outputLines.push('');
   }
 
-  output += outputLines.filter(Boolean).join('\n');
-
   // Process highlights if they exist
   (source.highlights ?? [])
     .filter((h) => h.text.trim().length > 0)
     .forEach((h, hIndex) => {
-      output += `### Highlight ${hIndex + 1} [Relevance: ${h.score.toFixed(2)}]\n\n`;
-      output += '```text\n' + h.text.trim() + '\n```\n\n';
+      outputLines.push(
+        `### Highlight ${hIndex + 1} [Relevance: ${h.score.toFixed(2)}]`
+      );
+      outputLines.push('');
+      outputLines.push('```text');
+      outputLines.push(h.text.trim());
+      outputLines.push('```');
+      outputLines.push('');
 
       if (h.references != null && h.references.length) {
         let hasHeader = false;
+        const refLines: string[] = [];
+
         for (let j = 0; j < h.references.length; j++) {
           const ref = h.references[j];
           references.push({
@@ -61,37 +71,51 @@ function formatSource(
               ''
             ).split('\n')[0],
           });
+
           if (ref.type !== 'link') {
             continue;
           }
+
           if (!hasHeader) {
-            output += 'Core References:';
+            refLines.push('Core References:');
             hasHeader = true;
           }
-          output += `\n- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
+
+          refLines.push(
+            `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}`
+          );
+          refLines.push(
+            `\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`
+          );
         }
+
         if (hasHeader) {
-          output += '\n';
+          outputLines.push(...refLines);
+          outputLines.push('');
         }
       }
 
       if (hIndex < (source.highlights?.length ?? 0) - 1) {
-        output += '---\n\n';
+        outputLines.push('---');
+        outputLines.push('');
       }
     });
 
-  output += '\n';
-  return output;
+  outputLines.push('');
+  return outputLines.join('\n');
 }
 
 export function formatResultsForLLM(
   turn: number,
   results: t.SearchResultData
 ): { output: string; references: t.ResultReference[] } {
-  let output = '';
+  /** Array to collect all output lines */
+  const outputLines: string[] = [];
 
   const addSection = (title: string): void => {
-    output += `\n=== ${title} ===\n`;
+    outputLines.push('');
+    outputLines.push(`=== ${title} ===`);
+    outputLines.push('');
   };
 
   const references: t.ResultReference[] = [];
@@ -101,7 +125,7 @@ export function formatResultsForLLM(
     addSection(`Web Results, Turn ${turn}`);
     for (let i = 0; i < results.organic.length; i++) {
       const r = results.organic[i];
-      output += formatSource(r, i, turn, 'search', references);
+      outputLines.push(formatSource(r, i, turn, 'search', references));
       delete results.organic[i].highlights;
     }
   }
@@ -112,7 +136,7 @@ export function formatResultsForLLM(
     addSection('News Results');
     for (let i = 0; i < topStories.length; i++) {
       const r = topStories[i];
-      output += formatSource(r, i, turn, 'news', references);
+      outputLines.push(formatSource(r, i, turn, 'news', references));
       if (results.topStories?.[i]?.highlights) {
         delete results.topStories[i].highlights;
       }
@@ -123,20 +147,19 @@ export function formatResultsForLLM(
   // const images = results.images ?? [];
   // if (images.length) {
   //   addSection('Image Results');
-  //   images.forEach((img, i) => {
-  //     output += [
-  //       `Anchor: \ue202turn0image${i}`,
-  //       `Title: ${img.title ?? '(no title)'}`,
-  //       `Image URL: ${img.imageUrl}`,
-  //       ''
-  //     ].join('\n');
-  //   });
+  //   const imageLines = images.map((img, i) => [
+  //     `Anchor: \ue202turn0image${i}`,
+  //     `Title: ${img.title ?? '(no title)'}`,
+  //     `Image URL: ${img.imageUrl}`,
+  //     ''
+  //   ].join('\n'));
+  //   outputLines.push(imageLines.join('\n'));
   // }
 
   // Knowledge Graph
   if (results.knowledgeGraph != null) {
     addSection('Knowledge Graph');
-    output += [
+    const kgLines = [
       `**Title:** ${results.knowledgeGraph.title ?? '(no title)'}`,
       results.knowledgeGraph.type != null
         ? `**Type:** ${results.knowledgeGraph.type}`
@@ -164,15 +187,15 @@ export function formatResultsForLLM(
         )}\n\`\`\``
         : '',
       '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    ].filter(Boolean);
+
+    outputLines.push(kgLines.join('\n\n'));
   }
 
   // Answer Box
   if (results.answerBox != null) {
     addSection('Answer Box');
-    output += [
+    const abLines = [
       results.answerBox.title != null
         ? `**Title:** ${results.answerBox.title}`
         : '',
@@ -188,31 +211,35 @@ export function formatResultsForLLM(
         ? `**Link:** ${results.answerBox.link}`
         : '',
       '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    ].filter(Boolean);
+
+    outputLines.push(abLines.join('\n\n'));
   }
 
   // People also ask
   const peopleAlsoAsk = results.peopleAlsoAsk ?? [];
   if (peopleAlsoAsk.length) {
     addSection('People Also Ask');
+
+    const paaLines: string[] = [];
     peopleAlsoAsk.forEach((p, i) => {
-      output += [
+      const questionLines = [
         `### Question ${i + 1}:`,
         `"${p.question}"`,
-        `${p.snippet != null && p.snippet ? `Snippet: ${p.snippet}}` : ''}`,
+        `${p.snippet != null && p.snippet ? `Snippet: ${p.snippet}` : ''}`,
         `${p.title != null && p.title ? `Title: ${p.title}` : ''}`,
         `${p.link != null && p.link ? `Link: ${p.link}` : ''}`,
         '',
-      ]
-        .filter(Boolean)
-        .join('\n\n');
+      ].filter(Boolean);
+
+      paaLines.push(questionLines.join('\n\n'));
     });
+
+    outputLines.push(paaLines.join(''));
   }
 
   return {
-    output: output.trim(),
+    output: outputLines.join('\n').trim(),
     references,
   };
 }
