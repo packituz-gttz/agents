@@ -1,6 +1,9 @@
 import type * as t from './types';
 import { getDomainName } from './utils';
 
+function addHighlightSection(): string[] {
+  return ['\n## Highlights\n\n', '', ''];
+}
 export function formatResultsForLLM(
   turn: number,
   results: t.SearchResultData
@@ -25,9 +28,7 @@ export function formatResultsForLLM(
         r.date != null ? `Date: ${r.date}` : '',
         r.attribution != null ? `Source: ${r.attribution}` : '',
         '',
-        '\n## Highlights\n\n',
-        '',
-        '',
+        ...((r.highlights?.length ?? 0) > 0 ? addHighlightSection() : ['']),
       ]
         .filter(Boolean)
         .join('\n');
@@ -40,19 +41,22 @@ export function formatResultsForLLM(
 
           if (h.references != null && h.references.length) {
             output += 'Core References:\n';
-            output += h.references
-              .map((ref) => {
-                references.push({
-                  link: ref.reference.originalUrl,
-                  attribution: getDomainName(ref.reference.originalUrl),
-                  title: (
-                    ((ref.reference.title ?? '') || ref.reference.text) ??
-                    ''
-                  ).split('\n')[0],
-                });
-                return `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
-              })
-              .join('\n');
+            for (let j = 0; j < h.references.length; j++) {
+              const ref = h.references[j];
+              references.push({
+                type: ref.type,
+                link: ref.reference.originalUrl,
+                attribution: getDomainName(ref.reference.originalUrl),
+                title: (
+                  ((ref.reference.title ?? '') || ref.reference.text) ??
+                  ''
+                ).split('\n')[0],
+              });
+              if (ref.type !== 'link') {
+                continue;
+              }
+              output += `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}\n`;
+            }
             output += '\n\n';
           }
 
