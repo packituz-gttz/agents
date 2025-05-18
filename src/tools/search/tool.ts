@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { z } from 'zod';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from './types';
 import { createSearchAPI, createSourceProcessor } from './search';
 import { createFirecrawlScraper } from './firecrawl';
@@ -86,6 +87,24 @@ function createSearchProcessor({
         error: error instanceof Error ? error.message : String(error),
       };
     }
+  };
+}
+
+function createOnSearchResults({
+  runnableConfig,
+  onSearchResults,
+}: {
+  runnableConfig: RunnableConfig;
+  onSearchResults?: (
+    results: t.SearchResult,
+    runnableConfig?: RunnableConfig
+  ) => void;
+}) {
+  return function (results: t.SearchResult): void {
+    if (!onSearchResults) {
+      return;
+    }
+    onSearchResults(results, runnableConfig);
   };
 }
 
@@ -180,11 +199,10 @@ export const createSearchTool = (
       const searchResult = await search({
         query,
         country,
-        onSearchResults: _onSearchResults
-          ? (result): void => {
-            _onSearchResults(result, runnableConfig);
-          }
-          : undefined,
+        onSearchResults: createOnSearchResults({
+          runnableConfig,
+          onSearchResults: _onSearchResults,
+        }),
       });
       const turn = runnableConfig.toolCall?.turn ?? 0;
       const { output, references } = formatResultsForLLM(turn, searchResult);
