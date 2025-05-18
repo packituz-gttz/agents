@@ -365,7 +365,7 @@ export const createSourceProcessor = (
                 url,
                 attribution,
                 error: true,
-                content: `Failed to scrape ${url}: ${response.error ?? 'Unknown error'}`,
+                content: '',
               } as t.ScrapeResult;
             })
             .then(async (result) => {
@@ -402,7 +402,7 @@ export const createSourceProcessor = (
               return {
                 url: currentLink,
                 error: true,
-                content: `Failed to scrape ${currentLink}: ${error.message ?? 'Unknown error'}`,
+                content: '',
               };
             });
           promises.push(promise);
@@ -557,20 +557,11 @@ export const createSourceProcessor = (
 
       // Update sources with scraped content
       if (result.data.organic.length > 0) {
-        const organicSources = updateSourcesWithContent(
-          result.data.organic,
-          sourceMap
-        );
-        if (organicSources.length > 0) {
-          result.data.organic = organicSources;
-        }
+        updateSourcesWithContent(result.data.organic, sourceMap);
       }
 
       if (topStories.length > 0) {
-        const topStorySources = updateSourcesWithContent(topStories, sourceMap);
-        if (topStorySources.length > 0) {
-          result.data.topStories = topStorySources;
-        }
+        updateSourcesWithContent(topStories, sourceMap);
       }
 
       return result.data;
@@ -623,7 +614,7 @@ function collectLinks(
 function updateSourcesWithContent<T extends t.ValidSource>(
   sources: T[],
   sourceMap: Map<string, t.ValidSource>
-): T[] {
+): void {
   for (let i = 0; i < sources.length; i++) {
     const source = sources[i];
     const updatedSource = sourceMap.get(source.link);
@@ -634,9 +625,4 @@ function updateSourcesWithContent<T extends t.ValidSource>(
       } as T;
     }
   }
-
-  // Filter out failed sources
-  return sources.filter(
-    (source) => source.content == null || !source.content.startsWith('Failed')
-  ) as T[];
 }
