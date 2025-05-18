@@ -21,13 +21,12 @@ export function formatResultsForLLM(
     for (let i = 0; i < results.organic.length; i++) {
       const r = results.organic[i];
       output += [
-        `# Source ${i}: "${r.title ?? '(no title)'}"`,
+        `\n# Source ${i}: "${r.title ?? '(no title)'}"`,
         `Anchor: \\ue202turn${turn}search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
         r.date != null ? `Date: ${r.date}` : '',
         r.attribution != null ? `Source: ${r.attribution}` : '',
-        '',
         ...((r.highlights?.length ?? 0) > 0 ? addHighlightSection() : ['']),
       ]
         .filter(Boolean)
@@ -40,7 +39,7 @@ export function formatResultsForLLM(
           output += '```text\n' + h.text.trim() + '\n```\n\n';
 
           if (h.references != null && h.references.length) {
-            output += 'Core References:\n';
+            let hasHeader = false;
             for (let j = 0; j < h.references.length; j++) {
               const ref = h.references[j];
               references.push({
@@ -55,9 +54,15 @@ export function formatResultsForLLM(
               if (ref.type !== 'link') {
                 continue;
               }
-              output += `- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}\n`;
+              if (!hasHeader) {
+                output += 'Core References:';
+                hasHeader = true;
+              }
+              output += `\n- ${ref.type}#${ref.originalIndex + 1}: ${ref.reference.originalUrl}\n\t- Anchor: \\ue202turn${turn}ref${references.length - 1}`;
             }
-            output += '\n\n';
+            if (hasHeader) {
+              output += '\n';
+            }
           }
 
           if (hIndex < (r.highlights?.length ?? 0) - 1) {
@@ -179,6 +184,8 @@ export function formatResultsForLLM(
         .join('\n\n');
     });
   }
+
+  output += '\nNote: give as much relevant detail as possible';
   return {
     output: output.trim(),
     references,
