@@ -339,7 +339,7 @@ export const createSourceProcessor = (
     }: {
       query: string;
       links: string[];
-      onGetHighlights?: (link: string) => void;
+      onGetHighlights: t.SearchToolConfig['onGetHighlights'];
     }): Promise<Array<t.ScrapeResult>> => {
       console.log(`Scraping ${links.length} links with Firecrawl`);
       const promises: Array<Promise<t.ScrapeResult>> = [];
@@ -425,7 +425,7 @@ export const createSourceProcessor = (
     links: string[];
     query: string;
     target: number;
-    onGetHighlights?: (link: string) => void;
+    onGetHighlights: t.SearchToolConfig['onGetHighlights'];
     onContentScraped?: (link: string, update?: Partial<t.ValidSource>) => void;
   }): Promise<void> => {
     const initialLinks = links.slice(0, target);
@@ -518,8 +518,9 @@ export const createSourceProcessor = (
 
       const onContentScraped = createSourceUpdateCallback(sourceMap);
       await fetchContents({
-        links: allLinks,
         query,
+        links: allLinks,
+        onGetHighlights,
         onContentScraped,
         target: numElements,
       });

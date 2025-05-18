@@ -562,5 +562,5 @@ export type ProcessSourcesFields = {
   numElements: number;
   query: string;
   proMode: boolean;
-  onGetHighlights?: (link: string) => void;
+  onGetHighlights: SearchToolConfig['onGetHighlights'];
 };
