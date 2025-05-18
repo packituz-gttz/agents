@@ -21,7 +21,7 @@ export function formatResultsForLLM(
     for (let i = 0; i < results.organic.length; i++) {
       const r = results.organic[i];
       output += [
-        `\n# Source ${i}: "${r.title ?? '(no title)'}"`,
+        `\n# Search ${i}: "${r.title ?? '(no title)'}"`,
         `Anchor: \\ue202turn${turn}search${i}`,
         `URL: ${r.link}`,
         r.snippet != null ? `Summary: ${r.snippet}` : '',
