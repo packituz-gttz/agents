@@ -503,27 +503,51 @@ export const createSourceProcessor = (
       }
 
       const sourceMap = new Map<string, t.ValidSource>();
-      const allLinks: string[] = [];
+      const organicLinks: string[] = [];
+      const topStoryLinks: string[] = [];
 
       for (const source of result.data.organic) {
         if (source.link) {
-          allLinks.push(source.link);
+          organicLinks.push(source.link);
+          sourceMap.set(source.link, source);
+        }
+      }
+      for (const source of result.data.topStories ?? []) {
+        if (source.link) {
+          topStoryLinks.push(source.link);
           sourceMap.set(source.link, source);
         }
       }
 
-      if (allLinks.length === 0) {
+      if (organicLinks.length === 0 && topStoryLinks.length === 0) {
         return result.data;
       }
 
       const onContentScraped = createSourceUpdateCallback(sourceMap);
-      await fetchContents({
-        query,
-        links: allLinks,
-        onGetHighlights,
-        onContentScraped,
-        target: numElements,
-      });
+      const promises: Promise<void>[] = [];
+      if (organicLinks.length > 0) {
+        promises.push(
+          fetchContents({
+            query,
+            onGetHighlights,
+            onContentScraped,
+            links: organicLinks,
+            target: numElements,
+          })
+        );
+      }
+      if (topStoryLinks.length > 0) {
+        promises.push(
+          fetchContents({
+            query,
+            onGetHighlights,
+            onContentScraped,
+            links: topStoryLinks,
+            target: numElements,
+          })
+        );
+      }
+      await Promise.all(promises);
 
       for (let i = 0; i < result.data.organic.length; i++) {
         const source = result.data.organic[i];
@@ -535,14 +559,34 @@ export const createSourceProcessor = (
           };
         }
       }
+      for (let i = 0; i < (result.data.topStories ?? []).length; i++) {
+        if (result.data.topStories == null) {
+          break;
+        }
+        const source = result.data.topStories[i];
+        const updatedSource = sourceMap.get(source.link);
+        if (updatedSource) {
+          result.data.topStories[i] = {
+            ...source,
+            ...updatedSource,
+          };
+        }
+      }
 
-      const successfulSources = result.data.organic.filter(
+      const organicSources = result.data.organic.filter(
         (source) =>
           source.content == null || !source.content.startsWith('Failed')
       );
+      if (organicSources.length > 0) {
+        result.data.organic = organicSources;
+      }
 
-      if (successfulSources.length > 0) {
-        result.data.organic = successfulSources;
+      const topStorySources = result.data.topStories?.filter(
+        (source) =>
+          source.content == null || !source.content.startsWith('Failed')
+      );
+      if (topStorySources && topStorySources.length > 0) {
+        result.data.topStories = topStorySources;
       }
       return result.data;
     } catch (error) {
