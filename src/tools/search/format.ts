@@ -2,7 +2,7 @@ import type * as t from './types';
 import { getDomainName } from './utils';
 
 function addHighlightSection(): string[] {
-  return ['\n## Highlights\n\n', '', ''];
+  return ['\n## Highlights', ''];
 }
 
 // Helper function to format a source (organic or top story)
@@ -18,7 +18,7 @@ function formatSource(
 
   // Add the title
   outputLines.push(
-    `\n# ${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} ${index}: ${source.title != null && source.title ? `"${source.title}"` : '(no title)'}`
+    `# ${sourceType.charAt(0).toUpperCase() + sourceType.slice(1)} ${index}: ${source.title != null && source.title ? `"${source.title}"` : '(no title)'}`
   );
   outputLines.push(`\nAnchor: \\ue202turn${turn}${sourceType}${index}`);
   outputLines.push(`URL: ${source.link}`);
