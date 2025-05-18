@@ -503,25 +503,22 @@ export const createSourceProcessor = (
       }
 
       const sourceMap = new Map<string, t.ValidSource>();
-      const organicLinks: string[] = [];
       const organicLinksSet = new Set<string>();
 
-      for (const source of result.data.organic) {
-        if (source.link) {
-          organicLinks.push(source.link);
-          organicLinksSet.add(source.link);
-          sourceMap.set(source.link, source);
-        }
-      }
+      // Collect organic links
+      const organicLinks = collectLinks(
+        result.data.organic,
+        sourceMap,
+        organicLinksSet
+      );
 
-      const topStoryLinks: string[] = [];
+      // Collect top story links, excluding any that are already in organic links
       const topStories = result.data.topStories ?? [];
-      for (const source of topStories) {
-        if (source.link && !organicLinksSet.has(source.link)) {
-          topStoryLinks.push(source.link);
-          sourceMap.set(source.link, source);
-        }
-      }
+      const topStoryLinks = collectLinks(
+        topStories,
+        sourceMap,
+        organicLinksSet
+      );
 
       if (organicLinks.length === 0 && topStoryLinks.length === 0) {
         return result.data;
@@ -530,6 +527,7 @@ export const createSourceProcessor = (
       const onContentScraped = createSourceUpdateCallback(sourceMap);
       const promises: Promise<void>[] = [];
 
+      // Process organic links
       if (organicLinks.length > 0) {
         promises.push(
           fetchContents({
@@ -542,6 +540,7 @@ export const createSourceProcessor = (
         );
       }
 
+      // Process top story links
       if (topStoryLinks.length > 0) {
         promises.push(
           fetchContents({
@@ -556,42 +555,24 @@ export const createSourceProcessor = (
 
       await Promise.all(promises);
 
-      for (let i = 0; i < result.data.organic.length; i++) {
-        const source = result.data.organic[i];
-        const updatedSource = sourceMap.get(source.link);
-        if (updatedSource) {
-          result.data.organic[i] = {
-            ...source,
-            ...updatedSource,
-          };
-        }
-      }
-      for (let i = 0; i < topStories.length; i++) {
-        const source = topStories[i];
-        const updatedSource = sourceMap.get(source.link);
-        if (updatedSource) {
-          topStories[i] = {
-            ...source,
-            ...updatedSource,
-          };
+      // Update sources with scraped content
+      if (result.data.organic.length > 0) {
+        const organicSources = updateSourcesWithContent(
+          result.data.organic,
+          sourceMap
+        );
+        if (organicSources.length > 0) {
+          result.data.organic = organicSources;
         }
       }
 
-      const organicSources = result.data.organic.filter(
-        (source) =>
-          source.content == null || !source.content.startsWith('Failed')
-      );
-      if (organicSources.length > 0) {
-        result.data.organic = organicSources;
+      if (topStories.length > 0) {
+        const topStorySources = updateSourcesWithContent(topStories, sourceMap);
+        if (topStorySources.length > 0) {
+          result.data.topStories = topStorySources;
+        }
       }
 
-      const topStorySources = topStories.filter(
-        (source) =>
-          source.content == null || !source.content.startsWith('Failed')
-      );
-      if (topStorySources.length > 0) {
-        result.data.topStories = topStorySources;
-      }
       return result.data;
     } catch (error) {
       console.error('Error in processSources:', error);
@@ -611,3 +592,51 @@ export const createSourceProcessor = (
     topResults,
   };
 };
+
+/** Helper function to collect links and update sourceMap */
+function collectLinks(
+  sources: Array<t.OrganicResult | t.TopStoryResult>,
+  sourceMap: Map<string, t.ValidSource>,
+  existingLinksSet?: Set<string>
+): string[] {
+  const links: string[] = [];
+
+  for (const source of sources) {
+    if (source.link) {
+      // For topStories, only add if not already in organic links
+      if (existingLinksSet && existingLinksSet.has(source.link)) {
+        continue;
+      }
+
+      links.push(source.link);
+      if (existingLinksSet) {
+        existingLinksSet.add(source.link);
+      }
+      sourceMap.set(source.link, source as t.ValidSource);
+    }
+  }
+
+  return links;
+}
+
+/** Helper function to update sources with scraped content */
+function updateSourcesWithContent<T extends t.ValidSource>(
+  sources: T[],
+  sourceMap: Map<string, t.ValidSource>
+): T[] {
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i];
+    const updatedSource = sourceMap.get(source.link);
+    if (updatedSource) {
+      sources[i] = {
+        ...source,
+        ...updatedSource,
+      } as T;
+    }
+  }
+
+  // Filter out failed sources
+  return sources.filter(
+    (source) => source.content == null || !source.content.startsWith('Failed')
+  ) as T[];
+}
