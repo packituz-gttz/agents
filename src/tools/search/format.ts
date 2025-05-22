@@ -62,6 +62,9 @@ function formatSource(
 
         for (let j = 0; j < h.references.length; j++) {
           const ref = h.references[j];
+          if (ref.reference.originalUrl.includes('mailto:')) {
+            continue;
+          }
           references.push({
             type: ref.type,
             link: ref.reference.originalUrl,
