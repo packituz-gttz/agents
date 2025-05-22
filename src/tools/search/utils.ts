@@ -25,7 +25,7 @@ export const createDefaultLogger = (): t.Logger => {
 };
 
 export const fileExtRegex =
-  /\.(pdf|jpe?g|png|gif|svg|webp|bmp|ico|tiff?|avif|heic|doc[xm]?|xls[xm]?|ppt[xm]?|zip|rar|mp[34]|mov|avi|wav)$/i;
+  /\.(pdf|jpe?g|png|gif|svg|webp|bmp|ico|tiff?|avif|heic|doc[xm]?|xls[xm]?|ppt[xm]?|zip|rar|mp[34]|mov|avi|wav)(?:\?.*)?$/i;
 
 export const getDomainName = (
   link: string,
