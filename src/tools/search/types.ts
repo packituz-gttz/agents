@@ -268,6 +268,10 @@ export type GetSourcesParams = {
   country?: string;
   numResults?: number;
   safeSearch?: SearchToolConfig['safeSearch'];
+  images?: boolean;
+  videos?: boolean;
+  news?: boolean;
+  type?: 'search' | 'images' | 'videos' | 'news';
 };
 
 /** Serper API */
@@ -582,6 +586,7 @@ export type ProcessSourcesFields = {
   result: SearchResult;
   numElements: number;
   query: string;
+  news: boolean;
   proMode: boolean;
   onGetHighlights: SearchToolConfig['onGetHighlights'];
 };
@@ -591,6 +596,9 @@ export type SearchToolSchema = z.ZodObject<
     query: z.ZodString;
     date: z.ZodOptional<z.ZodNativeEnum<typeof DATE_RANGE>>;
     country?: z.ZodOptional<z.ZodString>;
+    images: z.ZodOptional<z.ZodBoolean>;
+    videos: z.ZodOptional<z.ZodBoolean>;
+    news: z.ZodOptional<z.ZodBoolean>;
   },
   'strip',
   z.ZodTypeAny,
@@ -598,10 +606,16 @@ export type SearchToolSchema = z.ZodObject<
     query: string;
     date?: DATE_RANGE;
     country?: unknown;
+    images?: boolean;
+    videos?: boolean;
+    news?: boolean;
   },
   {
     query: string;
     date?: DATE_RANGE;
     country?: unknown;
+    images?: boolean;
+    videos?: boolean;
+    news?: boolean;
   }
 >;

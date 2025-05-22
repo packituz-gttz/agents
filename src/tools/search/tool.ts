@@ -2,7 +2,15 @@ import { z } from 'zod';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from './types';
-import { DATE_RANGE, querySchema, dateSchema, countrySchema } from './schema';
+import {
+  DATE_RANGE,
+  querySchema,
+  dateSchema,
+  countrySchema,
+  imagesSchema,
+  videosSchema,
+  newsSchema,
+} from './schema';
 import { createSearchAPI, createSourceProcessor } from './search';
 import { createFirecrawlScraper } from './firecrawl';
 import { expandHighlights } from './highlights';
@@ -10,6 +18,160 @@ import { formatResultsForLLM } from './format';
 import { createDefaultLogger } from './utils';
 import { createReranker } from './rerankers';
 import { Constants } from '@/common';
+
+/**
+ * Executes parallel searches and merges the results
+ */
+async function executeParallelSearches({
+  searchAPI,
+  query,
+  date,
+  country,
+  safeSearch,
+  images,
+  videos,
+  news,
+  logger,
+}: {
+  searchAPI: ReturnType<typeof createSearchAPI>;
+  query: string;
+  date?: DATE_RANGE;
+  country?: string;
+  safeSearch: t.SearchToolConfig['safeSearch'];
+  images: boolean;
+  videos: boolean;
+  news: boolean;
+  logger: t.Logger;
+}): Promise<t.SearchResult> {
+  // Prepare all search tasks to run in parallel
+  const searchTasks: Promise<t.SearchResult>[] = [
+    // Main search
+    searchAPI.getSources({
+      query,
+      date,
+      country,
+      safeSearch,
+    }),
+  ];
+
+  if (images) {
+    searchTasks.push(
+      searchAPI
+        .getSources({
+          query,
+          date,
+          country,
+          safeSearch,
+          type: 'images',
+        })
+        .catch((error) => {
+          logger.error('Error fetching images:', error);
+          return {
+            success: false,
+            error: `Images search failed: ${error instanceof Error ? error.message : String(error)}`,
+          };
+        })
+    );
+  }
+  if (videos) {
+    searchTasks.push(
+      searchAPI
+        .getSources({
+          query,
+          date,
+          country,
+          safeSearch,
+          type: 'videos',
+        })
+        .catch((error) => {
+          logger.error('Error fetching videos:', error);
+          return {
+            success: false,
+            error: `Videos search failed: ${error instanceof Error ? error.message : String(error)}`,
+          };
+        })
+    );
+  }
+  if (news) {
+    searchTasks.push(
+      searchAPI
+        .getSources({
+          query,
+          date,
+          country,
+          safeSearch,
+          type: 'news',
+        })
+        .catch((error) => {
+          logger.error('Error fetching news:', error);
+          return {
+            success: false,
+            error: `News search failed: ${error instanceof Error ? error.message : String(error)}`,
+          };
+        })
+    );
+  }
+
+  // Run all searches in parallel
+  const results = await Promise.all(searchTasks);
+
+  // Get the main search result (first result)
+  const mainResult = results[0];
+  if (!mainResult.success) {
+    throw new Error(mainResult.error ?? 'Search failed');
+  }
+
+  // Merge additional results with the main results
+  const mergedResults = { ...mainResult.data };
+
+  // Convert existing news to topStories if present
+  if (mergedResults.news !== undefined && mergedResults.news.length > 0) {
+    const existingNewsAsTopStories = mergedResults.news
+      .filter((newsItem) => newsItem.link !== undefined && newsItem.link !== '')
+      .map((newsItem) => ({
+        title: newsItem.title ?? '',
+        link: newsItem.link ?? '',
+        source: newsItem.source ?? '',
+        date: newsItem.date ?? '',
+        imageUrl: newsItem.imageUrl ?? '',
+        processed: false,
+      }));
+    mergedResults.topStories = [
+      ...(mergedResults.topStories ?? []),
+      ...existingNewsAsTopStories,
+    ];
+    delete mergedResults.news;
+  }
+
+  results.slice(1).forEach((result) => {
+    if (result.success && result.data !== undefined) {
+      if (result.data.images !== undefined && result.data.images.length > 0) {
+        mergedResults.images = [
+          ...(mergedResults.images ?? []),
+          ...result.data.images,
+        ];
+      }
+      if (result.data.videos !== undefined && result.data.videos.length > 0) {
+        mergedResults.videos = [
+          ...(mergedResults.videos ?? []),
+          ...result.data.videos,
+        ];
+      }
+      if (result.data.news !== undefined && result.data.news.length > 0) {
+        const newsAsTopStories = result.data.news.map((newsItem) => ({
+          ...newsItem,
+          link: newsItem.link ?? '',
+        }));
+        mergedResults.topStories = [
+          ...(mergedResults.topStories ?? []),
+          ...newsAsTopStories,
+        ];
+      }
+    }
+  });
+
+  return { success: true, data: mergedResults };
+}
 
 function createSearchProcessor({
   searchAPI,
@@ -31,6 +193,9 @@ function createSearchProcessor({
     proMode = true,
     maxSources = 5,
     onSearchResults,
+    images = false,
+    videos = false,
+    news = false,
   }: {
     query: string;
     country?: string;
@@ -38,27 +203,35 @@ function createSearchProcessor({
     proMode?: boolean;
     maxSources?: number;
     onSearchResults: t.SearchToolConfig['onSearchResults'];
+    images?: boolean;
+    videos?: boolean;
+    news?: boolean;
   }): Promise<t.SearchResultData> {
     try {
-      const result = await searchAPI.getSources({
+      // Execute parallel searches and merge results
+      const searchResult = await executeParallelSearches({
+        searchAPI,
         query,
         date,
         country,
         safeSearch,
+        images,
+        videos,
+        news,
+        logger,
       });
-      onSearchResults?.(result);
 
-      if (!result.success) {
-        throw new Error(result.error ?? 'Search failed');
-      }
+      onSearchResults?.(searchResult);
 
       const processedSources = await sourceProcessor.processSources({
         query,
-        result,
+        news,
+        result: searchResult,
         proMode,
         onGetHighlights,
         numElements: maxSources,
       });
+
       return expandHighlights(processedSources);
     } catch (error) {
       logger.error('Error in search:', error);
@@ -66,6 +239,8 @@ function createSearchProcessor({
         organic: [],
         topStories: [],
         images: [],
+        videos: [],
+        news: [],
         relatedSearches: [],
         error: error instanceof Error ? error.message : String(error),
       };
@@ -99,12 +274,15 @@ function createTool({
 }): DynamicStructuredTool<typeof schema> {
   return tool<typeof schema>(
     async (params, runnableConfig) => {
-      const { query, date, country: _c } = params;
+      const { query, date, country: _c, images, videos, news } = params;
       const country = typeof _c === 'string' && _c ? _c : undefined;
       const searchResult = await search({
         query,
         date,
         country,
+        images,
+        videos,
+        news,
         onSearchResults: createOnSearchResults({
           runnableConfig,
           onSearchResults: _onSearchResults,
@@ -181,9 +359,15 @@ export const createSearchTool = (
     query: z.ZodString;
     date: z.ZodOptional<z.ZodNativeEnum<typeof DATE_RANGE>>;
     country?: z.ZodOptional<z.ZodString>;
+    images: z.ZodOptional<z.ZodBoolean>;
+    videos: z.ZodOptional<z.ZodBoolean>;
+    news: z.ZodOptional<z.ZodBoolean>;
   } = {
     query: querySchema,
     date: dateSchema,
+    images: imagesSchema,
+    videos: videosSchema,
+    news: newsSchema,
   };
 
   if (searchProvider === 'serper') {

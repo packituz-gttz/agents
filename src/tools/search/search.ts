@@ -140,6 +140,7 @@ const createSerperAPI = (
     country,
     safeSearch,
     numResults = 8,
+    type,
   }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
       return { success: false, error: 'Query cannot be empty' };
@@ -152,6 +153,12 @@ const createSerperAPI = (
         safe: safe[safeSearch ?? 1],
         num: Math.min(Math.max(1, numResults), 10),
       };
+
+      // Set the search type if provided
+      if (type) {
+        payload.type = type;
+      }
+
       if (date != null) {
         payload.tbs = `qdr:${date}`;
       }
@@ -160,8 +167,18 @@ const createSerperAPI = (
         payload['gl'] = country.toLowerCase();
       }
 
+      // Determine the API endpoint based on the search type
+      let apiEndpoint = config.apiUrl;
+      if (type === 'images') {
+        apiEndpoint = 'https://google.serper.dev/images';
+      } else if (type === 'videos') {
+        apiEndpoint = 'https://google.serper.dev/videos';
+      } else if (type === 'news') {
+        apiEndpoint = 'https://google.serper.dev/news';
+      }
+
       const response = await axios.post<t.SerperResultData>(
-        config.apiUrl,
+        apiEndpoint,
         payload,
         {
           headers: {
@@ -181,6 +198,8 @@ const createSerperAPI = (
         peopleAlsoAsk: data.peopleAlsoAsk,
         knowledgeGraph: data.knowledgeGraph,
         relatedSearches: data.relatedSearches,
+        videos: data.videos ?? [],
+        news: data.news ?? [],
       };
 
       return { success: true, data: results };
@@ -214,6 +233,7 @@ const createSearXNGAPI = (
   const getSources = async ({
     query,
     numResults = 8,
+    type,
   }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
       return { success: false, error: 'Query cannot be empty' };
@@ -230,12 +250,22 @@ const createSearXNGAPI = (
         searchUrl = searchUrl.replace(/\/$/, '') + '/search';
       }
 
+      // Determine the search category based on the type
+      let category = 'general';
+      if (type === 'images') {
+        category = 'images';
+      } else if (type === 'videos') {
+        category = 'videos';
+      } else if (type === 'news') {
+        category = 'news';
+      }
+
       // Prepare parameters for SearXNG
       const params: t.SearxNGSearchPayload = {
         q: query,
         format: 'json',
         pageno: 1,
-        categories: 'general',
+        categories: category,
         language: 'all',
         safesearch: 0,
         engines: 'google,bing,duckduckgo',
@@ -283,6 +313,8 @@ const createSearXNGAPI = (
         topStories: [],
         // Use undefined instead of null for optional properties
         relatedSearches: data.suggestions ?? [],
+        videos: [],
+        news: [],
       };
 
       return { success: true, data: results };
@@ -473,6 +505,7 @@ export const createSourceProcessor = (
     result,
     numElements,
     query,
+    news,
     proMode = true,
     onGetHighlights,
   }: t.ProcessSourcesFields): Promise<t.SearchResultData> => {
@@ -540,7 +573,7 @@ export const createSourceProcessor = (
         organicLinksSet
       );
 
-      if (organicLinks.length === 0 && topStoryLinks.length === 0) {
+      if (organicLinks.length === 0 && (topStoryLinks.length === 0 || !news)) {
         return result.data;
       }
 
@@ -561,7 +594,7 @@ export const createSourceProcessor = (
       }
 
       // Process top story links
-      if (topStoryLinks.length > 0) {
+      if (news && topStoryLinks.length > 0) {
         promises.push(
           fetchContents({
             query,
@@ -575,12 +608,11 @@ export const createSourceProcessor = (
 
       await Promise.all(promises);
 
-      // Update sources with scraped content
       if (result.data.organic.length > 0) {
         updateSourcesWithContent(result.data.organic, sourceMap);
       }
 
-      if (topStories.length > 0) {
+      if (news && topStories.length > 0) {
         updateSourcesWithContent(topStories, sourceMap);
       }
 

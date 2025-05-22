@@ -47,3 +47,17 @@ export const countrySchema = z
   .string()
   .optional()
   .describe(DEFAULT_COUNTRY_DESCRIPTION);
+export const imagesSchema = z
+  .boolean()
+  .optional()
+  .describe('Whether to also run an image search.');
+
+export const videosSchema = z
+  .boolean()
+  .optional()
+  .describe('Whether to also run a video search.');
+
+export const newsSchema = z
+  .boolean()
+  .optional()
+  .describe('Whether to also run a news search.');
