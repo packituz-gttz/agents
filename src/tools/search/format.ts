@@ -62,9 +62,6 @@ function formatSource(
 
         for (let j = 0; j < h.references.length; j++) {
           const ref = h.references[j];
-          if (ref.type !== 'link') {
-            continue;
-          }
           references.push({
             type: ref.type,
             link: ref.reference.originalUrl,
@@ -74,6 +71,10 @@ function formatSource(
               ''
             ).split('\n')[0],
           });
+
+          if (ref.type !== 'link') {
+            continue;
+          }
 
           if (!hasHeader) {
             refLines.push('Core References:');
