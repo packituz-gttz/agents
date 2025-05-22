@@ -409,6 +409,10 @@ export const createSourceProcessor = (
                   attribution,
                   content: chunker.cleanText(content),
                 } as t.ScrapeResult;
+              } else {
+                logger_.error(
+                  `Error scraping ${url}: ${response.error ?? 'Unknown error'}`
+                );
               }
 
               return {
@@ -422,8 +426,7 @@ export const createSourceProcessor = (
               try {
                 if (result.error != null) {
                   logger_.error(
-                    `Error scraping ${result.url}: ${result.content}`,
-                    result.error
+                    `Error scraping ${result.url}: ${result.content}`
                   );
                   return {
                     ...result,
