@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { z } from 'zod';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import type { RunnableConfig } from '@langchain/core/runnables';
@@ -7,6 +6,7 @@ import { createSearchAPI, createSourceProcessor } from './search';
 import { createFirecrawlScraper } from './firecrawl';
 import { expandHighlights } from './highlights';
 import { formatResultsForLLM } from './format';
+import { createDefaultLogger } from './utils';
 import { createReranker } from './rerankers';
 import { Constants } from '@/common';
 
@@ -44,11 +44,13 @@ function createSearchProcessor({
   safeSearch,
   sourceProcessor,
   onGetHighlights,
+  logger,
 }: {
   safeSearch: t.SearchToolConfig['safeSearch'];
   searchAPI: ReturnType<typeof createSearchAPI>;
   sourceProcessor: ReturnType<typeof createSourceProcessor>;
   onGetHighlights: t.SearchToolConfig['onGetHighlights'];
+  logger: t.Logger;
 }) {
   return async function ({
     query,
@@ -80,7 +82,7 @@ function createSearchProcessor({
       });
       return expandHighlights(processedSources);
     } catch (error) {
-      console.error('Error in search:', error);
+      logger.error('Error in search:', error);
       return {
         organic: [],
         topStories: [],
@@ -193,6 +195,8 @@ export const createSearchTool = (
     onGetHighlights,
   } = config;
 
+  const logger = config.logger || createDefaultLogger();
+
   const querySchema = z.string().describe(DEFAULT_QUERY_DESCRIPTION);
   const schemaObject: {
     query: z.ZodString;
@@ -227,10 +231,11 @@ export const createSearchTool = (
     rerankerType,
     jinaApiKey,
     cohereApiKey,
+    logger,
   });
 
   if (!selectedReranker) {
-    console.warn('No reranker selected. Using default ranking.');
+    logger.warn('No reranker selected. Using default ranking.');
   }
 
   const sourceProcessor = createSourceProcessor(
@@ -239,6 +244,7 @@ export const createSearchTool = (
       topResults,
       strategies,
       filterContent,
+      logger,
     },
     firecrawlScraper
   );
@@ -248,6 +254,7 @@ export const createSearchTool = (
     safeSearch,
     sourceProcessor,
     onGetHighlights,
+    logger,
   });
 
   return createTool({

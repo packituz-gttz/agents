@@ -1,9 +1,33 @@
 /* eslint-disable no-console */
+
 import type * as t from './types';
+
+/**
+ * Singleton instance of the default logger
+ */
+let defaultLoggerInstance: t.Logger | null = null;
+
+/**
+ * Creates a default logger that maps to console methods
+ * Uses a singleton pattern to avoid creating multiple instances
+ * @returns A default logger that implements the Logger interface
+ */
+export const createDefaultLogger = (): t.Logger => {
+  if (!defaultLoggerInstance) {
+    defaultLoggerInstance = {
+      error: console.error,
+      warn: console.warn,
+      info: console.info,
+      debug: console.debug,
+    } as t.Logger;
+  }
+  return defaultLoggerInstance;
+};
 
 export const getDomainName = (
   link: string,
-  metadata?: t.ScrapeMetadata
+  metadata?: t.ScrapeMetadata,
+  logger?: t.Logger
 ): string | undefined => {
   try {
     const url = metadata?.sourceURL ?? metadata?.url ?? (link || '');
@@ -13,7 +37,11 @@ export const getDomainName = (
     }
   } catch (e) {
     // URL parsing failed
-    console.error('Error parsing URL:', e);
+    if (logger) {
+      logger.error('Error parsing URL:', e);
+    } else {
+      console.error('Error parsing URL:', e);
+    }
   }
 
   return;
@@ -21,9 +49,10 @@ export const getDomainName = (
 
 export function getAttribution(
   link: string,
-  metadata?: t.ScrapeMetadata
+  metadata?: t.ScrapeMetadata,
+  logger?: t.Logger
 ): string | undefined {
-  if (!metadata) return getDomainName(link, metadata);
+  if (!metadata) return getDomainName(link, metadata, logger);
 
   const twitterSite = metadata['twitter:site'];
   const twitterSiteFormatted =
@@ -43,5 +72,5 @@ export function getAttribution(
     return attribution;
   }
 
-  return getDomainName(link, metadata);
+  return getDomainName(link, metadata, logger);
 }

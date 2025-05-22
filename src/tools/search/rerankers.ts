@@ -1,12 +1,14 @@
-/* eslint-disable no-console */
 import axios from 'axios';
 import type * as t from './types';
+import { createDefaultLogger } from './utils';
 
 export abstract class BaseReranker {
   protected apiKey: string | undefined;
+  protected logger: t.Logger;
 
-  constructor() {
+  constructor(logger?: t.Logger) {
     // Each specific reranker will set its API key
+    this.logger = logger || createDefaultLogger();
   }
 
   abstract rerank(
@@ -25,16 +27,22 @@ export abstract class BaseReranker {
   }
 
   protected logDocumentSamples(documents: string[]): void {
-    console.log('Sample documents being sent to API:');
+    this.logger.debug('Sample documents being sent to API:');
     for (let i = 0; i < Math.min(3, documents.length); i++) {
-      console.log(`Document ${i}: ${documents[i].substring(0, 100)}...`);
+      this.logger.debug(`Document ${i}: ${documents[i].substring(0, 100)}...`);
     }
   }
 }
 
 export class JinaReranker extends BaseReranker {
-  constructor({ apiKey = process.env.JINA_API_KEY }: { apiKey?: string }) {
-    super();
+  constructor({
+    apiKey = process.env.JINA_API_KEY,
+    logger,
+  }: {
+    apiKey?: string;
+    logger?: t.Logger;
+  }) {
+    super(logger);
     this.apiKey = apiKey;
   }
 
@@ -43,11 +51,11 @@ export class JinaReranker extends BaseReranker {
     documents: string[],
     topK: number = 5
   ): Promise<t.Highlight[]> {
-    console.log(`Reranking ${documents.length} documents with Jina`);
+    this.logger.debug(`Reranking ${documents.length} documents with Jina`);
 
     try {
       if (this.apiKey == null || this.apiKey === '') {
-        console.warn('JINA_API_KEY is not set. Using default ranking.');
+        this.logger.warn('JINA_API_KEY is not set. Using default ranking.');
         return this.getDefaultRanking(documents, topK);
       }
 
@@ -73,14 +81,14 @@ export class JinaReranker extends BaseReranker {
       );
 
       // Log the response data structure
-      console.log('Jina API response structure:');
-      console.log('Model:', response.data?.model);
-      console.log('Usage:', response.data?.usage);
-      console.log('Results count:', response.data?.results.length);
+      this.logger.debug('Jina API response structure:');
+      this.logger.debug('Model:', response.data?.model);
+      this.logger.debug('Usage:', response.data?.usage);
+      this.logger.debug('Results count:', response.data?.results.length);
 
       // Log a sample of the results
       if ((response.data?.results.length ?? 0) > 0) {
-        console.log(
+        this.logger.debug(
           'Sample result:',
           JSON.stringify(response.data?.results[0], null, 2)
         );
@@ -108,13 +116,13 @@ export class JinaReranker extends BaseReranker {
           return { text, score };
         });
       } else {
-        console.warn(
+        this.logger.warn(
           'Unexpected response format from Jina API. Using default ranking.'
         );
         return this.getDefaultRanking(documents, topK);
       }
     } catch (error) {
-      console.error('Error using Jina reranker:', error);
+      this.logger.error('Error using Jina reranker:', error);
       // Fallback to default ranking on error
       return this.getDefaultRanking(documents, topK);
     }
@@ -122,8 +130,14 @@ export class JinaReranker extends BaseReranker {
 }
 
 export class CohereReranker extends BaseReranker {
-  constructor({ apiKey = process.env.COHERE_API_KEY }: { apiKey?: string }) {
-    super();
+  constructor({
+    apiKey = process.env.COHERE_API_KEY,
+    logger,
+  }: {
+    apiKey?: string;
+    logger?: t.Logger;
+  }) {
+    super(logger);
     this.apiKey = apiKey;
   }
 
@@ -132,11 +146,11 @@ export class CohereReranker extends BaseReranker {
     documents: string[],
     topK: number = 5
   ): Promise<t.Highlight[]> {
-    console.log(`Reranking ${documents.length} documents with Cohere`);
+    this.logger.debug(`Reranking ${documents.length} documents with Cohere`);
 
     try {
       if (this.apiKey == null || this.apiKey === '') {
-        console.warn('COHERE_API_KEY is not set. Using default ranking.');
+        this.logger.warn('COHERE_API_KEY is not set. Using default ranking.');
         return this.getDefaultRanking(documents, topK);
       }
 
@@ -161,14 +175,14 @@ export class CohereReranker extends BaseReranker {
       );
 
       // Log the response data structure
-      console.log('Cohere API response structure:');
-      console.log('ID:', response.data?.id);
-      console.log('Meta:', response.data?.meta);
-      console.log('Results count:', response.data?.results.length);
+      this.logger.debug('Cohere API response structure:');
+      this.logger.debug('ID:', response.data?.id);
+      this.logger.debug('Meta:', response.data?.meta);
+      this.logger.debug('Results count:', response.data?.results.length);
 
       // Log a sample of the results
       if ((response.data?.results.length ?? 0) > 0) {
-        console.log(
+        this.logger.debug(
           'Sample result:',
           JSON.stringify(response.data?.results[0], null, 2)
         );
@@ -182,13 +196,13 @@ export class CohereReranker extends BaseReranker {
           return { text, score };
         });
       } else {
-        console.warn(
+        this.logger.warn(
           'Unexpected response format from Cohere API. Using default ranking.'
         );
         return this.getDefaultRanking(documents, topK);
       }
     } catch (error) {
-      console.error('Error using Cohere reranker:', error);
+      this.logger.error('Error using Cohere reranker:', error);
       // Fallback to default ranking on error
       return this.getDefaultRanking(documents, topK);
     }
@@ -196,8 +210,8 @@ export class CohereReranker extends BaseReranker {
 }
 
 export class InfinityReranker extends BaseReranker {
-  constructor() {
-    super();
+  constructor(logger?: t.Logger) {
+    super(logger);
     // No API key needed for the placeholder implementation
   }
 
@@ -206,7 +220,7 @@ export class InfinityReranker extends BaseReranker {
     documents: string[],
     topK: number = 5
   ): Promise<t.Highlight[]> {
-    console.log(
+    this.logger.debug(
       `Reranking ${documents.length} documents with Infinity (placeholder)`
     );
     // This would be replaced with actual Infinity reranker implementation
@@ -221,24 +235,31 @@ export const createReranker = (config: {
   rerankerType: t.RerankerType;
   jinaApiKey?: string;
   cohereApiKey?: string;
+  logger?: t.Logger;
 }): BaseReranker | undefined => {
-  const { rerankerType, jinaApiKey, cohereApiKey } = config;
+  const { rerankerType, jinaApiKey, cohereApiKey, logger } = config;
+
+  // Create a default logger if none is provided
+  const defaultLogger = logger || createDefaultLogger();
 
   switch (rerankerType.toLowerCase()) {
   case 'jina':
-    return new JinaReranker({ apiKey: jinaApiKey });
+    return new JinaReranker({ apiKey: jinaApiKey, logger: defaultLogger });
   case 'cohere':
-    return new CohereReranker({ apiKey: cohereApiKey });
+    return new CohereReranker({
+      apiKey: cohereApiKey,
+      logger: defaultLogger,
+    });
   case 'infinity':
-    return new InfinityReranker();
+    return new InfinityReranker(defaultLogger);
   case 'none':
-    console.log('Skipping reranking as reranker is set to "none"');
+    defaultLogger.debug('Skipping reranking as reranker is set to "none"');
     return undefined;
   default:
-    console.warn(
+    defaultLogger.warn(
       `Unknown reranker type: ${rerankerType}. Defaulting to InfinityReranker.`
     );
-    return new JinaReranker({ apiKey: jinaApiKey });
+    return new JinaReranker({ apiKey: jinaApiKey, logger: defaultLogger });
   }
 };
 

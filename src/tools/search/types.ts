@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Logger as WinstonLogger } from 'winston';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { BaseReranker } from './rerankers';
 
@@ -86,6 +87,7 @@ export interface ProcessSourcesConfig {
   strategies?: string[];
   filterContent?: boolean;
   reranker?: BaseReranker;
+  logger?: Logger;
 }
 
 export interface FirecrawlConfig {
@@ -137,10 +139,12 @@ export interface CohereRerankerResponse {
 
 export type SafeSearchLevel = 0 | 1 | 2;
 
+export type Logger = WinstonLogger;
 export interface SearchToolConfig
   extends SearchConfig,
     ProcessSourcesConfig,
     FirecrawlConfig {
+  logger?: Logger;
   safeSearch?: SafeSearchLevel;
   jinaApiKey?: string;
   cohereApiKey?: string;
@@ -254,6 +258,7 @@ export interface FirecrawlScraperConfig {
   apiUrl?: string;
   formats?: string[];
   timeout?: number;
+  logger?: Logger;
 }
 
 export type GetSourcesParams = {

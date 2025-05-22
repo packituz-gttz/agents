@@ -1,10 +1,9 @@
-/* eslint-disable no-console */
 import axios from 'axios';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import type * as t from './types';
+import { getAttribution, createDefaultLogger } from './utils';
 import { FirecrawlScraper } from './firecrawl';
 import { BaseReranker } from './rerankers';
-import { getAttribution } from './utils';
 
 const chunker = {
   cleanText: (text: string): string => {
@@ -52,12 +51,14 @@ const chunker = {
       chunkSize?: number;
       chunkOverlap?: number;
       separators?: string[];
-    }
+    },
+    logger?: t.Logger
   ): Promise<string[][]> => {
     // Split multiple texts
+    const logger_ = logger || createDefaultLogger();
     const promises = texts.map((text) =>
       chunker.splitText(text, options).catch((error) => {
-        console.error('Error splitting text:', error);
+        logger_.error('Error splitting text:', error);
         return [text];
       })
     );
@@ -82,18 +83,22 @@ const getHighlights = async ({
   content,
   reranker,
   topResults = 5,
+  logger,
 }: {
   content: string;
   query: string;
   reranker?: BaseReranker;
   topResults?: number;
+  logger?: t.Logger;
 }): Promise<t.Highlight[] | undefined> => {
+  const logger_ = logger || createDefaultLogger();
+
   if (!content) {
-    console.warn('No content provided for highlights');
+    logger_.warn('No content provided for highlights');
     return;
   }
   if (!reranker) {
-    console.warn('No reranker provided for highlights');
+    logger_.warn('No reranker provided for highlights');
     return;
   }
 
@@ -102,14 +107,14 @@ const getHighlights = async ({
     if (Array.isArray(documents)) {
       return await reranker.rerank(query, documents, topResults);
     } else {
-      console.error(
+      logger_.error(
         'Expected documents to be an array, got:',
         typeof documents
       );
       return;
     }
   } catch (error) {
-    console.error('Error in content processing:', error);
+    logger_.error('Error in content processing:', error);
     return;
   }
 };
@@ -330,8 +335,10 @@ export const createSourceProcessor = (
     // strategies = ['no_extraction'],
     // filterContent = true,
     reranker,
+    logger,
   } = config;
 
+  const logger_ = logger || createDefaultLogger();
   const firecrawlScraper = scraperInstance;
 
   const webScraper = {
@@ -344,7 +351,7 @@ export const createSourceProcessor = (
       links: string[];
       onGetHighlights: t.SearchToolConfig['onGetHighlights'];
     }): Promise<Array<t.ScrapeResult>> => {
-      console.log(`Scraping ${links.length} links with Firecrawl`);
+      logger_.debug(`Scraping ${links.length} links with Firecrawl`);
       const promises: Array<Promise<t.ScrapeResult>> = [];
       try {
         for (let i = 0; i < links.length; i++) {
@@ -352,7 +359,11 @@ export const createSourceProcessor = (
           const promise: Promise<t.ScrapeResult> = firecrawlScraper
             .scrapeUrl(currentLink, {})
             .then(([url, response]) => {
-              const attribution = getAttribution(url, response.data?.metadata);
+              const attribution = getAttribution(
+                url,
+                response.data?.metadata,
+                logger_
+              );
               if (response.success && response.data) {
                 const [content, references] =
                   firecrawlScraper.extractContent(response);
@@ -374,8 +385,9 @@ export const createSourceProcessor = (
             .then(async (result) => {
               try {
                 if (result.error != null) {
-                  console.error(
-                    `Error scraping ${result.url}: ${result.content}`
+                  logger_.error(
+                    `Error scraping ${result.url}: ${result.content}`,
+                    result.error
                   );
                   return {
                     ...result,
@@ -385,6 +397,7 @@ export const createSourceProcessor = (
                   query,
                   reranker,
                   content: result.content,
+                  logger: logger_,
                 });
                 if (onGetHighlights) {
                   onGetHighlights(result.url);
@@ -394,14 +407,14 @@ export const createSourceProcessor = (
                   highlights,
                 };
               } catch (error) {
-                console.error('Error processing scraped content:', error);
+                logger_.error('Error processing scraped content:', error);
                 return {
                   ...result,
                 };
               }
             })
             .catch((error) => {
-              console.error(`Error scraping ${currentLink}:`, error);
+              logger_.error(`Error scraping ${currentLink}:`, error);
               return {
                 url: currentLink,
                 error: true,
@@ -412,7 +425,7 @@ export const createSourceProcessor = (
         }
         return await Promise.all(promises);
       } catch (error) {
-        console.error('Error in scrapeMany:', error);
+        logger_.error('Error in scrapeMany:', error);
         return [];
       }
     },
@@ -569,7 +582,7 @@ export const createSourceProcessor = (
 
       return result.data;
     } catch (error) {
-      console.error('Error in processSources:', error);
+      logger_.error('Error in processSources:', error);
       return {
         organic: [],
         topStories: [],

@@ -1,7 +1,7 @@
-/* eslint-disable no-console */
 import axios from 'axios';
 import { processContent } from './content';
 import type * as t from './types';
+import { createDefaultLogger } from './utils';
 
 /**
  * Firecrawl scraper implementation
@@ -12,6 +12,7 @@ export class FirecrawlScraper {
   private apiUrl: string;
   private defaultFormats: string[];
   private timeout: number;
+  private logger: t.Logger;
 
   constructor(config: t.FirecrawlScraperConfig = {}) {
     this.apiKey = config.apiKey ?? process.env.FIRECRAWL_API_KEY ?? '';
@@ -25,11 +26,15 @@ export class FirecrawlScraper {
     this.defaultFormats = config.formats ?? ['markdown', 'html'];
     this.timeout = config.timeout ?? 15000;
 
+    this.logger = config.logger || createDefaultLogger();
+
     if (!this.apiKey) {
-      console.warn('FIRECRAWL_API_KEY is not set. Scraping will not work.');
+      this.logger.warn('FIRECRAWL_API_KEY is not set. Scraping will not work.');
     }
 
-    console.log(`Firecrawl scraper initialized with API URL: ${this.apiUrl}`);
+    this.logger.debug(
+      `Firecrawl scraper initialized with API URL: ${this.apiUrl}`
+    );
   }
 
   /**
@@ -107,7 +112,7 @@ export class FirecrawlScraper {
         );
         return [markdown, rest];
       } catch (error) {
-        console.error('Error processing content:', error);
+        this.logger.error('Error processing content:', error);
         return [response.data.markdown, undefined];
       }
     } else if (response.data.markdown != null) {
