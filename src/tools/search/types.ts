@@ -135,10 +135,13 @@ export interface CohereRerankerResponse {
   };
 }
 
+export type SafeSearchLevel = 0 | 1 | 2;
+
 export interface SearchToolConfig
   extends SearchConfig,
     ProcessSourcesConfig,
     FirecrawlConfig {
+  safeSearch?: SafeSearchLevel;
   jinaApiKey?: string;
   cohereApiKey?: string;
   rerankerType?: RerankerType;
@@ -257,6 +260,7 @@ export type GetSourcesParams = {
   query: string;
   country?: string;
   numResults?: number;
+  safeSearch?: SearchToolConfig['safeSearch'];
 };
 
 /** Serper API */

@@ -132,6 +132,7 @@ const createSerperAPI = (
   const getSources = async ({
     query,
     country,
+    safeSearch,
     numResults = 8,
   }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
@@ -139,8 +140,10 @@ const createSerperAPI = (
     }
 
     try {
+      const safe = ['off', 'moderate', 'active'] as const;
       const payload: t.SerperSearchPayload = {
         q: query,
+        safe: safe[safeSearch ?? 1],
         num: Math.min(Math.max(1, numResults), 10),
       };
 

@@ -41,9 +41,11 @@ Examples:
 
 function createSearchProcessor({
   searchAPI,
+  safeSearch,
   sourceProcessor,
   onGetHighlights,
 }: {
+  safeSearch: t.SearchToolConfig['safeSearch'];
   searchAPI: ReturnType<typeof createSearchAPI>;
   sourceProcessor: ReturnType<typeof createSourceProcessor>;
   onGetHighlights: t.SearchToolConfig['onGetHighlights'];
@@ -57,12 +59,12 @@ function createSearchProcessor({
   }: {
     query: string;
     country?: string;
-    maxSources?: number;
     proMode?: boolean;
+    maxSources?: number;
     onSearchResults: t.SearchToolConfig['onSearchResults'];
   }): Promise<t.SearchResultData> {
     try {
-      const result = await searchAPI.getSources({ query, country });
+      const result = await searchAPI.getSources({ query, country, safeSearch });
       onSearchResults?.(result);
 
       if (!result.success) {
@@ -181,6 +183,7 @@ export const createSearchTool = (
     topResults = 5,
     strategies = ['no_extraction'],
     filterContent = true,
+    safeSearch = 1,
     firecrawlApiKey,
     firecrawlApiUrl,
     firecrawlFormats = ['markdown', 'html'],
@@ -242,6 +245,7 @@ export const createSearchTool = (
 
   const search = createSearchProcessor({
     searchAPI,
+    safeSearch,
     sourceProcessor,
     onGetHighlights,
   });
