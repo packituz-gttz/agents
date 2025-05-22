@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from './types';
+import { DATE_RANGE, querySchema, dateSchema, countrySchema } from './schema';
 import { createSearchAPI, createSourceProcessor } from './search';
 import { createFirecrawlScraper } from './firecrawl';
 import { expandHighlights } from './highlights';
@@ -9,35 +10,6 @@ import { formatResultsForLLM } from './format';
 import { createDefaultLogger } from './utils';
 import { createReranker } from './rerankers';
 import { Constants } from '@/common';
-
-const DEFAULT_QUERY_DESCRIPTION = `
-GUIDELINES:
-- Start broad, then narrow: Begin with key concepts, then refine with specifics
-- Think like sources: Use terminology experts would use in the field
-- Consider perspective: Frame queries from different viewpoints for better results
-- Quality over quantity: A precise 3-4 word query often beats lengthy sentences
-
-TECHNIQUES (combine for power searches):
-- EXACT PHRASES: Use quotes ("climate change report")
-- EXCLUDE TERMS: Use minus to remove unwanted results (-wikipedia)
-- SITE-SPECIFIC: Restrict to websites (site:edu research)
-- FILETYPE: Find specific documents (filetype:pdf study)
-- OR OPERATOR: Find alternatives (electric OR hybrid cars)
-- DATE RANGE: Recent information (data after:2020)
-- WILDCARDS: Use * for unknown terms (how to * bread)
-- SPECIFIC QUESTIONS: Use who/what/when/where/why/how
-- DOMAIN TERMS: Include technical terminology for specialized topics
-- CONCISE TERMS: Prioritize keywords over sentences
-`.trim();
-
-const DEFAULT_COUNTRY_DESCRIPTION = `Country code to localize search results.
-Use standard 2-letter country codes: "us", "uk", "ca", "de", "fr", "jp", "br", etc.
-Provide this when the search should return results specific to a particular country.
-Examples:
-- "us" for United States (default)
-- "de" for Germany
-- "in" for India
-`.trim();
 
 function createSearchProcessor({
   searchAPI,
@@ -54,6 +26,7 @@ function createSearchProcessor({
 }) {
   return async function ({
     query,
+    date,
     country,
     proMode = true,
     maxSources = 5,
@@ -61,12 +34,18 @@ function createSearchProcessor({
   }: {
     query: string;
     country?: string;
+    date?: DATE_RANGE;
     proMode?: boolean;
     maxSources?: number;
     onSearchResults: t.SearchToolConfig['onSearchResults'];
   }): Promise<t.SearchResultData> {
     try {
-      const result = await searchAPI.getSources({ query, country, safeSearch });
+      const result = await searchAPI.getSources({
+        query,
+        date,
+        country,
+        safeSearch,
+      });
       onSearchResults?.(result);
 
       if (!result.success) {
@@ -120,10 +99,11 @@ function createTool({
 }): DynamicStructuredTool<typeof schema> {
   return tool<typeof schema>(
     async (params, runnableConfig) => {
-      const { query, country: _c } = params;
+      const { query, date, country: _c } = params;
       const country = typeof _c === 'string' && _c ? _c : undefined;
       const searchResult = await search({
         query,
+        date,
         country,
         onSearchResults: createOnSearchResults({
           runnableConfig,
@@ -197,19 +177,17 @@ export const createSearchTool = (
 
   const logger = config.logger || createDefaultLogger();
 
-  const querySchema = z.string().describe(DEFAULT_QUERY_DESCRIPTION);
   const schemaObject: {
     query: z.ZodString;
+    date: z.ZodOptional<z.ZodNativeEnum<typeof DATE_RANGE>>;
     country?: z.ZodOptional<z.ZodString>;
   } = {
     query: querySchema,
+    date: dateSchema,
   };
 
   if (searchProvider === 'serper') {
-    schemaObject.country = z
-      .string()
-      .optional()
-      .describe(DEFAULT_COUNTRY_DESCRIPTION);
+    schemaObject.country = countrySchema;
   }
 
   const toolSchema = z.object(schemaObject);

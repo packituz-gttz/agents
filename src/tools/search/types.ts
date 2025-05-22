@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Logger as WinstonLogger } from 'winston';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { BaseReranker } from './rerankers';
+import { DATE_RANGE } from './schema';
 
 export type SearchProvider = 'serper' | 'searxng';
 export type RerankerType = 'infinity' | 'jina' | 'cohere' | 'none';
@@ -263,6 +264,7 @@ export interface FirecrawlScraperConfig {
 
 export type GetSourcesParams = {
   query: string;
+  date?: DATE_RANGE;
   country?: string;
   numResults?: number;
   safeSearch?: SearchToolConfig['safeSearch'];
@@ -444,6 +446,13 @@ export interface SerperSearchInput {
    */
   autocorrect?: boolean;
   page?: number;
+  /**
+   * Date range for search results
+   * Options: "h" (past hour), "d" (past 24 hours), "w" (past week),
+   * "m" (past month), "y" (past year)
+   * `qdr:${DATE_RANGE}`
+   */
+  tbs?: string;
 }
 
 export type SerperResultData = {
@@ -580,16 +589,19 @@ export type ProcessSourcesFields = {
 export type SearchToolSchema = z.ZodObject<
   {
     query: z.ZodString;
+    date: z.ZodOptional<z.ZodNativeEnum<typeof DATE_RANGE>>;
     country?: z.ZodOptional<z.ZodString>;
   },
   'strip',
   z.ZodTypeAny,
   {
     query: string;
+    date?: DATE_RANGE;
     country?: unknown;
   },
   {
     query: string;
+    date?: DATE_RANGE;
     country?: unknown;
   }
 >;

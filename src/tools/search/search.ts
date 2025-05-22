@@ -136,6 +136,7 @@ const createSerperAPI = (
 
   const getSources = async ({
     query,
+    date,
     country,
     safeSearch,
     numResults = 8,
@@ -151,6 +152,9 @@ const createSerperAPI = (
         safe: safe[safeSearch ?? 1],
         num: Math.min(Math.max(1, numResults), 10),
       };
+      if (date != null) {
+        payload.tbs = `qdr:${date}`;
+      }
 
       if (country != null && country !== '') {
         payload['gl'] = country.toLowerCase();

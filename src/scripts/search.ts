@@ -111,10 +111,10 @@ async function testStandardStreaming(): Promise<void> {
   // `;
   // const userMessage = 'Are massage guns good?';
   // const userMessage = 'What is functional programming?';
-  // const userMessage = "Get me today's trending news.";
+  const userMessage = "Get me today's trending news.";
   // const userMessage = "search recent italy earthquake volcano activity";
-  const userMessage =
-    "use 'Trump' as the exact search query and tell me what you find.";
+  // const userMessage =
+  //   "use 'Trump' as the exact search query and tell me what you find.";
 
   conversationHistory.push(new HumanMessage(userMessage));
 
