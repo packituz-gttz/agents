@@ -1,5 +1,5 @@
 import type * as t from './types';
-import { getDomainName } from './utils';
+import { getDomainName, fileExtRegex } from './utils';
 
 function addHighlightSection(): string[] {
   return ['\n## Highlights', ''];
@@ -73,6 +73,10 @@ function formatSource(
           });
 
           if (ref.type !== 'link') {
+            continue;
+          }
+
+          if (fileExtRegex.test(ref.reference.originalUrl)) {
             continue;
           }
 
