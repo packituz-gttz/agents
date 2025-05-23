@@ -8,7 +8,6 @@ import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
 import { ToolEndHandler, ModelEndHandler } from '@/events';
 
-
 import { getArgs } from '@/scripts/args';
 import { Run } from '@/run';
 import { GraphEvents, Callback } from '@/common';
@@ -23,38 +22,67 @@ async function testStandardStreaming(): Promise<void> {
     [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP_COMPLETED]: {
-      handle: (event: GraphEvents.ON_RUN_STEP_COMPLETED, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP_COMPLETED,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP_COMPLETED ======');
         // console.dir(data, { depth: null });
-        aggregateContent({ event, data: data as unknown as { result: t.ToolEndEvent } });
-      }
+        aggregateContent({
+          event,
+          data: data as unknown as { result: t.ToolEndEvent },
+        });
+      },
     },
     [GraphEvents.ON_RUN_STEP]: {
-      handle: (event: GraphEvents.ON_RUN_STEP, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.RunStep });
-      }
+      },
     },
     [GraphEvents.ON_RUN_STEP_DELTA]: {
-      handle: (event: GraphEvents.ON_RUN_STEP_DELTA, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_RUN_STEP_DELTA,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_RUN_STEP_DELTA ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.RunStepDeltaEvent });
-      }
+      },
     },
     [GraphEvents.ON_MESSAGE_DELTA]: {
-      handle: (event: GraphEvents.ON_MESSAGE_DELTA, data: t.StreamEventData): void => {
+      handle: (
+        event: GraphEvents.ON_MESSAGE_DELTA,
+        data: t.StreamEventData
+      ): void => {
         console.log('====== ON_MESSAGE_DELTA ======');
         console.dir(data, { depth: null });
         aggregateContent({ event, data: data as t.MessageDeltaEvent });
-      }
+      },
+    },
+    [GraphEvents.ON_REASONING_DELTA]: {
+      handle: (
+        event: GraphEvents.ON_REASONING_DELTA,
+        data: t.StreamEventData
+      ) => {
+        console.log('====== ON_REASONING_DELTA ======');
+        console.dir(data, { depth: null });
+        aggregateContent({ event, data: data as t.ReasoningDeltaEvent });
+      },
     },
     [GraphEvents.TOOL_START]: {
-      handle: (_event: string, data: t.StreamEventData, metadata?: Record<string, unknown>): void => {
+      handle: (
+        _event: string,
+        data: t.StreamEventData,
+        metadata?: Record<string, unknown>
+      ): void => {
         console.log('====== TOOL_START ======');
         // console.dir(data, { depth: null });
-      }
+      },
     },
   };
 
@@ -66,7 +94,8 @@ async function testStandardStreaming(): Promise<void> {
       type: 'standard',
       llmConfig,
       tools: [new TavilySearchResults()],
-      instructions: 'You are a friendly AI assistant. Always address the user by their name.',
+      instructions:
+        'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
     },
     returnContent: true,

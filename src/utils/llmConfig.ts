@@ -107,7 +107,9 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   [Providers.BEDROCK]: {
     provider: Providers.BEDROCK,
     // model: 'anthropic.claude-3-sonnet-20240229-v1:0',
-    model: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+    // model: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+    model: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+    // additionalModelRequestFields: { thinking: { type: 'enabled', budget_tokens: 2000 } },
     region: process.env.BEDROCK_AWS_REGION,
     credentials: {
       accessKeyId: process.env.BEDROCK_AWS_ACCESS_KEY_ID!,
