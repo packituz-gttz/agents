@@ -282,8 +282,8 @@ hasToolCallChunks: ${hasToolCallChunks}
     } else if (
       graph.tokenTypeSwitch === 'reasoning' &&
       graph.currentTokenType !== ContentTypes.TEXT &&
-      chunk.content != null &&
-      chunk.content !== ''
+      ((chunk.content != null && chunk.content !== '') ||
+        (chunk.tool_calls?.length ?? 0) > 0)
     ) {
       graph.currentTokenType = ContentTypes.TEXT;
       graph.tokenTypeSwitch = 'content';
