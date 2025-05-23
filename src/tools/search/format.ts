@@ -65,6 +65,12 @@ function formatSource(
           if (ref.reference.originalUrl.includes('mailto:')) {
             continue;
           }
+          if (ref.type !== 'link') {
+            continue;
+          }
+          if (fileExtRegex.test(ref.reference.originalUrl)) {
+            continue;
+          }
           references.push({
             type: ref.type,
             link: ref.reference.originalUrl,
@@ -74,14 +80,6 @@ function formatSource(
               ''
             ).split('\n')[0],
           });
-
-          if (ref.type !== 'link') {
-            continue;
-          }
-
-          if (fileExtRegex.test(ref.reference.originalUrl)) {
-            continue;
-          }
 
           if (!hasHeader) {
             refLines.push('Core References:');
