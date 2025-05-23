@@ -347,6 +347,7 @@ export const createSearchTool = (
     firecrawlApiKey,
     firecrawlApiUrl,
     firecrawlFormats = ['markdown', 'html'],
+    scraperTimeout,
     jinaApiKey,
     cohereApiKey,
     onSearchResults: _onSearchResults,
@@ -386,6 +387,7 @@ export const createSearchTool = (
   const firecrawlScraper = createFirecrawlScraper({
     apiKey: firecrawlApiKey ?? process.env.FIRECRAWL_API_KEY,
     apiUrl: firecrawlApiUrl,
+    timeout: scraperTimeout,
     formats: firecrawlFormats,
   });
 

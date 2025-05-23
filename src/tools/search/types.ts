@@ -150,6 +150,7 @@ export interface SearchToolConfig
   jinaApiKey?: string;
   cohereApiKey?: string;
   rerankerType?: RerankerType;
+  scraperTimeout?: number;
   onSearchResults?: (
     results: SearchResult,
     runnableConfig?: RunnableConfig
