@@ -100,7 +100,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   } as t.VertexAIClientOptions & t.LLMConfig,
   [Providers.GOOGLE]: {
     provider: Providers.GOOGLE,
-    model: 'gemini-2.5-pro-exp-03-25',
+    model: 'gemini-2.5-flash-preview-04-17',
     streaming: true,
     streamUsage: true,
   },
@@ -108,6 +108,7 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     provider: Providers.BEDROCK,
     // model: 'anthropic.claude-3-sonnet-20240229-v1:0',
     // model: 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+    // model: 'us.amazon.nova-pro-v1:0',
     model: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
     // additionalModelRequestFields: { thinking: { type: 'enabled', budget_tokens: 2000 } },
     region: process.env.BEDROCK_AWS_REGION,

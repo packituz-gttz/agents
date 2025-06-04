@@ -4,7 +4,6 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 import { ChatVertexAI } from '@langchain/google-vertexai';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type {
   BindToolsInput,
@@ -23,6 +22,7 @@ import type { ChatDeepSeekCallOptions } from '@langchain/deepseek';
 import type { ChatOpenRouterCallOptions } from '@/llm/openrouter';
 import type { ChatBedrockConverseInput } from '@langchain/aws';
 import type { ChatMistralAIInput } from '@langchain/mistralai';
+import type { RequestOptions } from '@google/generative-ai';
 import type { StructuredTool } from '@langchain/core/tools';
 import type { AnthropicInput } from '@langchain/anthropic';
 import type { Runnable } from '@langchain/core/runnables';
@@ -35,6 +35,7 @@ import {
   ChatDeepSeek,
   AzureChatOpenAI,
 } from '@/llm/openai';
+import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { ChatOpenRouter } from '@/llm/openrouter';
 import { Providers } from '@/common';
 
@@ -67,7 +68,9 @@ export type BedrockAnthropicInput = ChatBedrockConverseInput & {
     AnthropicReasoning;
 };
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
-export type GoogleClientOptions = GoogleGenerativeAIChatInput;
+export type GoogleClientOptions = GoogleGenerativeAIChatInput & {
+  customHeaders?: RequestOptions['customHeaders'];
+};
 export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
 export type XAIClientOptions = ChatXAIInput;
 
@@ -117,7 +120,7 @@ export type ChatModelMap = {
   [Providers.OPENROUTER]: ChatOpenRouter;
   [Providers.BEDROCK_LEGACY]: BedrockChat;
   [Providers.BEDROCK]: ChatBedrockConverse;
-  [Providers.GOOGLE]: ChatGoogleGenerativeAI;
+  [Providers.GOOGLE]: CustomChatGoogleGenerativeAI;
 };
 
 export type ChatModelConstructorMap = {
