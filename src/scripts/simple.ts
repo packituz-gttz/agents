@@ -99,7 +99,7 @@ async function testStandardStreaming(): Promise<void> {
     const openAIConfig = llmConfig as t.OpenAIClientOptions;
     if (openAIConfig.configuration) {
       openAIConfig.configuration.fetch = (
-        url: RequestInfo,
+        url: string | URL | Request,
         init?: RequestInit
       ) => {
         console.log('Fetching:', url);
