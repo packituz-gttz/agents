@@ -21,7 +21,7 @@ import {
   parseBase64DataUrl,
 } from '@langchain/core/messages';
 import { ToolCall } from '@langchain/core/messages/tool';
-import type {
+import {
   AnthropicImageBlockParam,
   AnthropicMessageCreateParams,
   AnthropicTextBlockParam,
@@ -31,8 +31,10 @@ import type {
   AnthropicDocumentBlockParam,
   AnthropicThinkingBlockParam,
   AnthropicRedactedThinkingBlockParam,
+  AnthropicServerToolUseBlockParam,
+  AnthropicWebSearchToolResultBlockParam,
+  isAnthropicImageBlockParam,
 } from '@/llm/anthropic/types';
-import { isAnthropicImageBlockParam } from '@/llm/anthropic/types';
 
 function _formatImage(imageUrl: string) {
   const parsed = parseBase64DataUrl({ dataUrl: imageUrl });
@@ -119,7 +121,6 @@ function _ensureMessageContents(
               {
                 type: 'tool_result',
                 // rare case: message.content could be undefined
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                 ...(message.content != null
                   ? { content: _formatContent(message.content) }
                   : {}),
@@ -347,7 +348,14 @@ const standardContentBlockConverter: StandardContentBlockConverter<{
 };
 
 function _formatContent(content: MessageContent) {
-  const toolTypes = ['tool_use', 'tool_result', 'input_json_delta'];
+  const toolTypes = [
+    'tool_use',
+    'tool_result',
+    'input_json_delta',
+    'server_tool_use',
+    'web_search_tool_result',
+    'web_search_result',
+  ];
   const textTypes = ['text', 'text_delta'];
 
   if (typeof content === 'string') {
@@ -408,6 +416,9 @@ function _formatContent(content: MessageContent) {
           type: 'text' as const, // Explicitly setting the type as "text"
           text: contentPart.text,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
+          ...('citations' in contentPart && contentPart.citations
+            ? { citations: contentPart.citations }
+            : {}),
         };
       } else if (toolTypes.find((t) => t === contentPart.type)) {
         const contentPartCopy = { ...contentPart };
@@ -502,7 +513,8 @@ export function _convertMessagesToAnthropicPayload(
           content.find(
             (contentPart) =>
               (contentPart.type === 'tool_use' ||
-                contentPart.type === 'input_json_delta') &&
+                contentPart.type === 'input_json_delta' ||
+                contentPart.type === 'server_tool_use') &&
               contentPart.id === toolCall.id
           )
         );
@@ -548,6 +560,8 @@ function mergeMessages(messages: AnthropicMessageCreateParams['messages']) {
           | AnthropicDocumentBlockParam
           | AnthropicThinkingBlockParam
           | AnthropicRedactedThinkingBlockParam
+          | AnthropicServerToolUseBlockParam
+          | AnthropicWebSearchToolResultBlockParam
         >
   ): Array<
     | AnthropicTextBlockParam
@@ -557,6 +571,8 @@ function mergeMessages(messages: AnthropicMessageCreateParams['messages']) {
     | AnthropicDocumentBlockParam
     | AnthropicThinkingBlockParam
     | AnthropicRedactedThinkingBlockParam
+    | AnthropicServerToolUseBlockParam
+    | AnthropicWebSearchToolResultBlockParam
   > => {
     if (typeof content === 'string') {
       return [

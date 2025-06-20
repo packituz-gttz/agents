@@ -8,11 +8,7 @@ export type AnthropicToolResponse = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: Record<string, any>;
 };
-
-export type AnthropicStreamUsage = Anthropic.Usage;
 export type AnthropicMessageParam = Anthropic.MessageParam;
-export type AnthropicMessageDeltaEvent = Anthropic.MessageDeltaEvent;
-export type AnthropicMessageStartEvent = Anthropic.MessageStartEvent;
 export type AnthropicMessageResponse =
   | Anthropic.ContentBlock
   | AnthropicToolResponse;
@@ -42,6 +38,25 @@ export type AnthropicDocumentBlockParam = Anthropic.Messages.DocumentBlockParam;
 export type AnthropicThinkingBlockParam = Anthropic.Messages.ThinkingBlockParam;
 export type AnthropicRedactedThinkingBlockParam =
   Anthropic.Messages.RedactedThinkingBlockParam;
+export type AnthropicServerToolUseBlockParam =
+  Anthropic.Messages.ServerToolUseBlockParam;
+export type AnthropicWebSearchToolResultBlockParam =
+  Anthropic.Messages.WebSearchToolResultBlockParam;
+export type AnthropicWebSearchResultBlockParam =
+  Anthropic.Messages.WebSearchResultBlockParam;
+
+// Union of all possible content block types including server tool use
+export type AnthropicContentBlock =
+  | AnthropicTextBlockParam
+  | AnthropicImageBlockParam
+  | AnthropicToolUseBlockParam
+  | AnthropicToolResultBlockParam
+  | AnthropicDocumentBlockParam
+  | AnthropicThinkingBlockParam
+  | AnthropicRedactedThinkingBlockParam
+  | AnthropicServerToolUseBlockParam
+  | AnthropicWebSearchToolResultBlockParam
+  | AnthropicWebSearchResultBlockParam;
 
 export function isAnthropicImageBlockParam(
   block: unknown

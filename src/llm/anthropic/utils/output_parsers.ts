@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/no-empty-object-type */
-import { z } from 'zod';
 import {
   BaseLLMOutputParser,
   OutputParserException,
 } from '@langchain/core/output_parsers';
 import { JsonOutputKeyToolsParserParams } from '@langchain/core/output_parsers/openai_tools';
+import {
+  interopSafeParseAsync,
+  InteropZodType,
+} from '@langchain/core/utils/types';
 import { ChatGeneration } from '@langchain/core/outputs';
 import { ToolCall } from '@langchain/core/messages/tool';
 
@@ -31,7 +34,7 @@ export class AnthropicToolsOutputParser<
   /** Whether to return only the first tool call. */
   returnSingle = false;
 
-  zodSchema?: z.ZodType<T>;
+  zodSchema?: InteropZodType<T>;
 
   constructor(params: AnthropicToolsOutputParserParams<T>) {
     super(params);
@@ -62,7 +65,10 @@ export class AnthropicToolsOutputParser<
     if (this.zodSchema === undefined) {
       return parsedResult as T;
     }
-    const zodParsedResult = await this.zodSchema.safeParseAsync(parsedResult);
+    const zodParsedResult = await interopSafeParseAsync(
+      this.zodSchema,
+      parsedResult
+    );
     if (zodParsedResult.success) {
       return zodParsedResult.data;
     } else {
@@ -71,7 +77,7 @@ export class AnthropicToolsOutputParser<
           result,
           null,
           2
-        )}". Error: ${JSON.stringify(zodParsedResult.error.errors)}`,
+        )}". Error: ${JSON.stringify(zodParsedResult.error.issues)}`,
         JSON.stringify(parsedResult, null, 2)
       );
     }
@@ -100,6 +106,7 @@ export class AnthropicToolsOutputParser<
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function extractToolCalls(content: Record<string, any>[]) {
   const toolCalls: ToolCall[] = [];
+
   for (const block of content) {
     if (block.type === 'tool_use') {
       toolCalls.push({
@@ -108,7 +115,19 @@ export function extractToolCalls(content: Record<string, any>[]) {
         id: block.id,
         type: 'tool_call',
       });
+    } else if (
+      block.type === 'server_tool_use' &&
+      block.name === 'web_search'
+    ) {
+      // Handle Anthropic built-in web search tool
+      toolCalls.push({
+        name: block.name,
+        args: block.input,
+        id: block.id,
+        type: 'tool_call',
+      });
     }
   }
+
   return toolCalls;
 }
