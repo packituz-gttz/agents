@@ -81,7 +81,7 @@
     "@langchain/google-vertexai": "^0.2.9",
     "@langchain/langgraph": "^0.2.73",
     "@langchain/mistralai": "^0.2.0",
-    "@langchain/ollama": "^0.2.0",
+    "@langchain/ollama": "^0.2.3",
     "@langchain/openai": "^0.5.14",
     "@langchain/xai": "^0.0.2",
     "cheerio": "^1.0.0",
