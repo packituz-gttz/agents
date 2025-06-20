@@ -277,6 +277,25 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
 }
 
 export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
+  override bindTools(
+    tools: ChatOpenAIToolType[],
+    kwargs?: Partial<t.ChatOpenAICallOptions>
+  ): Runnable<BaseLanguageModelInput, AIMessageChunk, t.ChatOpenAICallOptions> {
+    let strict: boolean | undefined;
+    if (kwargs?.strict !== undefined) {
+      strict = kwargs.strict;
+    } else if (this.supportsStrictToolCalling !== undefined) {
+      strict = this.supportsStrictToolCalling;
+    }
+    return this.withConfig({
+      tools: tools.map((tool) =>
+        isBuiltInTool(tool)
+          ? tool
+          : _convertChatOpenAIToolTypeToOpenAITool(tool, { strict })
+      ),
+      ...kwargs,
+    } as Partial<t.ChatOpenAICallOptions>);
+  }
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
   }
