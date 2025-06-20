@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { BindToolsInput } from '@langchain/core/language_models/chat_models';
 
+export type AnthropicStreamUsage = Anthropic.Usage;
+export type AnthropicMessageDeltaEvent = Anthropic.MessageDeltaEvent;
+export type AnthropicMessageStartEvent = Anthropic.MessageStartEvent;
+
 export type AnthropicToolResponse = {
   type: 'tool_use';
   id: string;
@@ -8,6 +12,7 @@ export type AnthropicToolResponse = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: Record<string, any>;
 };
+
 export type AnthropicMessageParam = Anthropic.MessageParam;
 export type AnthropicMessageResponse =
   | Anthropic.ContentBlock
