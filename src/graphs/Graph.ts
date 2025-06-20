@@ -184,10 +184,9 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       finalInstructions &&
       provider === Providers.ANTHROPIC &&
       ((
-        clientOptions as t.AnthropicClientOptions
-      ).clientOptions?.defaultHeaders?.['anthropic-beta']?.includes(
-        'prompt-caching'
-      ) ??
+        (clientOptions as t.AnthropicClientOptions).clientOptions
+          ?.defaultHeaders as Record<string, string> | undefined
+      )?.['anthropic-beta']?.includes('prompt-caching') ??
         false)
     ) {
       finalInstructions = {
