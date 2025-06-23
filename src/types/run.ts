@@ -26,6 +26,7 @@ export type StandardGraphConfig = BaseGraphConfig &
 
 export type RunTitleOptions = {
   inputText: string;
+  provider: e.Providers;
   contentParts: (s.MessageContentComplex | undefined)[];
   titlePrompt?: string;
   skipLanguage?: boolean;

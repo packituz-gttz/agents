@@ -235,6 +235,7 @@ export class Run<T extends t.BaseGraphState> {
   }
 
   async generateTitle({
+    provider,
     inputText,
     contentParts,
     titlePrompt,
@@ -255,8 +256,9 @@ export class Run<T extends t.BaseGraphState> {
       await convoTemplate.invoke({ input: inputText, output: response })
     ).value;
     const model = this.Graph?.getNewModel({
+      provider,
       clientOptions,
-      omitOriginalOptions: new Set([
+      omitOptions: new Set([
         'clientOptions',
         'streaming',
         'stream',
@@ -270,7 +272,7 @@ export class Run<T extends t.BaseGraphState> {
       return { language: '', title: '' };
     }
     if (
-      isOpenAILike(this.provider) &&
+      isOpenAILike(provider) &&
       (model instanceof ChatOpenAI || model instanceof AzureChatOpenAI)
     ) {
       model.temperature = (clientOptions as t.OpenAIClientOptions | undefined)

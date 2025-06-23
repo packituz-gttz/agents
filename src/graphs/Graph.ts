@@ -417,21 +417,22 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
   }
 
   getNewModel({
-    clientOptions = {},
-    omitOriginalOptions,
+    provider,
+    clientOptions,
+    omitOptions,
   }: {
+    provider: Providers;
     clientOptions?: t.ClientOptions;
-    omitOriginalOptions?: Set<string>;
+    omitOptions?: Set<string>;
   }): t.ChatModelInstance {
-    const ChatModelClass = getChatModelClass(this.provider);
-    const _options = omitOriginalOptions
+    const ChatModelClass = getChatModelClass(provider);
+    const options = omitOptions
       ? Object.fromEntries(
-        Object.entries(this.clientOptions).filter(
-          ([key]) => !omitOriginalOptions.has(key)
+        Object.entries(clientOptions ?? this.clientOptions).filter(
+          ([key]) => !omitOptions.has(key)
         )
       )
-      : this.clientOptions;
-    const options = Object.assign(_options, clientOptions);
+      : (clientOptions ?? this.clientOptions);
     return new ChatModelClass(options);
   }
 
