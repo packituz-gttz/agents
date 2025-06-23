@@ -160,6 +160,7 @@ async function testStandardStreaming(): Promise<void> {
   console.dir(contentParts, { depth: null });
   const { handleLLMEnd, collected } = createMetadataAggregator();
   const titleOptions: t.RunTitleOptions = {
+    provider,
     inputText: userMessage,
     contentParts,
     chainOptions: {
