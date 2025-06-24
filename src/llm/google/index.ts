@@ -6,8 +6,15 @@ import type {
   GenerateContentRequest,
   SafetySetting,
 } from '@google/generative-ai';
+import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
+import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { GeminiGenerationConfig } from '@langchain/google-common';
+import type { ChatGenerationChunk } from '@langchain/core/outputs';
 import type { GoogleClientOptions } from '@/types';
+import {
+  convertResponseContentToChatGenerationChunk,
+  convertBaseMessagesToContent,
+} from './utils/common';
 
 export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
   thinkingConfig?: GeminiGenerationConfig['thinkingConfig'];
@@ -111,5 +118,83 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
         thinkingConfig: this.thinkingConfig,
       },
     };
+  }
+
+  async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this['ParsedCallOptions'],
+    runManager?: CallbackManagerForLLMRun
+  ): AsyncGenerator<ChatGenerationChunk> {
+    const prompt = convertBaseMessagesToContent(
+      messages,
+      this._isMultimodalModel,
+      this.useSystemInstruction
+    );
+    let actualPrompt = prompt;
+    if (prompt[0].role === 'system') {
+      const [systemInstruction] = prompt;
+      /** @ts-ignore */
+      this.client.systemInstruction = systemInstruction;
+      actualPrompt = prompt.slice(1);
+    }
+    const parameters = this.invocationParams(options);
+    const request = {
+      ...parameters,
+      contents: actualPrompt,
+    };
+    const stream = await this.caller.callWithOptions(
+      { signal: options.signal },
+      async () => {
+        /** @ts-ignore */
+        const { stream } = await this.client.generateContentStream(request);
+        return stream;
+      }
+    );
+
+    let usageMetadata: UsageMetadata | undefined;
+    let index = 0;
+    for await (const response of stream) {
+      if (
+        'usageMetadata' in response &&
+        this.streamUsage !== false &&
+        options.streamUsage !== false
+      ) {
+        const genAIUsageMetadata = response.usageMetadata as {
+          promptTokenCount: number | undefined;
+          candidatesTokenCount: number | undefined;
+          totalTokenCount: number | undefined;
+        };
+        if (!usageMetadata) {
+          usageMetadata = {
+            input_tokens: genAIUsageMetadata.promptTokenCount ?? 0,
+            output_tokens: genAIUsageMetadata.candidatesTokenCount ?? 0,
+            total_tokens: genAIUsageMetadata.totalTokenCount ?? 0,
+          };
+        } else {
+          // Under the hood, LangChain combines the prompt tokens. Google returns the updated
+          // total each time, so we need to find the difference between the tokens.
+          const outputTokenDiff =
+            (genAIUsageMetadata.candidatesTokenCount ?? 0) -
+            usageMetadata.output_tokens;
+          usageMetadata = {
+            input_tokens: 0,
+            output_tokens: outputTokenDiff,
+            total_tokens: outputTokenDiff,
+          };
+        }
+      }
+
+      const chunk = convertResponseContentToChatGenerationChunk(response, {
+        usageMetadata,
+        index,
+      });
+      index += 1;
+      if (!chunk) {
+        continue;
+      }
+
+      yield chunk;
+      await runManager?.handleLLMNewToken(chunk.text || '');
+    }
   }
 }
