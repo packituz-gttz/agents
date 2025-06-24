@@ -1,15 +1,17 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { getEnvironmentVariable } from '@langchain/core/utils/env';
 import { GoogleGenerativeAI as GenerativeAI } from '@google/generative-ai';
-import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
-import type { RequestOptions, SafetySetting } from '@google/generative-ai';
+import type {
+  GenerateContentRequest,
+  SafetySetting,
+} from '@google/generative-ai';
+import type { GeminiGenerationConfig } from '@langchain/google-common';
+import type { GoogleClientOptions } from '@/types';
 
 export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
-  constructor(
-    fields: GoogleGenerativeAIChatInput & {
-      customHeaders?: RequestOptions['customHeaders'];
-    }
-  ) {
+  thinkingConfig?: GeminiGenerationConfig['thinkingConfig'];
+  constructor(fields: GoogleClientOptions) {
     super(fields);
 
     this.model = fields.model.replace(/^models\//, '');
@@ -66,10 +68,11 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
       }
     }
 
+    this.thinkingConfig = fields.thinkingConfig ?? this.thinkingConfig;
+
     this.streaming = fields.streaming ?? this.streaming;
     this.json = fields.json;
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore - Accessing private property from parent class
     this.client = new GenerativeAI(this.apiKey).getGenerativeModel(
       {
@@ -93,5 +96,20 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
       }
     );
     this.streamUsage = fields.streamUsage ?? this.streamUsage;
+  }
+
+  invocationParams(
+    options?: this['ParsedCallOptions']
+  ): Omit<GenerateContentRequest, 'contents'> {
+    const params = super.invocationParams(options);
+    return {
+      ...params,
+      generationConfig: {
+        ...params.generationConfig,
+
+        /** @ts-ignore */
+        thinkingConfig: this.thinkingConfig,
+      },
+    };
   }
 }

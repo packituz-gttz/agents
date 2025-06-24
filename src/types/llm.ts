@@ -17,6 +17,7 @@ import type {
 } from '@langchain/openai';
 import type { BedrockChatFields } from '@langchain/community/chat_models/bedrock/web';
 import type { GoogleGenerativeAIChatInput } from '@langchain/google-genai';
+import type { GeminiGenerationConfig } from '@langchain/google-common';
 import type { ChatVertexAIInput } from '@langchain/google-vertexai';
 import type { ChatDeepSeekCallOptions } from '@langchain/deepseek';
 import type { ChatOpenRouterCallOptions } from '@/llm/openrouter';
@@ -70,6 +71,7 @@ export type BedrockAnthropicInput = ChatBedrockConverseInput & {
 export type BedrockConverseClientOptions = ChatBedrockConverseInput;
 export type GoogleClientOptions = GoogleGenerativeAIChatInput & {
   customHeaders?: RequestOptions['customHeaders'];
+  thinkingConfig?: GeminiGenerationConfig['thinkingConfig'];
 };
 export type DeepSeekClientOptions = ChatDeepSeekCallOptions;
 export type XAIClientOptions = ChatXAIInput;
