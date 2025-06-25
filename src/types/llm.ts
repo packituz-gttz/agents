@@ -3,7 +3,6 @@ import { ChatOllama } from '@langchain/ollama';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
-import { ChatVertexAI } from '@langchain/google-vertexai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type {
   BindToolsInput,
@@ -38,6 +37,7 @@ import {
 } from '@/llm/openai';
 import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { ChatOpenRouter } from '@/llm/openrouter';
+import { ChatVertexAI } from '@/llm/vertexai';
 import { Providers } from '@/common';
 
 export type AzureClientOptions = Partial<OpenAIChatInput> &

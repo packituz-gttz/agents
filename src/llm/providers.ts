@@ -3,7 +3,7 @@ import { ChatOllama } from '@langchain/ollama';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 // import { ChatAnthropic } from '@langchain/anthropic';
-import { ChatVertexAI } from '@langchain/google-vertexai';
+// import { ChatVertexAI } from '@langchain/google-vertexai';
 import { BedrockChat } from '@langchain/community/chat_models/bedrock/web';
 import type {
   ChatModelConstructorMap,
@@ -19,6 +19,7 @@ import {
 import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { CustomAnthropic } from '@/llm/anthropic';
 import { ChatOpenRouter } from '@/llm/openrouter';
+import { ChatVertexAI } from '@/llm/vertexai';
 import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {
