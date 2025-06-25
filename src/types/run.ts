@@ -32,6 +32,7 @@ export type RunTitleOptions = {
   skipLanguage?: boolean;
   clientOptions?: l.ClientOptions;
   chainOptions?: Partial<RunnableConfig> | undefined;
+  omitOptions?: Set<string>;
 };
 
 export interface AgentStateChannels {

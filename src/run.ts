@@ -19,6 +19,19 @@ import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
 import { isOpenAILike } from '@/utils/llm';
 
+export const defaultOmitOptions = new Set([
+  'stream',
+  'thinking',
+  'streaming',
+  'maxTokens',
+  'clientOptions',
+  'thinkingConfig',
+  'thinkingBudget',
+  'includeThoughts',
+  'maxOutputTokens',
+  'additionalModelRequestFields',
+]);
+
 export class Run<T extends t.BaseGraphState> {
   graphRunnable?: t.CompiledWorkflow<T, Partial<T>, string>;
   // private collab!: CollabGraph;
@@ -242,6 +255,7 @@ export class Run<T extends t.BaseGraphState> {
     clientOptions,
     chainOptions,
     skipLanguage,
+    omitOptions = defaultOmitOptions,
   }: t.RunTitleOptions): Promise<{ language: string; title: string }> {
     const convoTemplate = PromptTemplate.fromTemplate(
       'User: {input}\nAI: {output}'
@@ -257,16 +271,8 @@ export class Run<T extends t.BaseGraphState> {
     ).value;
     const model = this.Graph?.getNewModel({
       provider,
+      omitOptions,
       clientOptions,
-      omitOptions: new Set([
-        'clientOptions',
-        'streaming',
-        'stream',
-        'thinking',
-        'maxTokens',
-        'maxOutputTokens',
-        'additionalModelRequestFields',
-      ]),
     });
     if (!model) {
       return { language: '', title: '' };
