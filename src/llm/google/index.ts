@@ -110,15 +110,16 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
     options?: this['ParsedCallOptions']
   ): Omit<GenerateContentRequest, 'contents'> {
     const params = super.invocationParams(options);
-    return {
-      ...params,
-      generationConfig: {
-        ...params.generationConfig,
-
+    if (this.thinkingConfig) {
+      /** @ts-ignore */
+      this.client.generationConfig = {
+        /** @ts-ignore */
+        ...this.client.generationConfig,
         /** @ts-ignore */
         thinkingConfig: this.thinkingConfig,
-      },
-    };
+      };
+    }
+    return params;
   }
 
   async *_streamResponseChunks(
