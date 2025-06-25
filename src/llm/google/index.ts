@@ -10,6 +10,7 @@ import type { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager
 import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { GeminiGenerationConfig } from '@langchain/google-common';
 import type { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { GeminiApiUsageMetadata } from './types';
 import type { GoogleClientOptions } from '@/types';
 import {
   convertResponseContentToChatGenerationChunk,
@@ -159,23 +160,22 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
         this.streamUsage !== false &&
         options.streamUsage !== false
       ) {
-        const genAIUsageMetadata = response.usageMetadata as {
-          promptTokenCount: number | undefined;
-          candidatesTokenCount: number | undefined;
-          totalTokenCount: number | undefined;
-        };
+        const genAIUsageMetadata = response.usageMetadata as
+          | GeminiApiUsageMetadata
+          | undefined;
+        const output_tokens =
+          (genAIUsageMetadata?.candidatesTokenCount ?? 0) +
+          (genAIUsageMetadata?.thoughtsTokenCount ?? 0);
         if (!usageMetadata) {
           usageMetadata = {
-            input_tokens: genAIUsageMetadata.promptTokenCount ?? 0,
-            output_tokens: genAIUsageMetadata.candidatesTokenCount ?? 0,
-            total_tokens: genAIUsageMetadata.totalTokenCount ?? 0,
+            input_tokens: genAIUsageMetadata?.promptTokenCount ?? 0,
+            output_tokens,
+            total_tokens: genAIUsageMetadata?.totalTokenCount ?? 0,
           };
         } else {
           // Under the hood, LangChain combines the prompt tokens. Google returns the updated
           // total each time, so we need to find the difference between the tokens.
-          const outputTokenDiff =
-            (genAIUsageMetadata.candidatesTokenCount ?? 0) -
-            usageMetadata.output_tokens;
+          const outputTokenDiff = output_tokens - usageMetadata.output_tokens;
           usageMetadata = {
             input_tokens: 0,
             output_tokens: outputTokenDiff,
@@ -194,7 +194,14 @@ export class CustomChatGoogleGenerativeAI extends ChatGoogleGenerativeAI {
       }
 
       yield chunk;
-      await runManager?.handleLLMNewToken(chunk.text || '');
+      await runManager?.handleLLMNewToken(
+        chunk.text || '',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { chunk }
+      );
     }
   }
 }

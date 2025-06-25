@@ -28,6 +28,7 @@ import {
   isDataContentBlock,
 } from '@langchain/core/messages';
 import { ChatGenerationChunk } from '@langchain/core/outputs';
+import type { ChatGeneration } from '@langchain/core/outputs';
 import { isLangChainTool } from '@langchain/core/utils/function_calling';
 import { isOpenAITool } from '@langchain/core/language_models/base';
 import { ToolCallChunk } from '@langchain/core/messages/tool';
@@ -494,14 +495,26 @@ export function convertResponseContentToChatGenerationChunk(
   const { content: candidateContent, ...generationInfo } = candidate;
   let content: MessageContent | undefined;
   // Checks if some parts do not have text. If false, it means that the content is a string.
+  const reasoningParts: string[] = [];
   if (
     Array.isArray(candidateContent.parts) &&
     candidateContent.parts.every((p) => 'text' in p)
   ) {
-    content = candidateContent.parts.map((p) => p.text).join('');
+    // content = candidateContent.parts.map((p) => p.text).join('');
+    const textParts: string[] = [];
+    for (const part of candidateContent.parts) {
+      if ('thought' in part && part.thought === true) {
+        reasoningParts.push(part.text ?? '');
+        continue;
+      }
+      textParts.push(part.text ?? '');
+    }
+    content = textParts.join('');
   } else if (Array.isArray(candidateContent.parts)) {
     content = candidateContent.parts.map((p) => {
-      if ('text' in p) {
+      if ('text' in p && 'thought' in p && p.thought === true) {
+        reasoningParts.push(p.text ?? '');
+      } else if ('text' in p) {
         return {
           type: 'text',
           text: p.text,
@@ -525,7 +538,7 @@ export function convertResponseContentToChatGenerationChunk(
   }
 
   let text = '';
-  if (content && typeof content === 'string') {
+  if (typeof content === 'string' && content) {
     text = content;
   } else if (Array.isArray(content)) {
     const block = content.find((b) => 'text' in b) as
@@ -547,6 +560,11 @@ export function convertResponseContentToChatGenerationChunk(
     );
   }
 
+  const additional_kwargs: ChatGeneration['message']['additional_kwargs'] = {};
+  if (reasoningParts.length > 0) {
+    additional_kwargs.reasoning = reasoningParts.join('');
+  }
+
   return new ChatGenerationChunk({
     text,
     message: new AIMessageChunk({
@@ -555,7 +573,7 @@ export function convertResponseContentToChatGenerationChunk(
       tool_call_chunks: toolCallChunks,
       // Each chunk can have unique "generationInfo", and merging strategy is unclear,
       // so leave blank for now.
-      additional_kwargs: {},
+      additional_kwargs,
       usage_metadata: extra.usageMetadata,
     }),
     generationInfo,
