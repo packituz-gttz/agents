@@ -426,13 +426,17 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     omitOptions?: Set<string>;
   }): t.ChatModelInstance {
     const ChatModelClass = getChatModelClass(provider);
-    const options = omitOptions
-      ? Object.fromEntries(
-        Object.entries(clientOptions ?? this.clientOptions).filter(
-          ([key]) => !omitOptions.has(key)
+    const options =
+      omitOptions && clientOptions == null
+        ? Object.assign(
+          Object.fromEntries(
+            Object.entries(this.clientOptions).filter(
+              ([key]) => !omitOptions.has(key)
+            )
+          ),
+          clientOptions
         )
-      )
-      : (clientOptions ?? this.clientOptions);
+        : (clientOptions ?? this.clientOptions);
     return new ChatModelClass(options);
   }
 
