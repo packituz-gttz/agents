@@ -93,14 +93,14 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   },
   [Providers.VERTEXAI]: {
     provider: Providers.VERTEXAI,
-    modelName: 'gemini-2.0-flash-001',
+    model: 'gemini-2.5-flash',
     streaming: true,
     streamUsage: true,
     keyFile: process.env.VERTEXAI_KEY_FILE,
   } as t.VertexAIClientOptions & t.LLMConfig,
   [Providers.GOOGLE]: {
     provider: Providers.GOOGLE,
-    model: 'gemini-2.5-flash-preview-04-17',
+    model: 'gemini-2.5-flash',
     streaming: true,
     streamUsage: true,
   },
