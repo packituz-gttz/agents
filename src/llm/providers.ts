@@ -10,15 +10,15 @@ import type {
   ProviderOptionsMap,
   ChatModelMap,
 } from '@/types';
+import {
+  AzureChatOpenAI,
+  ChatDeepSeek,
+  ChatOpenAI,
+  ChatXAI,
+} from '@/llm/openai';
 import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { CustomAnthropic } from '@/llm/anthropic';
 import { ChatOpenRouter } from '@/llm/openrouter';
-import {
-  ChatXAI,
-  ChatOpenAI,
-  ChatDeepSeek,
-  AzureChatOpenAI,
-} from '@/llm/openai';
 import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {

@@ -31,10 +31,10 @@ import type { ChatOllamaInput } from '@langchain/ollama';
 import type { OpenAI as OpenAIClient } from 'openai';
 import type { ChatXAIInput } from '@langchain/xai';
 import {
-  ChatXAI,
-  ChatOpenAI,
-  ChatDeepSeek,
   AzureChatOpenAI,
+  ChatDeepSeek,
+  ChatOpenAI,
+  ChatXAI,
 } from '@/llm/openai';
 import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { ChatOpenRouter } from '@/llm/openrouter';
@@ -62,7 +62,9 @@ export type OpenAIClientOptions = ChatOpenAIFields;
 export type OllamaClientOptions = ChatOllamaInput;
 export type AnthropicClientOptions = AnthropicInput;
 export type MistralAIClientOptions = ChatMistralAIInput;
-export type VertexAIClientOptions = ChatVertexAIInput;
+export type VertexAIClientOptions = ChatVertexAIInput & {
+  includeThoughts?: boolean;
+};
 export type BedrockClientOptions = BedrockChatFields;
 export type BedrockAnthropicInput = ChatBedrockConverseInput & {
   additionalModelRequestFields?: ChatBedrockConverseInput['additionalModelRequestFields'] &
