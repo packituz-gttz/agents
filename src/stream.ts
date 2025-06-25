@@ -244,6 +244,7 @@ hasToolCallChunks: ${hasToolCallChunks}
       content.every(
         (c) =>
           (c.type?.startsWith(ContentTypes.THINKING) ?? false) ||
+          (c.type?.startsWith(ContentTypes.REASONING) ?? false) ||
           (c.type?.startsWith(ContentTypes.REASONING_CONTENT) ?? false)
       )
     ) {
@@ -252,6 +253,7 @@ hasToolCallChunks: ${hasToolCallChunks}
           type: ContentTypes.THINK,
           think:
             (c as t.ThinkingContentText).thinking ??
+            (c as Partial<t.GoogleReasoningContentText>).reasoning ??
             (c as Partial<t.BedrockReasoningContentText>).reasoningText?.text ??
             '',
         })),
@@ -264,8 +266,9 @@ hasToolCallChunks: ${hasToolCallChunks}
       | undefined;
     if (
       Array.isArray(chunk.content) &&
-      (chunk.content[0]?.type === 'thinking' ||
-        chunk.content[0]?.type === 'reasoning_content')
+      (chunk.content[0]?.type === ContentTypes.THINKING ||
+        chunk.content[0]?.type === ContentTypes.REASONING ||
+        chunk.content[0]?.type === ContentTypes.REASONING_CONTENT)
     ) {
       reasoning_content = 'valid';
     }

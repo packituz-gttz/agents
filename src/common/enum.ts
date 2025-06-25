@@ -117,10 +117,12 @@ export enum ContentTypes {
   IMAGE_FILE = 'image_file',
   /** Anthropic */
   THINKING = 'thinking',
-  /** Bedrock */
-  REASONING_CONTENT = 'reasoning_content',
+  /** Vertex AI / Google Common */
+  REASONING = 'reasoning',
   /** Multi-Agent Switch */
   AGENT_UPDATE = 'agent_update',
+  /** Bedrock */
+  REASONING_CONTENT = 'reasoning_content',
 }
 
 export enum ToolCallTypes {

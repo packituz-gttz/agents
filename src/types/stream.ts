@@ -251,6 +251,12 @@ export type ReasoningContentText = {
   think: string;
 };
 
+/** Vertex AI / Google Common - Reasoning Content Block Format */
+export type GoogleReasoningContentText = {
+  type: ContentTypes.REASONING;
+  reasoning: string;
+};
+
 /** Anthropic's Reasoning Content Block Format */
 export type ThinkingContentText = {
   type: ContentTypes.THINKING;
