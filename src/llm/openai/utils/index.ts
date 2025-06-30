@@ -553,11 +553,14 @@ export function _convertMessagesToOpenAIResponsesParams(
           );
         }
 
-        const toolOutputs = (
-          lcMsg.response_metadata.output as Array<ResponsesInputItem>
-        ).length
-          ? lcMsg.response_metadata.output
-          : additional_kwargs.tool_outputs;
+        const toolOutputs =
+          ((
+            lcMsg.response_metadata.output as
+              | Array<ResponsesInputItem>
+              | undefined
+          )?.length ?? 0) > 0
+            ? lcMsg.response_metadata.output
+            : additional_kwargs.tool_outputs;
 
         const fallthroughCallTypes: ResponsesInputItem['type'][] = [
           'computer_call',
