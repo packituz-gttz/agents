@@ -2,8 +2,15 @@
 import type { AIMessageChunk } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { Graph } from '@/graphs';
+import type { ChatOpenAIReasoningSummary } from '@langchain/openai';
 import type * as t from '@/types';
-import { StepTypes, ContentTypes, GraphEvents, ToolCallTypes } from '@/common';
+import {
+  StepTypes,
+  ContentTypes,
+  GraphEvents,
+  ToolCallTypes,
+  Providers,
+} from '@/common';
 import { handleToolCalls, handleToolCallChunks } from '@/tools/handlers';
 import { getMessageId } from '@/messages';
 
@@ -66,6 +73,41 @@ function getNonEmptyValue(possibleValues: string[]): string | undefined {
   }
   return undefined;
 }
+
+function getChunkContent({
+  chunk,
+  provider,
+  reasoningKey,
+}: {
+  chunk?: Partial<AIMessageChunk>;
+  provider?: Providers;
+  reasoningKey: 'reasoning_content' | 'reasoning';
+}): string | t.MessageContentComplex[] | undefined {
+  if (
+    (provider === Providers.OPENAI || provider === Providers.AZURE) &&
+    (
+      chunk?.additional_kwargs?.reasoning as
+        | Partial<ChatOpenAIReasoningSummary>
+        | undefined
+    )?.summary?.[0]?.text != null &&
+    ((
+      chunk?.additional_kwargs?.reasoning as
+        | Partial<ChatOpenAIReasoningSummary>
+        | undefined
+    )?.summary?.[0]?.text?.length ?? 0) > 0
+  ) {
+    return (
+      chunk?.additional_kwargs?.reasoning as
+        | Partial<ChatOpenAIReasoningSummary>
+        | undefined
+    )?.summary?.[0]?.text;
+  }
+  return (
+    (chunk?.additional_kwargs?.[reasoningKey] as string | undefined) ??
+    chunk?.content
+  );
+}
+
 export class ChatModelStreamHandler implements t.EventHandler {
   handle(
     event: string,
@@ -85,10 +127,12 @@ export class ChatModelStreamHandler implements t.EventHandler {
     }
 
     const chunk = data.chunk as Partial<AIMessageChunk>;
-    const content =
-      (chunk.additional_kwargs?.[graph.reasoningKey] as string | undefined) ??
-      chunk.content;
-    this.handleReasoning(chunk, graph);
+    const content = getChunkContent({
+      chunk,
+      reasoningKey: graph.reasoningKey,
+      provider: metadata?.provider as Providers,
+    });
+    this.handleReasoning(chunk, graph, metadata?.provider as Providers);
 
     let hasToolCalls = false;
     if (
@@ -260,9 +304,14 @@ hasToolCallChunks: ${hasToolCallChunks}
       });
     }
   }
-  handleReasoning(chunk: Partial<AIMessageChunk>, graph: Graph): void {
+  handleReasoning(
+    chunk: Partial<AIMessageChunk>,
+    graph: Graph,
+    provider?: Providers
+  ): void {
     let reasoning_content = chunk.additional_kwargs?.[graph.reasoningKey] as
       | string
+      | Partial<ChatOpenAIReasoningSummary>
       | undefined;
     if (
       Array.isArray(chunk.content) &&
@@ -271,10 +320,18 @@ hasToolCallChunks: ${hasToolCallChunks}
         chunk.content[0]?.type === ContentTypes.REASONING_CONTENT)
     ) {
       reasoning_content = 'valid';
+    } else if (
+      (provider === Providers.OPENAI || provider === Providers.AZURE) &&
+      reasoning_content != null &&
+      typeof reasoning_content !== 'string' &&
+      reasoning_content.summary?.[0]?.text != null &&
+      reasoning_content.summary[0].text
+    ) {
+      reasoning_content = 'valid';
     }
     if (
       reasoning_content != null &&
-      reasoning_content &&
+      reasoning_content !== '' &&
       (chunk.content == null ||
         chunk.content === '' ||
         reasoning_content === 'valid')
