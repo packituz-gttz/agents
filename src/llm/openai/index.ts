@@ -2,23 +2,30 @@ import { AzureOpenAI as AzureOpenAIClient } from 'openai';
 import { ChatXAI as OriginalChatXAI } from '@langchain/xai';
 import { ChatDeepSeek as OriginalChatDeepSeek } from '@langchain/deepseek';
 import {
+  isOpenAITool,
+  ToolDefinition,
+  BaseLanguageModelInput,
+} from '@langchain/core/language_models/base';
+import {
   getEndpoint,
   OpenAIClient,
   formatToOpenAITool,
   ChatOpenAI as OriginalChatOpenAI,
   AzureChatOpenAI as OriginalAzureChatOpenAI,
 } from '@langchain/openai';
+import type { ChatGenerationChunk } from '@langchain/core/outputs';
 import { isLangChainTool } from '@langchain/core/utils/function_calling';
+import { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { OpenAIEndpointConfig } from '@langchain/openai/dist/utils/azure';
-import type { AIMessageChunk } from '@langchain/core/messages';
+import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import type * as t from '@langchain/openai';
 import {
-  isOpenAITool,
-  ToolDefinition,
-  BaseLanguageModelInput,
-} from '@langchain/core/language_models/base';
+  _convertMessagesToOpenAIResponsesParams,
+  _convertOpenAIResponsesDeltaToBaseMessageChunk,
+  type ResponseReturnStreamEvents,
+} from './utils';
 
 type ResponsesCreateParams = Parameters<OpenAIClient.Responses['create']>[0];
 type ResponsesTool = Exclude<ResponsesCreateParams['tools'], undefined>[number];
@@ -274,6 +281,46 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
     } as OpenAICoreRequestOptions;
     return requestOptions;
   }
+
+  async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this['ParsedCallOptions'],
+    runManager?: CallbackManagerForLLMRun
+  ): AsyncGenerator<ChatGenerationChunk> {
+    if (!this._useResponseApi(options)) {
+      return yield* super._streamResponseChunks(messages, options, runManager);
+    }
+    const streamIterable = await this.responseApiWithRetry(
+      {
+        ...this.invocationParams<'responses'>(options, { streaming: true }),
+        input: _convertMessagesToOpenAIResponsesParams(
+          messages,
+          this.model,
+          this.zdrEnabled
+        ),
+        stream: true,
+      },
+      options
+    );
+
+    for await (const data of streamIterable) {
+      const chunk = _convertOpenAIResponsesDeltaToBaseMessageChunk(
+        data as ResponseReturnStreamEvents
+      );
+      if (chunk == null) continue;
+      yield chunk;
+      await runManager?.handleLLMNewToken(
+        chunk.text || '',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { chunk }
+      );
+    }
+
+    return;
+  }
 }
 
 export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
@@ -360,6 +407,45 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
       };
     }
     return requestOptions;
+  }
+  async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this['ParsedCallOptions'],
+    runManager?: CallbackManagerForLLMRun
+  ): AsyncGenerator<ChatGenerationChunk> {
+    if (!this._useResponseApi(options)) {
+      return yield* super._streamResponseChunks(messages, options, runManager);
+    }
+    const streamIterable = await this.responseApiWithRetry(
+      {
+        ...this.invocationParams<'responses'>(options, { streaming: true }),
+        input: _convertMessagesToOpenAIResponsesParams(
+          messages,
+          this.model,
+          this.zdrEnabled
+        ),
+        stream: true,
+      },
+      options
+    );
+
+    for await (const data of streamIterable) {
+      const chunk = _convertOpenAIResponsesDeltaToBaseMessageChunk(
+        data as ResponseReturnStreamEvents
+      );
+      if (chunk == null) continue;
+      yield chunk;
+      await runManager?.handleLLMNewToken(
+        chunk.text || '',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { chunk }
+      );
+    }
+
+    return;
   }
 }
 export class ChatDeepSeek extends OriginalChatDeepSeek {
