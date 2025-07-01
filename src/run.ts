@@ -1,8 +1,8 @@
 // src/run.ts
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { PromptTemplate } from '@langchain/core/prompts';
-import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
 import { SystemMessage } from '@langchain/core/messages';
+import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai';
 import type {
   BaseMessage,
   MessageContentComplex,
@@ -147,15 +147,18 @@ export class Run<T extends t.BaseGraphState> {
       (streamOptions?.indexTokenCountMap
         ? await createTokenCounter()
         : undefined);
+    const tools = this.Graph.tools as
+      | Array<t.GenericTool | undefined>
+      | undefined;
     const toolTokens = tokenCounter
-      ? (this.Graph.tools?.reduce((acc, tool) => {
+      ? (tools?.reduce((acc, tool) => {
         if (!(tool as Partial<t.GenericTool>).schema) {
           return acc;
         }
 
         const jsonSchema = zodToJsonSchema(
-          (tool.schema as t.ZodObjectAny).describe(tool.description ?? ''),
-          tool.name
+          (tool?.schema as t.ZodObjectAny).describe(tool?.description ?? ''),
+          tool?.name ?? ''
         );
         return (
           acc + tokenCounter(new SystemMessage(JSON.stringify(jsonSchema)))

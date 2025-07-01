@@ -1,6 +1,6 @@
 // src/types/tools.ts
-import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
-import type { GoogleAIToolType } from '@langchain/google-common';
+import type { StructuredToolInterface } from '@langchain/core/tools';
+import type { RunnableToolLike } from '@langchain/core/runnables';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { ToolErrorData } from './stream';
 import { EnvVar } from '@/common';
@@ -15,7 +15,8 @@ export type CustomToolCall = {
   output?: string;
 };
 
-export type GenericTool = BindToolsInput | GoogleAIToolType;
+export type GenericTool = StructuredToolInterface | RunnableToolLike;
+
 export type ToolMap = Map<string, GenericTool>;
 export type ToolRefs = {
   tools: GenericTool[];

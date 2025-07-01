@@ -135,7 +135,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
   systemMessage: SystemMessage | undefined;
   messages: BaseMessage[] = [];
   runId: string | undefined;
-  tools?: t.GenericTool[];
+  tools?: t.GraphTools;
   toolMap?: t.ToolMap;
   startIndex: number = 0;
   provider: Providers;
@@ -354,7 +354,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     | ToolNode<t.BaseGraphState> {
     // return new ToolNode<t.BaseGraphState>(this.tools);
     return new CustomToolNode<t.BaseGraphState>({
-      tools: this.tools || [],
+      tools: (this.tools as t.GenericTool[] | undefined) || [],
       toolMap: this.toolMap,
       toolCallStepIds: this.toolCallStepIds,
       errorHandler: (data, metadata) =>
