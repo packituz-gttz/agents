@@ -1,11 +1,7 @@
 import { AzureOpenAI as AzureOpenAIClient } from 'openai';
 import { ChatXAI as OriginalChatXAI } from '@langchain/xai';
 import { ChatDeepSeek as OriginalChatDeepSeek } from '@langchain/deepseek';
-import {
-  isOpenAITool,
-  ToolDefinition,
-  BaseLanguageModelInput,
-} from '@langchain/core/language_models/base';
+import { ToolDefinition } from '@langchain/core/language_models/base';
 import {
   getEndpoint,
   OpenAIClient,
@@ -18,22 +14,13 @@ import { isLangChainTool } from '@langchain/core/utils/function_calling';
 import { CallbackManagerForLLMRun } from '@langchain/core/callbacks/manager';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { OpenAIEndpointConfig } from '@langchain/openai/dist/utils/azure';
-import type { AIMessageChunk, BaseMessage } from '@langchain/core/messages';
-import type { Runnable } from '@langchain/core/runnables';
+import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@langchain/openai';
 import {
   _convertMessagesToOpenAIResponsesParams,
   _convertOpenAIResponsesDeltaToBaseMessageChunk,
   type ResponseReturnStreamEvents,
 } from './utils';
-
-type ResponsesCreateParams = Parameters<OpenAIClient.Responses['create']>[0];
-type ResponsesTool = Exclude<ResponsesCreateParams['tools'], undefined>[number];
-
-type ChatOpenAIToolType =
-  | BindToolsInput
-  | OpenAIClient.ChatCompletionTool
-  | ResponsesTool;
 
 type HeaderValue = string | undefined | null;
 export type HeadersLike =
@@ -133,29 +120,6 @@ export function _convertToOpenAITool(
 
   return toolDef;
 }
-
-function _convertChatOpenAIToolTypeToOpenAITool(
-  tool: ChatOpenAIToolType,
-  fields?: {
-    strict?: boolean;
-  }
-): OpenAIClient.ChatCompletionTool {
-  if (isOpenAITool(tool)) {
-    if (fields?.strict !== undefined) {
-      return {
-        ...tool,
-        function: {
-          ...tool.function,
-          strict: fields.strict,
-        },
-      };
-    }
-
-    return tool;
-  }
-  return _convertToOpenAITool(tool, fields);
-}
-
 export class CustomOpenAIClient extends OpenAIClient {
   abortHandler?: () => void;
   async fetchWithTimeout(
@@ -227,32 +191,9 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
   }
 }
 
-function isBuiltInTool(tool: ChatOpenAIToolType): tool is ResponsesTool {
-  return 'type' in tool && tool.type !== 'function';
-}
-
 export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
-  }
-  override bindTools(
-    tools: ChatOpenAIToolType[],
-    kwargs?: Partial<t.ChatOpenAICallOptions>
-  ): Runnable<BaseLanguageModelInput, AIMessageChunk, t.ChatOpenAICallOptions> {
-    let strict: boolean | undefined;
-    if (kwargs?.strict !== undefined) {
-      strict = kwargs.strict;
-    } else if (this.supportsStrictToolCalling !== undefined) {
-      strict = this.supportsStrictToolCalling;
-    }
-    return this.withConfig({
-      tools: tools.map((tool) =>
-        isBuiltInTool(tool)
-          ? tool
-          : _convertChatOpenAIToolTypeToOpenAITool(tool, { strict })
-      ),
-      ...kwargs,
-    } as Partial<t.ChatOpenAICallOptions>);
   }
   protected _getClientOptions(
     options?: OpenAICoreRequestOptions
@@ -324,25 +265,6 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
 }
 
 export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
-  override bindTools(
-    tools: ChatOpenAIToolType[],
-    kwargs?: Partial<t.ChatOpenAICallOptions>
-  ): Runnable<BaseLanguageModelInput, AIMessageChunk, t.ChatOpenAICallOptions> {
-    let strict: boolean | undefined;
-    if (kwargs?.strict !== undefined) {
-      strict = kwargs.strict;
-    } else if (this.supportsStrictToolCalling !== undefined) {
-      strict = this.supportsStrictToolCalling;
-    }
-    return this.withConfig({
-      tools: tools.map((tool) =>
-        isBuiltInTool(tool)
-          ? tool
-          : _convertChatOpenAIToolTypeToOpenAITool(tool, { strict })
-      ),
-      ...kwargs,
-    } as Partial<t.ChatOpenAICallOptions>);
-  }
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
   }
