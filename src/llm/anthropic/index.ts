@@ -221,16 +221,9 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       !_documentsInParams(payload) &&
       !_thinkingInParams(payload);
 
-    const stream = await this.createStreamWithRetry(
-      {
-        ...params,
-        ...formattedMessages,
-        stream: true,
-      },
-      {
-        headers: options.headers,
-      }
-    );
+    const stream = await this.createStreamWithRetry(payload, {
+      headers: options.headers,
+    });
 
     const shouldStreamUsage = this.streamUsage ?? options.streamUsage;
 

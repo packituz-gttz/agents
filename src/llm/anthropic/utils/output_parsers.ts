@@ -4,17 +4,17 @@ import {
   BaseLLMOutputParser,
   OutputParserException,
 } from '@langchain/core/output_parsers';
-import { JsonOutputKeyToolsParserParams } from '@langchain/core/output_parsers/openai_tools';
+import { JsonOutputKeyToolsParserParamsInterop } from '@langchain/core/output_parsers/openai_tools';
+import { ChatGeneration } from '@langchain/core/outputs';
+import { ToolCall } from '@langchain/core/messages/tool';
 import {
   interopSafeParseAsync,
   InteropZodType,
 } from '@langchain/core/utils/types';
-import { ChatGeneration } from '@langchain/core/outputs';
-import { ToolCall } from '@langchain/core/messages/tool';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface AnthropicToolsOutputParserParams<T extends Record<string, any>>
-  extends JsonOutputKeyToolsParserParams<T> {}
+  extends JsonOutputKeyToolsParserParamsInterop<T> {}
 
 export class AnthropicToolsOutputParser<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

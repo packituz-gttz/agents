@@ -25,7 +25,6 @@ import {
   AnthropicImageBlockParam,
   AnthropicMessageCreateParams,
   AnthropicTextBlockParam,
-  AnthropicToolResponse,
   AnthropicToolResultBlockParam,
   AnthropicToolUseBlockParam,
   AnthropicDocumentBlockParam,
@@ -34,7 +33,9 @@ import {
   AnthropicServerToolUseBlockParam,
   AnthropicWebSearchToolResultBlockParam,
   isAnthropicImageBlockParam,
-} from '@/llm/anthropic/types';
+  AnthropicSearchResultBlockParam,
+  AnthropicToolResponse,
+} from '../types';
 
 function _formatImage(imageUrl: string) {
   const parsed = parseBase64DataUrl({ dataUrl: imageUrl });
@@ -405,6 +406,20 @@ function _formatContent(content: MessageContent) {
           type: 'redacted_thinking' as const, // Explicitly setting the type as "redacted_thinking"
           data: contentPart.data,
           ...(cacheControl ? { cache_control: cacheControl } : {}),
+        };
+        return block;
+      } else if (contentPart.type === 'search_result') {
+        const block: AnthropicSearchResultBlockParam = {
+          type: 'search_result' as const, // Explicitly setting the type as "search_result"
+          title: contentPart.title,
+          source: contentPart.source,
+          ...('cache_control' in contentPart && contentPart.cache_control
+            ? { cache_control: contentPart.cache_control }
+            : {}),
+          ...('citations' in contentPart && contentPart.citations
+            ? { citations: contentPart.citations }
+            : {}),
+          content: contentPart.content,
         };
         return block;
       } else if (
