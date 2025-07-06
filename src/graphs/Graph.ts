@@ -125,6 +125,7 @@ export abstract class Graph<
   signal?: AbortSignal;
   /** Set of invoked tool call IDs from non-message run steps completed mid-run, if any */
   invokedToolIds?: Set<string>;
+  handlerRegistry: HandlerRegistry | undefined;
 }
 
 export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
@@ -133,7 +134,6 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
   boundModel?: Runnable;
   /** The last recorded timestamp that a stream API call was invoked */
   lastStreamCall: number | undefined;
-  handlerRegistry: HandlerRegistry | undefined;
   systemMessage: SystemMessage | undefined;
   messages: BaseMessage[] = [];
   runId: string | undefined;

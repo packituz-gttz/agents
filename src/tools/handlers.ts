@@ -7,16 +7,18 @@ import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 import {
-  coerceAnthropicSearchResults,
-  isAnthropicWebSearchResult,
-} from '@/tools/search/anthropic';
-import {
-  StepTypes,
-  ContentTypes,
   ToolCallTypes,
+  ContentTypes,
+  GraphEvents,
+  StepTypes,
   Providers,
   Constants,
 } from '@/common';
+import {
+  coerceAnthropicSearchResults,
+  isAnthropicWebSearchResult,
+} from '@/tools/search/anthropic';
+import { formatResultsForLLM } from '@/tools/search/format';
 import { getMessageId } from '@/messages';
 
 export function handleToolCallChunks({
@@ -297,9 +299,10 @@ function handleAnthropicSearchResults({
     return;
   }
 
+  const turn = graph.invokedToolIds?.size ?? 0;
   const searchResultData = coerceAnthropicSearchResults({
+    turn,
     results: contentPart.content as AnthropicWebSearchResultBlockParam[],
-    turn: graph.invokedToolIds?.size,
   });
 
   const name = toolCall.name;
@@ -307,19 +310,23 @@ function handleAnthropicSearchResults({
   const artifact = {
     [Constants.WEB_SEARCH]: searchResultData,
   };
+  const { output: formattedOutput } = formatResultsForLLM(
+    turn,
+    searchResultData
+  );
   const output = new ToolMessage({
     name,
     artifact,
-    content: 'Anthropic web search results',
+    content: formattedOutput,
     tool_call_id: toolCall.id!,
   });
-  graph.handleToolCallCompleted(
-    {
-      input,
-      output,
-    },
-    metadata
-  );
+  const toolEndData: t.ToolEndData = {
+    input,
+    output,
+  };
+  graph.handlerRegistry
+    ?.getHandler(GraphEvents.TOOL_END)
+    ?.handle(GraphEvents.TOOL_END, toolEndData, metadata, graph);
 
   if (graph.invokedToolIds == null) {
     graph.invokedToolIds = new Set<string>();
