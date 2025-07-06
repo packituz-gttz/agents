@@ -1,6 +1,6 @@
 {
   "name": "@librechat/agents",
-  "version": "2.4.52",
+  "version": "2.4.53",
   "main": "./dist/cjs/main.cjs",
   "module": "./dist/esm/main.mjs",
   "types": "./dist/types/index.d.ts",
@@ -53,6 +53,7 @@
     "memory": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/memory.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "tool-test": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/tools.ts --provider 'bedrock' --name 'Jo' --location 'New York, NY'",
     "search": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/search.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
+    "ant_web_search": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/ant_web_search.ts --name 'Jo' --location 'New York, NY'",
     "abort": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/abort.ts --provider 'openAI' --name 'Jo' --location 'New York, NY'",
     "start:cli2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/scripts/cli2.ts --provider 'anthropic' --name 'Jo' --location 'New York, NY'",
     "script2": "node -r dotenv/config --loader ./tsconfig-paths-bootstrap.mjs --experimental-specifier-resolution=node ./src/proto/example_test.ts",
