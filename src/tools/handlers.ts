@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 // src/tools/handlers.ts
 import { nanoid } from 'nanoid';
+import { ToolMessage } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
-import type { Graph } from '@/graphs';
+import type { Graph, StandardGraph } from '@/graphs';
 import type * as t from '@/types';
-import { StepTypes, ContentTypes, ToolCallTypes } from '@/common';
+import { StepTypes, ContentTypes, ToolCallTypes, Providers } from '@/common';
 import { getMessageId } from '@/messages';
 
 export function handleToolCallChunks({
@@ -165,3 +166,101 @@ export const handleToolCalls = (
     });
   }
 };
+
+export const toolResultTypes = new Set([
+  // 'tool_use',
+  // 'server_tool_use',
+  // 'input_json_delta',
+  'tool_result',
+  'web_search_result',
+  'web_search_tool_result',
+]);
+
+/**
+ * Handles the result of a server tool call; in other words, a provider's built-in tool.
+ * As of 2025-07-06, only Anthropic handles server tool calls with this pattern.
+ */
+export function handleServerToolResult({
+  content,
+  metadata,
+  graph,
+}: {
+  content?: string | t.MessageContentComplex[];
+  metadata?: Record<string, unknown>;
+  graph: StandardGraph;
+}): boolean {
+  let skipHandling = false;
+  if (metadata?.provider !== Providers.ANTHROPIC) {
+    return skipHandling;
+  }
+  if (
+    typeof content === 'string' ||
+    content == null ||
+    content.length === 0 ||
+    (content.length === 1 &&
+      (content[0] as t.ToolResultContent).tool_use_id == null)
+  ) {
+    return skipHandling;
+  }
+
+  for (const contentPart of content) {
+    const toolUseId = (contentPart as t.ToolResultContent).tool_use_id;
+    if (toolUseId == null || toolUseId === '') {
+      continue;
+    }
+    const stepId = graph.toolCallStepIds.get(toolUseId);
+    if (stepId == null || stepId === '') {
+      console.warn(
+        `Tool use ID ${toolUseId} not found in graph, cannot dispatch tool result.`
+      );
+      continue;
+    }
+    const runStep = graph.getRunStep(stepId);
+    if (!runStep) {
+      console.warn(
+        `Run step for ${stepId} does not exist, cannot dispatch tool result.`
+      );
+      continue;
+    } else if (runStep.type !== StepTypes.TOOL_CALLS) {
+      console.warn(
+        `Run step for ${stepId} is not a tool call step, cannot dispatch tool result.`
+      );
+      continue;
+    }
+
+    const toolCall =
+      runStep.stepDetails.type === StepTypes.TOOL_CALLS
+        ? (runStep.stepDetails.tool_calls?.find(
+          (toolCall) => toolCall.id === toolUseId
+        ) as ToolCall)
+        : undefined;
+
+    const name = toolCall?.name ?? 'server_tool_use';
+    const input = toolCall?.args ?? '';
+    const output = (contentPart as t.ToolResultContent).content;
+
+    graph.handleToolCallCompleted(
+      {
+        input,
+        output: new ToolMessage({
+          name,
+          content: typeof output === 'string' ? output : JSON.stringify(output),
+          tool_call_id: toolUseId!,
+        }),
+      },
+      metadata
+    );
+
+    if (graph.invokedToolIds == null) {
+      graph.invokedToolIds = new Set<string>();
+    }
+
+    graph.invokedToolIds.add(toolUseId);
+
+    if (!skipHandling) {
+      skipHandling = true;
+    }
+  }
+
+  return skipHandling;
+}

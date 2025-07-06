@@ -1,17 +1,21 @@
 // src/stream.ts
+import type { ChatOpenAIReasoningSummary } from '@langchain/openai';
 import type { AIMessageChunk } from '@langchain/core/messages';
 import type { ToolCall } from '@langchain/core/messages/tool';
 import type { Graph } from '@/graphs';
-import type { ChatOpenAIReasoningSummary } from '@langchain/openai';
 import type * as t from '@/types';
 import {
-  StepTypes,
+  ToolCallTypes,
   ContentTypes,
   GraphEvents,
-  ToolCallTypes,
+  StepTypes,
   Providers,
 } from '@/common';
-import { handleToolCalls, handleToolCallChunks } from '@/tools/handlers';
+import {
+  handleServerToolResult,
+  handleToolCallChunks,
+  handleToolCalls,
+} from '@/tools/handlers';
 import { getMessageId } from '@/messages';
 
 /**
@@ -132,8 +136,15 @@ export class ChatModelStreamHandler implements t.EventHandler {
       reasoningKey: graph.reasoningKey,
       provider: metadata?.provider as Providers,
     });
+    const skipHandling = handleServerToolResult({
+      content,
+      metadata,
+      graph,
+    });
+    if (skipHandling) {
+      return;
+    }
     this.handleReasoning(chunk, graph, metadata?.provider as Providers);
-
     let hasToolCalls = false;
     if (
       chunk.tool_calls &&

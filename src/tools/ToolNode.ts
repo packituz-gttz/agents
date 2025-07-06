@@ -138,16 +138,30 @@ export class ToolNode<T = any> extends RunnableCallable<T, T> {
   }
 }
 
+function areToolCallsInvoked(
+  message: AIMessage,
+  invokedToolIds?: Set<string>
+): boolean {
+  if (!invokedToolIds || invokedToolIds.size === 0) return false;
+  return (
+    message.tool_calls?.every(
+      (toolCall) => toolCall.id != null && invokedToolIds.has(toolCall.id)
+    ) ?? false
+  );
+}
+
 export function toolsCondition(
-  state: BaseMessage[] | typeof MessagesAnnotation.State
+  state: BaseMessage[] | typeof MessagesAnnotation.State,
+  invokedToolIds?: Set<string>
 ): 'tools' | typeof END {
-  const message = Array.isArray(state)
+  const message: AIMessage = Array.isArray(state)
     ? state[state.length - 1]
     : state.messages[state.messages.length - 1];
 
   if (
     'tool_calls' in message &&
-    ((message as AIMessage).tool_calls?.length ?? 0) > 0
+    (message.tool_calls?.length ?? 0) > 0 &&
+    !areToolCallsInvoked(message, invokedToolIds)
   ) {
     return GraphNodeKeys.TOOLS;
   } else {

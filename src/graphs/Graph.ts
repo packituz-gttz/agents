@@ -123,6 +123,8 @@ export abstract class Graph<
   streamBuffer: number | undefined;
   tokenCounter?: t.TokenCounter;
   signal?: AbortSignal;
+  /** Set of invoked tool call IDs from non-message run steps completed mid-run, if any */
+  invokedToolIds?: Set<string>;
 }
 
 export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
@@ -238,6 +240,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
     this.currentUsage = resetIfNotEmpty(this.currentUsage, undefined);
     this.tokenCounter = resetIfNotEmpty(this.tokenCounter, undefined);
     this.maxContextTokens = resetIfNotEmpty(this.maxContextTokens, undefined);
+    this.invokedToolIds = resetIfNotEmpty(this.invokedToolIds, undefined);
   }
 
   /* Run Step Processing */
@@ -308,6 +311,10 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       this.currentTokenType === 'think_and_text'
     ) {
       keyList.push('reasoning');
+    }
+
+    if (this.invokedToolIds != null && this.invokedToolIds.size > 0) {
+      keyList.push(this.invokedToolIds.size + '');
     }
 
     return keyList;
@@ -607,12 +614,7 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       config?: RunnableConfig
     ): string => {
       this.config = config;
-      // const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
-      // if (!lastMessage?.tool_calls?.length) {
-      //   return END;
-      // }
-      // return TOOLS;
-      return toolsCondition(state);
+      return toolsCondition(state, this.invokedToolIds);
     };
 
     const workflow = new StateGraph<t.BaseGraphState>({

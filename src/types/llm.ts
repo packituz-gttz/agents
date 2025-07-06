@@ -91,9 +91,11 @@ export type ClientOptions =
   | DeepSeekClientOptions
   | XAIClientOptions;
 
-export type LLMConfig = {
+export type SharedLLMConfig = {
   provider: Providers;
-} & ClientOptions;
+};
+
+export type LLMConfig = SharedLLMConfig & ClientOptions;
 
 export type ProviderOptionsMap = {
   [Providers.AZURE]: AzureClientOptions;

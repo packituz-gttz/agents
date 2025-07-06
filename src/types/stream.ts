@@ -299,7 +299,18 @@ export type ToolCallContent = {
   tool_call?: ToolCallPart;
 };
 
+export type ToolResultContent = {
+  content:
+    | string
+    | Record<string, unknown>
+    | Array<string | Record<string, unknown>>;
+  type: 'tool_result' | 'web_search_result' | 'web_search_tool_result';
+  tool_use_id?: string;
+  index?: number;
+};
+
 export type MessageContentComplex = (
+  | ToolResultContent
   | ThinkingContentText
   | AgentUpdate
   | ToolCallContent
