@@ -7,7 +7,7 @@ const tsconfig = require('./tsconfig.json');
 const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/src/**/*.test.ts'],
+  testMatch: ['**/src/**/*.test.ts', '**/src/**/*.spec.ts'],
   moduleNameMapper: pathsToModuleNameMapper(tsconfig.compilerOptions.paths, {
     prefix: '<rootDir>/'
   }),

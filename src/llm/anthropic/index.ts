@@ -128,6 +128,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
   private emitted_usage?: boolean;
   constructor(fields?: CustomAnthropicInput) {
     super(fields);
+    this.resetTokenEvents();
     this._lc_stream_delay = fields?._lc_stream_delay ?? 25;
   }
 
@@ -209,6 +210,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
     options: this['ParsedCallOptions'],
     runManager?: CallbackManagerForLLMRun
   ): AsyncGenerator<ChatGenerationChunk> {
+    this.resetTokenEvents();
     const params = this.invocationParams(options);
     const formattedMessages = _convertMessagesToAnthropicPayload(messages);
     const payload = {
@@ -256,7 +258,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
       if (
         !tokenType ||
         tokenType === 'input' ||
-        (token === '' && usageMetadata)
+        (token === '' && (usageMetadata != null || chunk.id != null))
       ) {
         const generationChunk = this.createGenerationChunk({
           token,
@@ -302,7 +304,7 @@ export class CustomAnthropic extends ChatAnthropicMessages {
           yield generationChunk;
 
           await runManager?.handleLLMNewToken(
-            token,
+            currentToken,
             undefined,
             undefined,
             undefined,
