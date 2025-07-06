@@ -233,6 +233,7 @@ const createSearXNGAPI = (
   const getSources = async ({
     query,
     numResults = 8,
+    safeSearch,
     type,
   }: t.GetSourcesParams): Promise<t.SearchResult> => {
     if (!query.trim()) {
@@ -267,7 +268,7 @@ const createSearXNGAPI = (
         pageno: 1,
         categories: category,
         language: 'all',
-        safesearch: 0,
+        safesearch: safeSearch,
         engines: 'google,bing,duckduckgo',
       };
 
