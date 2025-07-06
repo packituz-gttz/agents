@@ -2,10 +2,21 @@
 // src/tools/handlers.ts
 import { nanoid } from 'nanoid';
 import { ToolMessage } from '@langchain/core/messages';
+import type { AnthropicWebSearchResultBlockParam } from '@/llm/anthropic/types';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { Graph, StandardGraph } from '@/graphs';
 import type * as t from '@/types';
-import { StepTypes, ContentTypes, ToolCallTypes, Providers } from '@/common';
+import {
+  coerceAnthropicSearchResults,
+  isAnthropicWebSearchResult,
+} from '@/tools/search/anthropic';
+import {
+  StepTypes,
+  ContentTypes,
+  ToolCallTypes,
+  Providers,
+  Constants,
+} from '@/common';
 import { getMessageId } from '@/messages';
 
 export function handleToolCallChunks({
@@ -235,27 +246,21 @@ export function handleServerToolResult({
         ) as ToolCall)
         : undefined;
 
-    const name = toolCall?.name ?? 'server_tool_use';
-    const input = toolCall?.args ?? '';
-    const output = (contentPart as t.ToolResultContent).content;
-
-    graph.handleToolCallCompleted(
-      {
-        input,
-        output: new ToolMessage({
-          name,
-          content: typeof output === 'string' ? output : JSON.stringify(output),
-          tool_call_id: toolUseId!,
-        }),
-      },
-      metadata
-    );
-
-    if (graph.invokedToolIds == null) {
-      graph.invokedToolIds = new Set<string>();
+    if (!toolCall) {
+      continue;
     }
 
-    graph.invokedToolIds.add(toolUseId);
+    if (
+      contentPart.type === 'web_search_result' ||
+      contentPart.type === 'web_search_tool_result'
+    ) {
+      handleAnthropicSearchResults({
+        contentPart: contentPart as t.ToolResultContent,
+        toolCall,
+        metadata,
+        graph,
+      });
+    }
 
     if (!skipHandling) {
       skipHandling = true;
@@ -263,4 +268,62 @@ export function handleServerToolResult({
   }
 
   return skipHandling;
+}
+
+function handleAnthropicSearchResults({
+  contentPart,
+  toolCall,
+  metadata,
+  graph,
+}: {
+  contentPart: t.ToolResultContent;
+  toolCall: ToolCall;
+  metadata?: Record<string, unknown>;
+  graph: StandardGraph;
+}): void {
+  if (!Array.isArray(contentPart.content)) {
+    console.warn(
+      `Expected content to be an array, got ${typeof contentPart.content}`
+    );
+    return;
+  }
+
+  if (!isAnthropicWebSearchResult(contentPart.content[0])) {
+    console.warn(
+      `Expected content to be an Anthropic web search result, got ${JSON.stringify(
+        contentPart.content
+      )}`
+    );
+    return;
+  }
+
+  const searchResultData = coerceAnthropicSearchResults({
+    results: contentPart.content as AnthropicWebSearchResultBlockParam[],
+    turn: graph.invokedToolIds?.size,
+  });
+
+  const name = toolCall.name;
+  const input = toolCall.args;
+  const artifact = {
+    [Constants.WEB_SEARCH]: searchResultData,
+  };
+  const output = new ToolMessage({
+    name,
+    artifact,
+    content: 'Anthropic web search results',
+    tool_call_id: toolCall.id!,
+  });
+  graph.handleToolCallCompleted(
+    {
+      input,
+      output,
+    },
+    metadata
+  );
+
+  if (graph.invokedToolIds == null) {
+    graph.invokedToolIds = new Set<string>();
+  }
+
+  graph.invokedToolIds.add(toolCall.id!);
 }

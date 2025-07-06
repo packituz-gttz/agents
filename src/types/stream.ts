@@ -8,6 +8,7 @@ import type {
 } from '@langchain/core/messages';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
 import type { LLMResult, Generation } from '@langchain/core/outputs';
+import type { AnthropicContentBlock } from '@/llm/anthropic/types';
 import type { ToolEndEvent } from '@/types/tools';
 import { StepTypes, ContentTypes, GraphEvents } from '@/common/enum';
 
@@ -303,9 +304,11 @@ export type ToolResultContent = {
   content:
     | string
     | Record<string, unknown>
-    | Array<string | Record<string, unknown>>;
+    | Array<string | Record<string, unknown>>
+    | AnthropicContentBlock[];
   type: 'tool_result' | 'web_search_result' | 'web_search_tool_result';
   tool_use_id?: string;
+  input?: string | Record<string, unknown>;
   index?: number;
 };
 
