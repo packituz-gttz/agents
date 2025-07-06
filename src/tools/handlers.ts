@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import { ToolMessage } from '@langchain/core/messages';
 import type { AnthropicWebSearchResultBlockParam } from '@/llm/anthropic/types';
 import type { ToolCall, ToolCallChunk } from '@langchain/core/messages/tool';
-import type { Graph, StandardGraph } from '@/graphs';
+import type { Graph } from '@/graphs';
 import type * as t from '@/types';
 import {
   coerceAnthropicSearchResults,
@@ -198,7 +198,7 @@ export function handleServerToolResult({
 }: {
   content?: string | t.MessageContentComplex[];
   metadata?: Record<string, unknown>;
-  graph: StandardGraph;
+  graph: Graph;
 }): boolean {
   let skipHandling = false;
   if (metadata?.provider !== Providers.ANTHROPIC) {
@@ -279,7 +279,7 @@ function handleAnthropicSearchResults({
   contentPart: t.ToolResultContent;
   toolCall: ToolCall;
   metadata?: Record<string, unknown>;
-  graph: StandardGraph;
+  graph: Graph;
 }): void {
   if (!Array.isArray(contentPart.content)) {
     console.warn(
