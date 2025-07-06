@@ -81,11 +81,6 @@ async function testStandardStreaming(): Promise<void> {
     Providers.ANTHROPIC
   ) as t.AnthropicClientOptions & t.SharedLLMConfig;
   llmConfig.model = 'claude-3-5-sonnet-latest';
-  llmConfig.clientOptions = {
-    defaultHeaders: {
-      'anthropic-beta': 'search-results-2025-06-09',
-    },
-  };
 
   const run = await Run.create<t.IState>({
     runId: 'test-run-id',
