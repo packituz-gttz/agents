@@ -473,12 +473,19 @@ export function createContentAggregator(): t.ContentAggregatorResult {
 
       const toolCallArgs = (contentPart.tool_call as t.ToolCallPart).args;
       /** When args are a valid object, they are likely already invoked */
-      const args =
+      let args =
         finalUpdate ||
         typeof existingContent?.tool_call?.args === 'object' ||
         typeof toolCallArgs === 'object'
           ? contentPart.tool_call.args
           : (existingContent?.tool_call?.args ?? '') + (toolCallArgs ?? '');
+      if (
+        finalUpdate &&
+        args == null &&
+        existingContent?.tool_call?.args != null
+      ) {
+        args = existingContent.tool_call.args;
+      }
 
       const id =
         getNonEmptyValue([
