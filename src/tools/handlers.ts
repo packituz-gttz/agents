@@ -279,7 +279,7 @@ function handleAnthropicSearchResults({
   graph,
 }: {
   contentPart: t.ToolResultContent;
-  toolCall: ToolCall;
+  toolCall: Partial<ToolCall>;
   metadata?: Record<string, unknown>;
   graph: Graph;
 }): void {
@@ -306,7 +306,7 @@ function handleAnthropicSearchResults({
   });
 
   const name = toolCall.name;
-  const input = toolCall.args;
+  const input = toolCall.args ?? {};
   const artifact = {
     [Constants.WEB_SEARCH]: searchResultData,
   };
