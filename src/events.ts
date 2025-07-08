@@ -68,8 +68,13 @@ export class ModelEndHandler implements t.EventHandler {
 
 export class ToolEndHandler implements t.EventHandler {
   private callback?: t.ToolEndCallback;
-  constructor(callback?: t.ToolEndCallback) {
+  private omitOutput?: (name?: string) => boolean;
+  constructor(
+    callback?: t.ToolEndCallback,
+    omitOutput?: (name?: string) => boolean
+  ) {
     this.callback = callback;
+    this.omitOutput = omitOutput;
   }
   handle(
     event: string,
@@ -89,10 +94,10 @@ export class ToolEndHandler implements t.EventHandler {
     }
 
     this.callback?.(toolEndData, metadata);
-
     graph.handleToolCallCompleted(
       { input: toolEndData.input, output: toolEndData.output },
-      metadata
+      metadata,
+      this.omitOutput?.(toolEndData.output.name)
     );
   }
 }

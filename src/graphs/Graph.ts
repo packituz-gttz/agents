@@ -94,7 +94,8 @@ export abstract class Graph<
   ): void;
   abstract handleToolCallCompleted(
     data: t.ToolEndData,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    omitOutput?: boolean
   ): void;
 
   abstract createCallModel(): (
@@ -672,7 +673,8 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
 
   handleToolCallCompleted(
     data: t.ToolEndData,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    omitOutput?: boolean
   ): void {
     if (!this.config) {
       throw new Error('No config provided');
@@ -694,15 +696,17 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
       throw new Error(`No run step found for stepId ${stepId}`);
     }
 
+    const dispatchedOutput =
+      typeof output.content === 'string'
+        ? output.content
+        : JSON.stringify(output.content);
+
     const args = typeof input === 'string' ? input : input.input;
     const tool_call = {
       args: typeof args === 'string' ? args : JSON.stringify(args),
       name: output.name ?? '',
       id: output.tool_call_id,
-      output:
-        typeof output.content === 'string'
-          ? output.content
-          : JSON.stringify(output.content),
+      output: omitOutput === true ? '' : dispatchedOutput,
       progress: 1,
     };
 
