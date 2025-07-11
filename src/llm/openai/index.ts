@@ -14,7 +14,6 @@ import {
   AzureChatOpenAI as OriginalAzureChatOpenAI,
 } from '@langchain/openai';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
-import type { OpenAIEndpointConfig } from '@langchain/openai/dist/utils/azure';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@langchain/openai';
 import {
@@ -412,7 +411,7 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
     options: OpenAICoreRequestOptions | undefined
   ): OpenAICoreRequestOptions {
     if (!(this.client as unknown as AzureOpenAIClient | undefined)) {
-      const openAIEndpointConfig: OpenAIEndpointConfig = {
+      const openAIEndpointConfig: t.OpenAIEndpointConfig = {
         azureOpenAIApiDeploymentName: this.azureOpenAIApiDeploymentName,
         azureOpenAIApiInstanceName: this.azureOpenAIApiInstanceName,
         azureOpenAIApiKey: this.azureOpenAIApiKey,
