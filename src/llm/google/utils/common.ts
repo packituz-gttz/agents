@@ -557,7 +557,8 @@ export function convertResponseContentToChatGenerationChunk(
       ...functionCalls.map((fc) => ({
         ...fc,
         args: JSON.stringify(fc.args),
-        index: extra.index,
+        // Un-commenting this causes LangChain to incorrectly merge tool calls together
+        // index: extra.index,
         type: 'tool_call_chunk' as const,
         id: 'id' in fc && typeof fc.id === 'string' ? fc.id : uuidv4(),
       }))
