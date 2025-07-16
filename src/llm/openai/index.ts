@@ -13,6 +13,7 @@ import {
   ChatOpenAI as OriginalChatOpenAI,
   AzureChatOpenAI as OriginalAzureChatOpenAI,
 } from '@langchain/openai';
+import type { OpenAIRoleEnum, HeaderValue, HeadersLike } from './types';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@langchain/openai';
@@ -22,25 +23,6 @@ import {
   _convertOpenAIResponsesDeltaToBaseMessageChunk,
   type ResponseReturnStreamEvents,
 } from './utils';
-
-// TODO import from SDK when available
-type OpenAIRoleEnum =
-  | 'system'
-  | 'developer'
-  | 'assistant'
-  | 'user'
-  | 'function'
-  | 'tool';
-
-type HeaderValue = string | undefined | null;
-export type HeadersLike =
-  | Headers
-  | readonly HeaderValue[][]
-  | Record<string, HeaderValue | readonly HeaderValue[]>
-  | undefined
-  | null
-  // NullableHeaders
-  | { values: Headers; [key: string]: unknown };
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const iife = <T>(fn: () => T) => fn();
