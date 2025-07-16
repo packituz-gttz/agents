@@ -1,7 +1,11 @@
 // src/scripts/cli.ts
 import { config } from 'dotenv';
 config();
-import { HumanMessage, BaseMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  BaseMessage,
+  UsageMetadata,
+} from '@langchain/core/messages';
 import { TavilySearchResults } from '@langchain/community/tools/tavily_search';
 import type * as t from '@/types';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
@@ -17,6 +21,7 @@ import { Run } from '@/run';
 
 const conversationHistory: BaseMessage[] = [];
 let _contentParts: t.MessageContentComplex[] = [];
+let collectedUsage: UsageMetadata[] = [];
 
 async function testStandardStreaming(): Promise<void> {
   const { userName, location, provider, currentDate } = await getArgs();
@@ -24,7 +29,7 @@ async function testStandardStreaming(): Promise<void> {
   _contentParts = contentParts as t.MessageContentComplex[];
   const customHandlers = {
     [GraphEvents.TOOL_END]: new ToolEndHandler(),
-    [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(),
+    [GraphEvents.CHAT_MODEL_END]: new ModelEndHandler(collectedUsage),
     [GraphEvents.CHAT_MODEL_STREAM]: new ChatModelStreamHandler(),
     [GraphEvents.ON_RUN_STEP_COMPLETED]: {
       handle: (
@@ -177,8 +182,9 @@ async function testStandardStreaming(): Promise<void> {
     };
   }
   const titleResult = await run.generateTitle(titleOptions);
+  console.log('Collected usage metadata:', collectedUsage);
   console.log('Generated Title:', titleResult);
-  console.log('Collected metadata:', collected);
+  console.log('Collected title usage metadata:', collected);
 }
 
 process.on('unhandledRejection', (reason, promise) => {
