@@ -20,7 +20,7 @@ import type {
   HeadersLike,
 } from './types';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
-import type { BaseMessage } from '@langchain/core/messages';
+import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { ChatXAIInput } from '@langchain/xai';
 import type * as t from '@langchain/openai';
 import {
@@ -640,6 +640,16 @@ export class ChatXAI extends OriginalChatXAI {
         data,
         defaultRole
       );
+      if (chunk.usage_metadata != null) {
+        chunk.usage_metadata = {
+          input_tokens:
+            (chunk.usage_metadata as Partial<UsageMetadata>).input_tokens ?? 0,
+          output_tokens:
+            (chunk.usage_metadata as Partial<UsageMetadata>).output_tokens ?? 0,
+          total_tokens:
+            (chunk.usage_metadata as Partial<UsageMetadata>).total_tokens ?? 0,
+        };
+      }
       if ('reasoning_content' in delta) {
         chunk.additional_kwargs.reasoning_content = delta.reasoning_content;
       }
