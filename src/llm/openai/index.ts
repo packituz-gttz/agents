@@ -13,7 +13,12 @@ import {
   ChatOpenAI as OriginalChatOpenAI,
   AzureChatOpenAI as OriginalAzureChatOpenAI,
 } from '@langchain/openai';
-import type { OpenAIRoleEnum, HeaderValue, HeadersLike } from './types';
+import type {
+  OpenAIChatCallOptions,
+  OpenAIRoleEnum,
+  HeaderValue,
+  HeadersLike,
+} from './types';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
 import type * as t from '@langchain/openai';
@@ -524,10 +529,29 @@ export class ChatDeepSeek extends OriginalChatDeepSeek {
   }
 }
 
+/** xAI-specific usage metadata type */
+export interface XAIUsageMetadata
+  extends OpenAIClient.Completions.CompletionUsage {
+  prompt_tokens_details?: {
+    audio_tokens?: number;
+    cached_tokens?: number;
+    text_tokens?: number;
+    image_tokens?: number;
+  };
+  completion_tokens_details?: {
+    audio_tokens?: number;
+    reasoning_tokens?: number;
+    accepted_prediction_tokens?: number;
+    rejected_prediction_tokens?: number;
+  };
+  num_sources_used?: number;
+}
+
 export class ChatXAI extends OriginalChatXAI {
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
   }
+
   protected _getClientOptions(
     options?: OpenAICoreRequestOptions
   ): OpenAICoreRequestOptions {
@@ -554,5 +578,157 @@ export class ChatXAI extends OriginalChatXAI {
       ...options,
     } as OpenAICoreRequestOptions;
     return requestOptions;
+  }
+
+  async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this['ParsedCallOptions'],
+    runManager?: CallbackManagerForLLMRun
+  ): AsyncGenerator<ChatGenerationChunk> {
+    const messagesMapped: OpenAICompletionParam[] =
+      _convertMessagesToOpenAIParams(messages, this.model);
+
+    const params = {
+      ...this.invocationParams(options, {
+        streaming: true,
+      }),
+      messages: messagesMapped,
+      stream: true as const,
+    };
+    let defaultRole: OpenAIRoleEnum | undefined;
+
+    const streamIterable = await this.completionWithRetry(params, options);
+    let usage: OpenAIClient.Completions.CompletionUsage | undefined;
+    for await (const data of streamIterable) {
+      const choice = data.choices[0] as
+        | Partial<OpenAIClient.Chat.Completions.ChatCompletionChunk.Choice>
+        | undefined;
+      if (data.usage) {
+        usage = data.usage;
+      }
+      if (!choice) {
+        continue;
+      }
+
+      const { delta } = choice;
+      if (!delta) {
+        continue;
+      }
+      const chunk = this._convertOpenAIDeltaToBaseMessageChunk(
+        delta,
+        data,
+        defaultRole
+      );
+      if ('reasoning_content' in delta) {
+        chunk.additional_kwargs.reasoning_content = delta.reasoning_content;
+      }
+      defaultRole = delta.role ?? defaultRole;
+      const newTokenIndices = {
+        prompt: (options as OpenAIChatCallOptions).promptIndex ?? 0,
+        completion: choice.index ?? 0,
+      };
+      if (typeof chunk.content !== 'string') {
+        // eslint-disable-next-line no-console
+        console.log(
+          '[WARNING]: Received non-string content from OpenAI. This is currently not supported.'
+        );
+        continue;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const generationInfo: Record<string, any> = { ...newTokenIndices };
+      if (choice.finish_reason != null) {
+        generationInfo.finish_reason = choice.finish_reason;
+        // Only include system fingerprint in the last chunk for now
+        // to avoid concatenation issues
+        generationInfo.system_fingerprint = data.system_fingerprint;
+        generationInfo.model_name = data.model;
+        generationInfo.service_tier = data.service_tier;
+      }
+      if (this.logprobs == true) {
+        generationInfo.logprobs = choice.logprobs;
+      }
+      const generationChunk = new ChatGenerationChunk({
+        message: chunk,
+        text: chunk.content,
+        generationInfo,
+      });
+      yield generationChunk;
+      await runManager?.handleLLMNewToken(
+        generationChunk.text || '',
+        newTokenIndices,
+        undefined,
+        undefined,
+        undefined,
+        { chunk: generationChunk }
+      );
+    }
+    if (usage) {
+      // Type assertion for xAI-specific usage structure
+      const xaiUsage = usage as XAIUsageMetadata;
+      const inputTokenDetails = {
+        // Standard OpenAI fields
+        ...(usage.prompt_tokens_details?.audio_tokens != null && {
+          audio: usage.prompt_tokens_details.audio_tokens,
+        }),
+        ...(usage.prompt_tokens_details?.cached_tokens != null && {
+          cache_read: usage.prompt_tokens_details.cached_tokens,
+        }),
+        // Add xAI-specific prompt token details if they exist
+        ...(xaiUsage.prompt_tokens_details?.text_tokens != null && {
+          text: xaiUsage.prompt_tokens_details.text_tokens,
+        }),
+        ...(xaiUsage.prompt_tokens_details?.image_tokens != null && {
+          image: xaiUsage.prompt_tokens_details.image_tokens,
+        }),
+      };
+      const outputTokenDetails = {
+        // Standard OpenAI fields
+        ...(usage.completion_tokens_details?.audio_tokens != null && {
+          audio: usage.completion_tokens_details.audio_tokens,
+        }),
+        ...(usage.completion_tokens_details?.reasoning_tokens != null && {
+          reasoning: usage.completion_tokens_details.reasoning_tokens,
+        }),
+        // Add xAI-specific completion token details if they exist
+        ...(xaiUsage.completion_tokens_details?.accepted_prediction_tokens !=
+          null && {
+          accepted_prediction:
+            xaiUsage.completion_tokens_details.accepted_prediction_tokens,
+        }),
+        ...(xaiUsage.completion_tokens_details?.rejected_prediction_tokens !=
+          null && {
+          rejected_prediction:
+            xaiUsage.completion_tokens_details.rejected_prediction_tokens,
+        }),
+      };
+      const generationChunk = new ChatGenerationChunk({
+        message: new AIMessageChunk({
+          content: '',
+          response_metadata: {
+            usage: { ...usage },
+            // Include xAI-specific metadata if it exists
+            ...(xaiUsage.num_sources_used != null && {
+              num_sources_used: xaiUsage.num_sources_used,
+            }),
+          },
+          usage_metadata: {
+            input_tokens: usage.prompt_tokens,
+            output_tokens: usage.completion_tokens,
+            total_tokens: usage.total_tokens,
+            ...(Object.keys(inputTokenDetails).length > 0 && {
+              input_token_details: inputTokenDetails,
+            }),
+            ...(Object.keys(outputTokenDetails).length > 0 && {
+              output_token_details: outputTokenDetails,
+            }),
+          },
+        }),
+        text: '',
+      });
+      yield generationChunk;
+    }
+    if (options.signal?.aborted === true) {
+      throw new Error('AbortError');
+    }
   }
 }
