@@ -21,6 +21,7 @@ import type {
 } from './types';
 import type { BindToolsInput } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
+import type { ChatXAIInput } from '@langchain/xai';
 import type * as t from '@langchain/openai';
 import {
   _convertMessagesToOpenAIParams,
@@ -548,6 +549,26 @@ export interface XAIUsageMetadata
 }
 
 export class ChatXAI extends OriginalChatXAI {
+  constructor(
+    fields?: Partial<ChatXAIInput> & {
+      configuration?: { baseURL?: string };
+      clientConfig?: { baseURL?: string };
+    }
+  ) {
+    super(fields);
+    const customBaseURL =
+      fields?.configuration?.baseURL ?? fields?.clientConfig?.baseURL;
+    if (customBaseURL != null && customBaseURL) {
+      this.clientConfig = {
+        ...this.clientConfig,
+        baseURL: customBaseURL,
+      };
+      // Reset the client to force recreation with new config
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.client = undefined as any;
+    }
+  }
+
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
   }
