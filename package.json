@@ -72,6 +72,9 @@
     "lint": "eslint \"{,!(node_modules|venv)/**/}*.{js,jsx,ts,tsx}\" --fix",
     "format": "prettier --write ."
   },
+  "overrides": {
+    "@langchain/openai": "0.5.18"
+  },
   "dependencies": {
     "@langchain/anthropic": "^0.3.24",
     "@langchain/aws": "^0.1.11",
@@ -83,7 +86,7 @@
     "@langchain/langgraph": "^0.3.4",
     "@langchain/mistralai": "^0.2.1",
     "@langchain/ollama": "^0.2.3",
-    "@langchain/openai": "^0.5.18",
+    "@langchain/openai": "0.5.18",
     "@langchain/xai": "^0.0.3",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
