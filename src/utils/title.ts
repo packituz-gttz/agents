@@ -106,7 +106,7 @@ export const createCompletionTitleRunnable = async (
       }
       const title = content.trim();
       return {
-        title: title || 'Untitled Conversation',
+        title,
       };
     },
   });

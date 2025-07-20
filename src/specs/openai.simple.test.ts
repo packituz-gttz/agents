@@ -240,7 +240,6 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
     expect(titleResult).toBeDefined();
     expect(titleResult.title).toBeDefined();
     expect(titleResult.title).not.toBe('');
-    expect(titleResult.title).not.toBe('Untitled Conversation');
     // Completion method doesn't return language
     expect(titleResult.language).toBeUndefined();
     expect(collected).toBeDefined();
