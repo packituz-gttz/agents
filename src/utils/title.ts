@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { RunnableLambda } from '@langchain/core/runnables';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 import type { Runnable } from '@langchain/core/runnables';
-import * as t from '@/types';
+import type * as t from '@/types';
+import { ContentTypes } from '@/common';
 
 const defaultTitlePrompt = `Analyze this conversation and provide:
 1. The detected language of the conversation
@@ -62,6 +63,50 @@ export const createTitleRunnable = async (
       return {
         language: result?.language ?? 'English',
         title: result?.title ?? '',
+      };
+    },
+  });
+};
+
+const defaultCompletionPrompt = `Provide a concise, 5-word-or-less title for the conversation, using its same language, with no punctuation. Apply title case conventions appropriate for the language. Never directly mention the language name or the word "title" and only return the title itself.
+
+Conversation:
+{convo}`;
+
+export const createCompletionTitleRunnable = async (
+  model: t.ChatModelInstance,
+  titlePrompt?: string
+): Promise<Runnable> => {
+  const completionPrompt = ChatPromptTemplate.fromTemplate(
+    titlePrompt ?? defaultCompletionPrompt
+  );
+
+  return new RunnableLambda({
+    func: async (input: {
+      convo: string;
+      inputText: string;
+      skipLanguage: boolean;
+    }): Promise<{ title: string }> => {
+      const promptOutput = await completionPrompt.invoke({
+        convo: input.convo,
+      });
+
+      const response = await model.invoke(promptOutput);
+      let content = '';
+      if (typeof response.content === 'string') {
+        content = response.content;
+      } else if (Array.isArray(response.content)) {
+        content = response.content
+          .filter(
+            (part): part is { type: ContentTypes.TEXT; text: string } =>
+              part.type === ContentTypes.TEXT
+          )
+          .map((part) => part.text)
+          .join('');
+      }
+      const title = content.trim();
+      return {
+        title: title || 'Untitled Conversation',
       };
     },
   });

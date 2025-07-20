@@ -14,9 +14,9 @@ import {
   ModelEndHandler,
   createMetadataAggregator,
 } from '@/events';
+import { GraphEvents, Providers, TitleMethod } from '@/common';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
-import { GraphEvents, Providers } from '@/common';
 import { Run } from '@/run';
 
 const conversationHistory: BaseMessage[] = [];

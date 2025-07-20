@@ -164,6 +164,12 @@ export enum Constants {
   CONTENT_AND_ARTIFACT = 'content_and_artifact',
 }
 
+export enum TitleMethod {
+  STRUCTURED = 'structured',
+  FUNCTIONS = 'functions',
+  COMPLETION = 'completion',
+}
+
 export enum EnvVar {
   CODE_API_KEY = 'LIBRECHAT_CODE_API_KEY',
   CODE_BASEURL = 'LIBRECHAT_CODE_BASEURL',

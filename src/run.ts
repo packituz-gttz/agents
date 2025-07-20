@@ -10,10 +10,13 @@ import type {
 import type { ClientCallbacks, SystemCallbacks } from '@/graphs/Graph';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
-import { GraphEvents, Providers, Callback } from '@/common';
+import { GraphEvents, Providers, Callback, TitleMethod } from '@/common';
 import { manualToolStreamProviders } from '@/llm/providers';
 import { shiftIndexTokenCountMap } from '@/messages/format';
-import { createTitleRunnable } from '@/utils/title';
+import {
+  createTitleRunnable,
+  createCompletionTitleRunnable,
+} from '@/utils/title';
 import { createTokenCounter } from '@/utils/tokens';
 import { StandardGraph } from '@/graphs/Graph';
 import { HandlerRegistry } from '@/events';
@@ -259,9 +262,11 @@ export class Run<T extends t.BaseGraphState> {
     chainOptions,
     skipLanguage,
     omitOptions = defaultOmitOptions,
-  }: t.RunTitleOptions): Promise<{ language: string; title: string }> {
+    titleMethod = TitleMethod.COMPLETION,
+    convoPromptTemplate,
+  }: t.RunTitleOptions): Promise<{ language?: string; title?: string }> {
     const convoTemplate = PromptTemplate.fromTemplate(
-      'User: {input}\nAI: {output}'
+      convoPromptTemplate ?? 'User: {input}\nAI: {output}'
     );
     const response = contentParts
       .map((part) => {
@@ -297,10 +302,13 @@ export class Run<T extends t.BaseGraphState> {
       model.n = (clientOptions as t.OpenAIClientOptions | undefined)
         ?.n as number;
     }
-    const chain = await createTitleRunnable(model, titlePrompt);
+    const chain =
+      titleMethod === TitleMethod.COMPLETION
+        ? await createCompletionTitleRunnable(model, titlePrompt)
+        : await createTitleRunnable(model, titlePrompt);
     return (await chain.invoke(
       { convo, inputText, skipLanguage },
       chainOptions
-    )) as { language: string; title: string };
+    )) as { language?: string; title?: string };
   }
 }

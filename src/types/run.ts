@@ -33,6 +33,8 @@ export type RunTitleOptions = {
   clientOptions?: l.ClientOptions;
   chainOptions?: Partial<RunnableConfig> | undefined;
   omitOptions?: Set<string>;
+  titleMethod?: e.TitleMethod;
+  convoPromptTemplate?: string;
 };
 
 export interface AgentStateChannels {

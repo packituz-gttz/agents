@@ -16,8 +16,8 @@ import {
   ModelEndHandler,
   createMetadataAggregator,
 } from '@/events';
+import { ContentTypes, GraphEvents, Providers, TitleMethod } from '@/common';
 import { ChatModelStreamHandler, createContentAggregator } from '@/stream';
-import { ContentTypes, GraphEvents, Providers } from '@/common';
 import { capitalizeFirstLetter } from './spec.utils';
 import { getLLMConfig } from '@/utils/llmConfig';
 import { getArgs } from '@/scripts/args';
@@ -175,6 +175,7 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
     const titleResult = await run.generateTitle({
       provider,
       inputText: userMessage,
+      titleMethod: TitleMethod.STRUCTURED,
       contentParts,
       chainOptions: {
         callbacks: [
@@ -189,6 +190,62 @@ describe(`${capitalizeFirstLetter(provider)} Streaming Tests`, () => {
     expect(titleResult.title).toBeDefined();
     expect(titleResult.language).toBeDefined();
     expect(collected).toBeDefined();
+  });
+
+  test(`${capitalizeFirstLetter(provider)}: should generate title using completion method`, async () => {
+    const { userName, location } = await getArgs();
+    const llmConfig = getLLMConfig(provider);
+    const customHandlers = setupCustomHandlers();
+
+    run = await Run.create<t.IState>({
+      runId: 'test-run-id-completion',
+      graphConfig: {
+        type: 'standard',
+        llmConfig,
+        tools: [new Calculator()],
+        instructions:
+          'You are a friendly AI assistant. Always address the user by their name.',
+        additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
+      },
+      returnContent: true,
+      customHandlers,
+    });
+
+    const userMessage =
+      'Can you help me calculate the area of a circle with radius 5?';
+    conversationHistory = [];
+    conversationHistory.push(new HumanMessage(userMessage));
+
+    const inputs = {
+      messages: conversationHistory,
+    };
+
+    const finalContentParts = await run.processStream(inputs, config);
+    expect(finalContentParts).toBeDefined();
+
+    const { handleLLMEnd, collected } = createMetadataAggregator();
+    const titleResult = await run.generateTitle({
+      provider,
+      inputText: userMessage,
+      titleMethod: TitleMethod.COMPLETION, // Using completion method
+      contentParts,
+      chainOptions: {
+        callbacks: [
+          {
+            handleLLMEnd,
+          },
+        ],
+      },
+    });
+
+    expect(titleResult).toBeDefined();
+    expect(titleResult.title).toBeDefined();
+    expect(titleResult.title).not.toBe('');
+    expect(titleResult.title).not.toBe('Untitled Conversation');
+    // Completion method doesn't return language
+    expect(titleResult.language).toBeUndefined();
+    expect(collected).toBeDefined();
+    console.log(`Completion method generated title: "${titleResult.title}"`);
   });
 
   test(`${capitalizeFirstLetter(provider)}: should follow-up`, async () => {
