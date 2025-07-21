@@ -21,7 +21,14 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npx jest
+        run: npx jest --testPathIgnorePatterns=title.memory-leak.test.ts
+        env:
+          NODE_ENV: test
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Run memory leak tests
+        run: NODE_OPTIONS='--expose-gc' npx jest src/specs/title.memory-leak.test.ts
         env:
           NODE_ENV: test
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
