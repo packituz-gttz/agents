@@ -168,6 +168,7 @@ async function testStandardStreaming(): Promise<void> {
     provider,
     inputText: userMessage,
     contentParts,
+    titleMethod: TitleMethod.STRUCTURED,
     chainOptions: {
       callbacks: [
         {

@@ -430,8 +430,8 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
         ...params.defaultHeaders,
         'User-Agent':
           defaultHeaders['User-Agent'] != null
-            ? `${defaultHeaders['User-Agent']}: langchainjs-azure-openai-v2`
-            : 'langchainjs-azure-openai-v2',
+            ? `${defaultHeaders['User-Agent']}: librechat-azure-openai-v2`
+            : 'librechat-azure-openai-v2',
       };
 
       this.client = new CustomAzureOpenAIClient({
