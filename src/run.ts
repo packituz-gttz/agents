@@ -306,9 +306,6 @@ export class Run<T extends t.BaseGraphState> {
       titleMethod === TitleMethod.COMPLETION
         ? await createCompletionTitleRunnable(model, titlePrompt)
         : await createTitleRunnable(model, titlePrompt);
-    return (await chain.invoke(
-      { convo, inputText, skipLanguage },
-      chainOptions
-    )) as { language?: string; title?: string };
+    return await chain.invoke({ convo, inputText, skipLanguage }, chainOptions);
   }
 }

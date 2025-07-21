@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { RunnableLambda } from '@langchain/core/runnables';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import type { Runnable } from '@langchain/core/runnables';
+import type { Runnable, RunnableConfig } from '@langchain/core/runnables';
 import type * as t from '@/types';
 import { ContentTypes } from '@/common';
 
@@ -45,20 +45,29 @@ export const createTitleRunnable = async (
   );
 
   return new RunnableLambda({
-    func: async (input: {
-      convo: string;
-      inputText: string;
-      skipLanguage: boolean;
-    }): Promise<{ language: string; title: string } | { title: string }> => {
+    func: async (
+      input: {
+        convo: string;
+        inputText: string;
+        skipLanguage: boolean;
+      },
+      config?: Partial<RunnableConfig>
+    ): Promise<{ language: string; title: string } | { title: string }> => {
       if (input.skipLanguage) {
-        return (await titlePrompt.pipe(titleLLM).invoke({
-          convo: input.convo,
-        })) as { title: string };
+        return (await titlePrompt.pipe(titleLLM).invoke(
+          {
+            convo: input.convo,
+          },
+          config
+        )) as { title: string };
       }
 
-      const result = (await titlePrompt.pipe(combinedLLM).invoke({
-        convo: input.convo,
-      })) as { language: string; title: string } | undefined;
+      const result = (await titlePrompt.pipe(combinedLLM).invoke(
+        {
+          convo: input.convo,
+        },
+        config
+      )) as { language: string; title: string } | undefined;
 
       return {
         language: result?.language ?? 'English',
@@ -82,16 +91,19 @@ export const createCompletionTitleRunnable = async (
   );
 
   return new RunnableLambda({
-    func: async (input: {
-      convo: string;
-      inputText: string;
-      skipLanguage: boolean;
-    }): Promise<{ title: string }> => {
+    func: async (
+      input: {
+        convo: string;
+        inputText: string;
+        skipLanguage: boolean;
+      },
+      config?: Partial<RunnableConfig>
+    ): Promise<{ title: string }> => {
       const promptOutput = await completionPrompt.invoke({
         convo: input.convo,
       });
 
-      const response = await model.invoke(promptOutput);
+      const response = await model.invoke(promptOutput, config);
       let content = '';
       if (typeof response.content === 'string') {
         content = response.content;
