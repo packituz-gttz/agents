@@ -263,10 +263,10 @@ export class Run<T extends t.BaseGraphState> {
     skipLanguage,
     omitOptions = defaultOmitOptions,
     titleMethod = TitleMethod.COMPLETION,
-    convoPromptTemplate,
+    titlePromptTemplate,
   }: t.RunTitleOptions): Promise<{ language?: string; title?: string }> {
     const convoTemplate = PromptTemplate.fromTemplate(
-      convoPromptTemplate ?? 'User: {input}\nAI: {output}'
+      titlePromptTemplate ?? 'User: {input}\nAI: {output}'
     );
     const response = contentParts
       .map((part) => {
