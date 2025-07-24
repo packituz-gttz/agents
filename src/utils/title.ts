@@ -77,7 +77,7 @@ export const createTitleRunnable = async (
   });
 };
 
-const defaultCompletionPrompt = `Provide a concise, 5-word-or-less title for the conversation, using its same language, with no punctuation. Apply title case conventions appropriate for the language. Never directly mention the language name or the word "title" and only return the title itself.
+const defaultCompletionPrompt = `Provide a concise, 5-word-or-less title for the conversation, using title case conventions. Only return the title itself.
 
 Conversation:
 {convo}`;
