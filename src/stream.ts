@@ -78,7 +78,7 @@ function getNonEmptyValue(possibleValues: string[]): string | undefined {
   return undefined;
 }
 
-function getChunkContent({
+export function getChunkContent({
   chunk,
   provider,
   reasoningKey,
@@ -107,7 +107,7 @@ function getChunkContent({
     )?.summary?.[0]?.text;
   }
   return (
-    (chunk?.additional_kwargs?.[reasoningKey] as string | undefined) ??
+    ((chunk?.additional_kwargs?.[reasoningKey] as string | undefined) ?? '') ||
     chunk?.content
   );
 }
