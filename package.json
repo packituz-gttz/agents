@@ -81,7 +81,7 @@
     }
   },
   "dependencies": {
-    "@langchain/anthropic": "^0.3.24",
+    "@langchain/anthropic": "^0.3.26",
     "@langchain/aws": "^0.1.12",
     "@langchain/community": "^0.3.47",
     "@langchain/core": "^0.3.62",
