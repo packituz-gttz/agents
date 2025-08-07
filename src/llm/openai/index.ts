@@ -193,6 +193,7 @@ export class CustomAzureOpenAIClient extends AzureOpenAIClient {
   }
 }
 
+/** @ts-expect-error We are intentionally overriding `getReasoningParams` */
 export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
@@ -229,7 +230,7 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
    * Returns backwards compatible reasoning parameters from constructor params and call options
    * @internal
    */
-  protected _getReasoningParams(
+  getReasoningParams(
     options?: this['ParsedCallOptions']
   ): OpenAIClient.Reasoning | undefined {
     if (!isReasoningModel(this.model)) {
@@ -252,6 +253,12 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
     }
 
     return reasoning;
+  }
+
+  protected _getReasoningParams(
+    options?: this['ParsedCallOptions']
+  ): OpenAIClient.Reasoning | undefined {
+    return this.getReasoningParams(options);
   }
 
   async *_streamResponseChunks(
@@ -421,6 +428,7 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
   }
 }
 
+/** @ts-expect-error We are intentionally overriding `getReasoningParams` */
 export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
@@ -429,7 +437,7 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
    * Returns backwards compatible reasoning parameters from constructor params and call options
    * @internal
    */
-  protected _getReasoningParams(
+  getReasoningParams(
     options?: this['ParsedCallOptions']
   ): OpenAIClient.Reasoning | undefined {
     if (!isReasoningModel(this.model)) {
@@ -453,6 +461,13 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
 
     return reasoning;
   }
+
+  protected _getReasoningParams(
+    options?: this['ParsedCallOptions']
+  ): OpenAIClient.Reasoning | undefined {
+    return this.getReasoningParams(options);
+  }
+
   protected _getClientOptions(
     options: OpenAICoreRequestOptions | undefined
   ): OpenAICoreRequestOptions {
