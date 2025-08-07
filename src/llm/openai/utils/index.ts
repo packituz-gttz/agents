@@ -648,7 +648,11 @@ export function _convertMessagesToOpenAIResponsesParams(
 }
 
 export function isReasoningModel(model?: string) {
-  return model != null && model && /^o\d/.test(model);
+  return (
+    model != null &&
+    model !== '' &&
+    (/^o\d/.test(model) || /^gpt-[5-9]/.test(model))
+  );
 }
 
 function _convertOpenAIResponsesMessageToBaseMessage(

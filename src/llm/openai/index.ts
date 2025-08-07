@@ -24,6 +24,7 @@ import type { BaseMessage, UsageMetadata } from '@langchain/core/messages';
 import type { ChatXAIInput } from '@langchain/xai';
 import type * as t from '@langchain/openai';
 import {
+  isReasoningModel,
   _convertMessagesToOpenAIParams,
   _convertMessagesToOpenAIResponsesParams,
   _convertOpenAIResponsesDeltaToBaseMessageChunk,
@@ -222,6 +223,35 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
       ...options,
     } as OpenAICoreRequestOptions;
     return requestOptions;
+  }
+
+  /**
+   * Returns backwards compatible reasoning parameters from constructor params and call options
+   * @internal
+   */
+  protected _getReasoningParams(
+    options?: this['ParsedCallOptions']
+  ): OpenAIClient.Reasoning | undefined {
+    if (!isReasoningModel(this.model)) {
+      return;
+    }
+
+    // apply options in reverse order of importance -- newer options supersede older options
+    let reasoning: OpenAIClient.Reasoning | undefined;
+    if (this.reasoning !== undefined) {
+      reasoning = {
+        ...reasoning,
+        ...this.reasoning,
+      };
+    }
+    if (options?.reasoning !== undefined) {
+      reasoning = {
+        ...reasoning,
+        ...options.reasoning,
+      };
+    }
+
+    return reasoning;
   }
 
   async *_streamResponseChunks(
