@@ -425,6 +425,34 @@ export class AzureChatOpenAI extends OriginalAzureChatOpenAI {
   public get exposedClient(): CustomOpenAIClient {
     return this.client;
   }
+  /**
+   * Returns backwards compatible reasoning parameters from constructor params and call options
+   * @internal
+   */
+  protected _getReasoningParams(
+    options?: this['ParsedCallOptions']
+  ): OpenAIClient.Reasoning | undefined {
+    if (!isReasoningModel(this.model)) {
+      return;
+    }
+
+    // apply options in reverse order of importance -- newer options supersede older options
+    let reasoning: OpenAIClient.Reasoning | undefined;
+    if (this.reasoning !== undefined) {
+      reasoning = {
+        ...reasoning,
+        ...this.reasoning,
+      };
+    }
+    if (options?.reasoning !== undefined) {
+      reasoning = {
+        ...reasoning,
+        ...options.reasoning,
+      };
+    }
+
+    return reasoning;
+  }
   protected _getClientOptions(
     options: OpenAICoreRequestOptions | undefined
   ): OpenAICoreRequestOptions {
