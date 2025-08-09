@@ -194,7 +194,9 @@ export class Run<T extends t.BaseGraphState> {
       provider: this.provider,
     });
 
-    const stream = this.graphRunnable.streamEvents(inputs, config);
+    const stream = this.graphRunnable.streamEvents(inputs, config, {
+      raiseError: true,
+    });
 
     for await (const event of stream) {
       const { data, name, metadata, ...info } = event;
