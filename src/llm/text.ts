@@ -1,4 +1,3 @@
-
 export interface TextStreamOptions {
   minChunkSize?: number;
   maxChunkSize?: number;
@@ -30,7 +29,15 @@ export class TextStream {
     return Math.floor(Math.random() * (max - min)) + min;
   }
 
-  private static readonly BOUNDARIES = new Set([' ', '.', ',', '!', '?', ';', ':']);
+  private static readonly BOUNDARIES = new Set([
+    ' ',
+    '.',
+    ',',
+    '!',
+    '?',
+    ';',
+    ':',
+  ]);
 
   private findFirstWordBoundary(text: string, minSize: number): number {
     if (minSize >= text.length) return text.length;
@@ -49,11 +56,17 @@ export class TextStream {
     return text.length; // If no boundary found, return entire remaining text
   }
 
-  async *generateText(progressCallback?: ProgressCallback): AsyncGenerator<string, void, unknown> {
+  async *generateText(
+    signal?: AbortSignal,
+    progressCallback?: ProgressCallback
+  ): AsyncGenerator<string, void, unknown> {
     const { delay, minChunkSize, maxChunkSize } = this;
 
     while (this.currentIndex < this.text.length) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      if (signal?.aborted === true) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       const remainingText = this.text.slice(this.currentIndex);
       let chunkSize: number;
@@ -62,10 +75,16 @@ export class TextStream {
         chunkSize = this.findFirstWordBoundary(remainingText, minChunkSize);
       } else {
         const remainingChars = remainingText.length;
-        chunkSize = Math.min(this.randomInt(minChunkSize, maxChunkSize + 1), remainingChars);
+        chunkSize = Math.min(
+          this.randomInt(minChunkSize, maxChunkSize + 1),
+          remainingChars
+        );
       }
 
-      const chunk = this.text.slice(this.currentIndex, this.currentIndex + chunkSize);
+      const chunk = this.text.slice(
+        this.currentIndex,
+        this.currentIndex + chunkSize
+      );
       progressCallback?.(chunk);
 
       yield chunk;

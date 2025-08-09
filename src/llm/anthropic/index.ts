@@ -352,10 +352,13 @@ export class CustomAnthropic extends ChatAnthropicMessages {
         maxChunkSize: 8,
       });
 
-      const generator = textStream.generateText();
+      const generator = textStream.generateText(options.signal);
       try {
         let emittedUsage = false;
         for await (const currentToken of generator) {
+          if ((options.signal as AbortSignal | undefined)?.aborted === true) {
+            break;
+          }
           const newChunk = cloneChunk(currentToken, tokenType, chunk);
 
           const generationChunk = this.createGenerationChunk({
