@@ -24,7 +24,12 @@ let _contentParts: t.MessageContentComplex[] = [];
 let collectedUsage: UsageMetadata[] = [];
 
 async function testStandardStreaming(): Promise<void> {
-  const { userName, location, provider, currentDate } = await getArgs();
+  const {
+    userName,
+    location,
+    provider: _provider,
+    currentDate,
+  } = await getArgs();
   const { contentParts, aggregateContent } = createContentAggregator();
   _contentParts = contentParts as t.MessageContentComplex[];
   const customHandlers = {
@@ -96,7 +101,7 @@ async function testStandardStreaming(): Promise<void> {
     },
   };
 
-  const llmConfig = getLLMConfig(provider);
+  const llmConfig = getLLMConfig(_provider);
   if (
     'configuration' in llmConfig &&
     (llmConfig as t.OpenAIClientOptions).configuration != null
@@ -112,6 +117,7 @@ async function testStandardStreaming(): Promise<void> {
       };
     }
   }
+  const provider = llmConfig.provider;
 
   if (provider === Providers.ANTHROPIC) {
     (llmConfig as t.AnthropicClientOptions).clientOptions = {
@@ -168,7 +174,7 @@ async function testStandardStreaming(): Promise<void> {
     provider,
     inputText: userMessage,
     contentParts,
-    titleMethod: TitleMethod.STRUCTURED,
+    // titleMethod: TitleMethod.STRUCTURED,
     chainOptions: {
       callbacks: [
         {
