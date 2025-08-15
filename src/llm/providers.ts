@@ -1,5 +1,4 @@
 // src/llm/providers.ts
-import { ChatOllama } from '@langchain/ollama';
 import { ChatMistralAI } from '@langchain/mistralai';
 import { ChatBedrockConverse } from '@langchain/aws';
 // import { ChatAnthropic } from '@langchain/anthropic';
@@ -20,6 +19,7 @@ import { CustomChatGoogleGenerativeAI } from '@/llm/google';
 import { CustomAnthropic } from '@/llm/anthropic';
 import { ChatOpenRouter } from '@/llm/openrouter';
 import { ChatVertexAI } from '@/llm/vertexai';
+import { ChatOllama } from '@/llm/ollama';
 import { Providers } from '@/common';
 
 export const llmProviders: Partial<ChatModelConstructorMap> = {

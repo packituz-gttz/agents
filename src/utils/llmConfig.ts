@@ -56,10 +56,10 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
   },
   [Providers.OLLAMA]: {
     provider: Providers.OLLAMA,
-    model: 'llama3.2',
+    model: 'gpt-oss:20b',
     streaming: true,
     streamUsage: true,
-    baseUrl: 'http://host.docker.internal:11434',
+    baseUrl: 'http://localhost:11434',
   },
   [Providers.DEEPSEEK]: {
     provider: Providers.DEEPSEEK,

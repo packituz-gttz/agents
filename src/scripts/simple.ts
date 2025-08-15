@@ -128,7 +128,7 @@ async function testStandardStreaming(): Promise<void> {
       type: 'standard',
       llmConfig,
       // tools: [new TavilySearchResults()],
-      reasoningKey: 'reasoning',
+      // reasoningKey: 'reasoning',
       instructions:
         'You are a friendly AI assistant. Always address the user by their name.',
       additional_instructions: `The user's name is ${userName} and they are located in ${location}.`,
