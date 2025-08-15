@@ -61,6 +61,15 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     baseUrl: 'http://localhost:11434',
   },
+  lmstudio: {
+    provider: Providers.OPENAI,
+    model: 'gpt-oss-120b',
+    streaming: true,
+    streamUsage: true,
+    configuration: {
+      baseURL: 'http://192.168.254.183:1233/v1',
+    },
+  },
   [Providers.DEEPSEEK]: {
     provider: Providers.DEEPSEEK,
     model: 'deepseek-reasoner',

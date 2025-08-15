@@ -342,6 +342,8 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
       );
       if ('reasoning_content' in delta) {
         chunk.additional_kwargs.reasoning_content = delta.reasoning_content;
+      } else if ('reasoning' in delta) {
+        chunk.additional_kwargs.reasoning_content = delta.reasoning;
       }
       defaultRole = delta.role ?? defaultRole;
       const newTokenIndices = {
