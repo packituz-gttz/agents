@@ -505,7 +505,12 @@ export class StandardGraph extends Graph<t.BaseGraphState, GraphNode> {
               null) ||
           (this.provider === Providers.BEDROCK &&
             (this.clientOptions as t.BedrockAnthropicInput)
-              .additionalModelRequestFields?.['thinking'] != null);
+              .additionalModelRequestFields?.['thinking'] != null) ||
+          (this.provider === Providers.OPENAI &&
+            (
+              (this.clientOptions as t.OpenAIClientOptions).modelKwargs
+                ?.thinking as t.AnthropicClientOptions['thinking']
+            )?.type === 'enabled');
 
         this.pruneMessages = createPruneMessages({
           provider: this.provider,
