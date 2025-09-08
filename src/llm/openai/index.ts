@@ -345,6 +345,10 @@ export class ChatOpenAI extends OriginalChatOpenAI<t.ChatOpenAICallOptions> {
       } else if ('reasoning' in delta) {
         chunk.additional_kwargs.reasoning_content = delta.reasoning;
       }
+      if ('provider_specific_fields' in delta) {
+        chunk.additional_kwargs.provider_specific_fields =
+          delta.provider_specific_fields;
+      }
       defaultRole = delta.role ?? defaultRole;
       const newTokenIndices = {
         prompt: options.promptIndex ?? 0,

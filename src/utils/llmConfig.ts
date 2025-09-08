@@ -12,6 +12,30 @@ export const llmConfigs: Record<string, t.LLMConfig | undefined> = {
     streamUsage: true,
     // disableStreaming: true,
   },
+  anthropicLITELLM: {
+    provider: Providers.OPENAI,
+    streaming: true,
+    streamUsage: false,
+    apiKey: 'sk-1234',
+    model: 'claude-sonnet-4',
+    maxTokens: 8192,
+    modelKwargs: {
+      metadata: {
+        user_id: 'some_user_id',
+      },
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 2000,
+      },
+    },
+    configuration: {
+      baseURL: 'http://host.docker.internal:4000/v1',
+      defaultHeaders: {
+        'anthropic-beta': 'prompt-caching-2024-07-31,context-1m-2025-08-07',
+      },
+    },
+    // disableStreaming: true,
+  },
   [Providers.XAI]: {
     provider: Providers.XAI,
     model: 'grok-2-latest',

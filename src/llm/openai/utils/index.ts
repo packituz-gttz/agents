@@ -298,10 +298,16 @@ export function _convertMessagesToOpenAIParams(
       role = 'developer';
     }
 
+    let hasAnthropicThinkingBlock: boolean = false;
+
     const content =
       typeof message.content === 'string'
         ? message.content
         : message.content.map((m) => {
+          if ('type' in m && m.type === 'thinking') {
+            hasAnthropicThinkingBlock = true;
+            return m;
+          }
           if (isDataContentBlock(m)) {
             return convertToProviderContentBlock(
               m,
@@ -326,7 +332,7 @@ export function _convertMessagesToOpenAIParams(
       completionParam.tool_calls = message.tool_calls.map(
         convertLangChainToolCallToOpenAI
       );
-      completionParam.content = '';
+      completionParam.content = hasAnthropicThinkingBlock ? content : '';
     } else {
       if (message.additional_kwargs.tool_calls != null) {
         completionParam.tool_calls = message.additional_kwargs.tool_calls;

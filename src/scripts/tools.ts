@@ -127,7 +127,10 @@ async function testStandardStreaming(): Promise<void> {
   const inputs = {
     messages: conversationHistory,
   };
-  const finalContentParts = await run.processStream(inputs, config);
+  const finalContentParts = await run.processStream(inputs, config, {
+    indexTokenCountMap: { 0: 35 },
+    maxContextTokens: 89000,
+  });
   const finalMessages = run.getRunMessages();
   if (finalMessages) {
     conversationHistory.push(...finalMessages);

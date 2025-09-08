@@ -389,6 +389,14 @@ export function checkValidNumber(value: unknown): value is number {
   return typeof value === 'number' && !isNaN(value) && value > 0;
 }
 
+type ThinkingBlocks = {
+  thinking_blocks?: Array<{
+    type: 'thinking';
+    thinking: string;
+    signature: string;
+  }>;
+};
+
 export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
   const indexTokenCountMap = { ...factoryParams.indexTokenCountMap };
   let lastTurnStartIndex = factoryParams.startIndex;
@@ -402,6 +410,49 @@ export function createPruneMessages(factoryParams: PruneMessagesFactoryParams) {
     context: BaseMessage[];
     indexTokenCountMap: Record<string, number | undefined>;
   } {
+    if (
+      factoryParams.provider === Providers.OPENAI &&
+      factoryParams.thinkingEnabled === true
+    ) {
+      for (let i = lastTurnStartIndex; i < params.messages.length; i++) {
+        const m = params.messages[i];
+        if (
+          m.getType() === 'ai' &&
+          typeof m.additional_kwargs.reasoning_content === 'string' &&
+          Array.isArray(
+            (
+              m.additional_kwargs.provider_specific_fields as
+                | ThinkingBlocks
+                | undefined
+            )?.thinking_blocks
+          ) &&
+          (m as AIMessage).tool_calls &&
+          ((m as AIMessage).tool_calls?.length ?? 0) > 0
+        ) {
+          const message = m as AIMessage;
+          const thinkingBlocks = (
+            message.additional_kwargs.provider_specific_fields as ThinkingBlocks
+          ).thinking_blocks;
+          const signature =
+            thinkingBlocks?.[thinkingBlocks.length - 1].signature;
+          const thinkingBlock: ThinkingContentText = {
+            signature,
+            type: ContentTypes.THINKING,
+            thinking: message.additional_kwargs.reasoning_content as string,
+          };
+
+          params.messages[i] = new AIMessage({
+            ...message,
+            content: [thinkingBlock],
+            additional_kwargs: {
+              ...message.additional_kwargs,
+              reasoning_content: undefined,
+            },
+          });
+        }
+      }
+    }
+
     let currentUsage: UsageMetadata | undefined;
     if (
       params.usageMetadata &&
