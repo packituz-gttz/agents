@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
 import fetch, { RequestInit } from 'node-fetch';
+// Use global AbortController (no import needed)
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { tool, DynamicStructuredTool } from '@langchain/core/tools';
 import { getEnvironmentVariable } from '@langchain/core/utils/env';
@@ -164,7 +165,12 @@ Usage:
         if (process.env.PROXY != null && process.env.PROXY !== '') {
           fetchOptions.agent = new HttpsProxyAgent(process.env.PROXY);
         }
-        const response = await fetch(EXEC_ENDPOINT, fetchOptions);
+        // Add a timeout of 60 seconds (60000 ms)
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 60000);
+        // Cast the signal to the expected type to satisfy TypeScript
+        const response = await fetch(EXEC_ENDPOINT, { ...fetchOptions, signal: controller.signal as any });
+        clearTimeout(timeout);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
